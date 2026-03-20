@@ -394,25 +394,8 @@ export function LOBChart() {
             {months.map((m, i) => (
               <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={PADDING.top + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
-            {/* Arrow marker */}
-            <defs>
-              <marker id="arrowhead" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
-                <polygon points="0 0, 8 3, 0 6" fill="hsl(var(--muted-foreground))" />
-              </marker>
-            </defs>
-            {/* Predecessor arrows */}
-            {lines.map(({ activity, points }) => {
-              if (!activity.predecessorId) return null;
-              const predLine = lines.find(l => l.activity.id === activity.predecessorId);
-              if (!predLine || predLine.points.length === 0 || points.length === 0) return null;
-              const predFirstDone = predLine.points.length > 1 ? predLine.points[1] : predLine.points[0];
-              const actStart = points[0];
-              return (
-                <line key={`arrow-${activity.id}`} x1={scaleX(predFirstDone.workdayIndex)} y1={scaleY(predFirstDone.unit)}
-                  x2={scaleX(actStart.workdayIndex)} y2={scaleY(actStart.unit)}
-                  stroke="hsl(var(--muted-foreground))" strokeWidth={1} strokeDasharray="4 2" markerEnd="url(#arrowhead)" />
-              );
-            })}
+
+
             {/* Buffer lines */}
             {lines.map(({ activity, buffer }) => {
               if (!buffer || buffer.length < 2) return null;
