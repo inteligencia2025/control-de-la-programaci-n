@@ -107,7 +107,7 @@ export function LOBPanel() {
       const activity: Activity = {
         id, name: p.name, unitStart: 1, unitEnd: totalUnits, startDate, rate: 1,
         color: getDefaultColor(project.activities.length + i), category: p.category,
-        bufferDays: 0, bufferUnits: 0, enabled: true, predecessorId: lastId,
+        bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
       };
       newActivities.push(activity);
       lastDate = startDate;
