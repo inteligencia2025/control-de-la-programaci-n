@@ -460,6 +460,7 @@ export function LOBChart() {
             style={{ left: hoverTooltip.x, top: hoverTooltip.y }}>
             {hoverTooltip.name}
           </div>
+        )}
       </div>
     </div>
   );
