@@ -133,17 +133,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const undoStack = useRef<ProjectData[]>([]);
   const redoStack = useRef<ProjectData[]>([]);
   const skipHistory = useRef(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
+
+  const updateUndoRedoState = useCallback(() => {
+    setCanUndo(undoStack.current.length > 0);
+    setCanRedo(redoStack.current.length > 0);
+  }, []);
 
   const pushUndo = useCallback((prev: ProjectData) => {
     if (skipHistory.current) return;
     undoStack.current = [...undoStack.current.slice(-(MAX_UNDO - 1)), prev];
     redoStack.current = [];
-  }, []);
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
 
   const setProject: React.Dispatch<React.SetStateAction<ProjectData>> = useCallback((action) => {
     setProjectInternal(prev => {
       const next = typeof action === 'function' ? action(prev) : action;
-      // Only push to undo if structural data changed (skip name-only changes for typing)
       const structuralChange =
         JSON.stringify(prev.activities) !== JSON.stringify(next.activities) ||
         JSON.stringify(prev.lookahead) !== JSON.stringify(next.lookahead) ||
@@ -166,7 +173,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       redoStack.current = [...redoStack.current, current];
       return prev;
     });
-  }, []);
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
 
   const redo = useCallback(() => {
     if (redoStack.current.length === 0) return;
@@ -176,10 +184,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       undoStack.current = [...undoStack.current, current];
       return next;
     });
-  }, []);
-
-  const canUndo = undoStack.current.length > 0;
-  const canRedo = redoStack.current.length > 0;
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -224,7 +230,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     undoStack.current = [];
     redoStack.current = [];
     skipHistory.current = false;
-  }, []);
+    updateUndoRedoState();
+  }, [updateUndoRedoState]);
 
   const switchProject = useCallback((id: string) => {
     try {
@@ -236,9 +243,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         undoStack.current = [];
         redoStack.current = [];
         skipHistory.current = false;
+        updateUndoRedoState();
       }
     } catch {}
-  }, []);
+  }, [updateUndoRedoState]);
 
   const deleteProject = useCallback((id: string) => {
     if (projectsList.length <= 1) return;
@@ -257,12 +265,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             undoStack.current = [];
             redoStack.current = [];
             skipHistory.current = false;
+            updateUndoRedoState();
           }
         } catch {}
       }
       return updated;
     });
-  }, [projectsList, activeProjectId]);
+  }, [projectsList, activeProjectId, updateUndoRedoState]);
 
   const addActivity = useCallback((a: Activity) => {
     setProject(p => ({ ...p, activities: [...p.activities, a] }));
