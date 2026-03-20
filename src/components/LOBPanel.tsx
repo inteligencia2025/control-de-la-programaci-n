@@ -133,13 +133,29 @@ export function LOBPanel() {
   const moveActivity = useCallback((index: number, direction: 'up' | 'down') => {
     const newIndex = direction === 'up' ? index - 1 : index + 1;
     setProject(p => {
-      const acts = [...p.activities];
+      const acts = [...p.activities].map(a => ({ ...a }));
       if (newIndex < 0 || newIndex >= acts.length) return p;
-      // Swap activities and their startDates so chart X-axis reflects new order
-      const dateA = acts[index].startDate;
-      const dateB = acts[newIndex].startDate;
-      acts[index] = { ...acts[index], startDate: dateB };
-      acts[newIndex] = { ...acts[newIndex], startDate: dateA };
+      const a = acts[index];
+      const b = acts[newIndex];
+      // Swap startDate, predecessorId, bufferDays, bufferUnits
+      const swap = (key: keyof Activity) => {
+        const tmp = (a as any)[key];
+        (a as any)[key] = (b as any)[key];
+        (b as any)[key] = tmp;
+      };
+      swap('startDate');
+      swap('predecessorId');
+      swap('bufferDays');
+      swap('bufferUnits');
+      // Update predecessor references: anything pointing to a should point to b and vice versa
+      const aId = a.id;
+      const bId = b.id;
+      for (const act of acts) {
+        if (act.id === aId || act.id === bId) continue;
+        if (act.predecessorId === aId) act.predecessorId = bId;
+        else if (act.predecessorId === bId) act.predecessorId = aId;
+      }
+      // Swap positions in array
       [acts[index], acts[newIndex]] = [acts[newIndex], acts[index]];
       return { ...p, activities: acts };
     });
