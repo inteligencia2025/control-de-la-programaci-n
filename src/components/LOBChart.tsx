@@ -40,18 +40,52 @@ function getActivityLine(activity: Activity, projectStart: Date, activities: Act
   const bufferUnits = activity.bufferUnits || 0;
   const actualUnitStart = activity.unitStart + bufferUnits;
   const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
-  const totalWorkdays = Math.ceil(totalUnits / activity.rate);
+  const effectiveRate = activity.rate * (activity.crews || 1);
+  const totalWorkdays = Math.ceil(totalUnits / effectiveRate);
   let startIndex = 0;
   let current = new Date(projectStart);
   while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
   while (isWeekend(start)) { start = addDays(start, 1); startIndex++; }
   points.push({ workdayIndex: startIndex, unit: actualUnitStart });
   for (let i = 1; i <= totalWorkdays; i++) {
-    const unit = actualUnitStart + (activity.unitEnd > actualUnitStart ? 1 : -1) * activity.rate * i;
+    const unit = actualUnitStart + (activity.unitEnd > actualUnitStart ? 1 : -1) * effectiveRate * i;
     const clampedUnit = activity.unitEnd > actualUnitStart ? Math.min(unit, activity.unitEnd) : Math.max(unit, activity.unitEnd);
     points.push({ workdayIndex: startIndex + i, unit: clampedUnit });
   }
   return points;
+}
+
+/** Get individual crew lines for multi-crew activities */
+function getCrewLines(activity: Activity, projectStart: Date, activities: Activity[]): LinePoint[][] {
+  const crews = activity.crews || 1;
+  if (crews <= 1) return [];
+  let start = getEffectiveStartDate(activity, activities);
+  const bufferUnits = activity.bufferUnits || 0;
+  const actualUnitStart = activity.unitStart + bufferUnits;
+  const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
+  const direction = activity.unitEnd > actualUnitStart ? 1 : -1;
+  const unitsPerCrew = totalUnits / crews;
+
+  let startIndex = 0;
+  let current = new Date(projectStart);
+  while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
+  while (isWeekend(start)) { start = addDays(start, 1); startIndex++; }
+
+  const crewLines: LinePoint[][] = [];
+  for (let c = 0; c < crews; c++) {
+    const crewUnitStart = actualUnitStart + direction * Math.round(c * unitsPerCrew);
+    const crewUnitEnd = actualUnitStart + direction * Math.round((c + 1) * unitsPerCrew) - direction;
+    const crewUnits = Math.abs(crewUnitEnd - crewUnitStart) + 1;
+    const crewWorkdays = Math.ceil(crewUnits / activity.rate);
+    const points: LinePoint[] = [{ workdayIndex: startIndex, unit: crewUnitStart }];
+    for (let i = 1; i <= crewWorkdays; i++) {
+      const unit = crewUnitStart + direction * activity.rate * i;
+      const clamped = direction > 0 ? Math.min(unit, crewUnitEnd) : Math.max(unit, crewUnitEnd);
+      points.push({ workdayIndex: startIndex + i, unit: clamped });
+    }
+    crewLines.push(points);
+  }
+  return crewLines;
 }
 
 function getBufferLine(activity: Activity, projectStart: Date, activities: Activity[]): LinePoint[] | null {
@@ -106,7 +140,8 @@ export function LOBChart() {
     const lines = enabledActivities.map(activity => {
       const points = getActivityLine(activity, projectStart, project.activities);
       const duration = points.length > 1 ? points[points.length - 1].workdayIndex - points[0].workdayIndex : 0;
-      return { activity, points, buffer: getBufferLine(activity, projectStart, project.activities), duration };
+      const crewLines = getCrewLines(activity, projectStart, project.activities);
+      return { activity, points, buffer: getBufferLine(activity, projectStart, project.activities), duration, crewLines };
     });
     const maxWorkday = Math.max(...lines.flatMap(l => {
       const pts = l.points.map(p => p.workdayIndex);
@@ -387,8 +422,14 @@ export function LOBChart() {
                   fill="none" stroke={activity.color} strokeWidth={2} strokeDasharray="6 3" opacity={0.5} />
               );
             })}
+            {/* Crew lines (parallel, dashed) */}
+            {lines.map(({ activity, crewLines }) => crewLines.map((cl, ci) => (
+              <polyline key={`crew-${activity.id}-${ci}`}
+                points={cl.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
+                fill="none" stroke={activity.color} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.6} strokeLinecap="round" />
+            )))}
             {/* Activity lines with data points */}
-            {lines.map(({ activity, points }) => (
+            {lines.map(({ activity, points, crewLines }) => (
               <g key={activity.id}>
                 <polyline points={points.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
                   fill="none" stroke={activity.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -398,7 +439,7 @@ export function LOBChart() {
                 {points.length > 0 && (
                   <text x={scaleX(points[points.length - 1].workdayIndex) + 6} y={scaleY(points[points.length - 1].unit)}
                     className="text-[10px] font-medium" fill={activity.color} dominantBaseline="middle">
-                    {activity.name}
+                    {activity.name}{(activity.crews || 1) > 1 ? ` (×${activity.crews})` : ''}
                   </text>
                 )}
               </g>

@@ -44,6 +44,7 @@ export function LOBPanel() {
     predecessorId: '' as string,
     bufferDays: 0,
     bufferUnits: 0,
+    crews: 1,
   });
 
   const resetForm = () => {
@@ -54,7 +55,7 @@ export function LOBPanel() {
       name: '', unitStart: 1, unitEnd: defaultUnits,
       startDate: nextDate,
       rate: 1, color: DEFAULT_COLORS[project.activities.length % DEFAULT_COLORS.length],
-      category: 'estructura', predecessorId: '', bufferDays: 0, bufferUnits: 0,
+      category: 'estructura', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
     });
     setEditId(null);
   };
@@ -78,7 +79,7 @@ export function LOBPanel() {
       setForm({
         name: a.name, unitStart: a.unitStart, unitEnd: a.unitEnd,
         startDate: a.startDate, rate: a.rate, color: a.color, category: a.category,
-        predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits,
+        predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits, crews: a.crews || 1,
       });
       setEditId(a.id);
     });
@@ -106,7 +107,7 @@ export function LOBPanel() {
       const activity: Activity = {
         id, name: p.name, unitStart: 1, unitEnd: totalUnits, startDate, rate: 1,
         color: getDefaultColor(project.activities.length + i), category: p.category,
-        bufferDays: 0, bufferUnits: 0, enabled: true, predecessorId: lastId,
+        bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
       };
       newActivities.push(activity);
       lastDate = startDate;
@@ -261,6 +262,18 @@ export function LOBPanel() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
+                <Label className="text-[10px]">Cuadrillas</Label>
+                <Input type="number" min={1} max={10} value={form.crews} onChange={e => setForm(f => ({ ...f, crews: Math.max(1, +e.target.value || 1) }))} className="h-7 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px]">Ritmo efectivo</Label>
+                <div className="h-7 flex items-center text-xs font-medium text-primary px-2 bg-primary/5 rounded border border-border">
+                  {(form.rate * form.crews).toFixed(1)} u/d
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
                 <Label className="text-[10px]">Buffer (días)</Label>
                 <Input type="number" min={0} value={form.bufferDays} onChange={e => setForm(f => ({ ...f, bufferDays: +e.target.value }))} className="h-7 text-xs" />
               </div>
@@ -335,7 +348,7 @@ export function LOBPanel() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-medium truncate">{a.name}</p>
                   <p className="text-[9px] text-muted-foreground">
-                    {getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-{getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | {a.rate} u/d
+                    {getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-{getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | {a.rate} u/d{(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}
                     {a.bufferDays > 0 && ` | B:${a.bufferDays}d`}
                     {pred && <span className="ml-1">← {pred.name}</span>}
                   </p>

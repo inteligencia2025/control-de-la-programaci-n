@@ -17,6 +17,7 @@ export interface Activity {
   predecessorId?: string;
   bufferDays: number;
   bufferUnits: number;
+  crews: number;
   enabled: boolean;
 }
 

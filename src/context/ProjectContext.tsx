@@ -49,6 +49,7 @@ function migrateProject(parsed: any): ProjectData {
       ...a,
       bufferDays: a.bufferDays ?? 0,
       bufferUnits: a.bufferUnits ?? 0,
+      crews: a.crews ?? 1,
       enabled: a.enabled ?? true,
     })),
     pacRecords: (parsed.pacRecords || []).map((r: any) => ({
