@@ -79,7 +79,7 @@ export function LOBPanel() {
       setForm({
         name: a.name, unitStart: a.unitStart, unitEnd: a.unitEnd,
         startDate: a.startDate, rate: a.rate, color: a.color, category: a.category,
-        predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits,
+        predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits, crews: a.crews || 1,
       });
       setEditId(a.id);
     });
