@@ -44,6 +44,7 @@ export function LOBPanel() {
     predecessorId: '' as string,
     bufferDays: 0,
     bufferUnits: 0,
+    crews: 1,
   });
 
   const resetForm = () => {
