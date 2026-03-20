@@ -262,6 +262,18 @@ export function LOBPanel() {
             </div>
             <div className="grid grid-cols-2 gap-2">
               <div>
+                <Label className="text-[10px]">Cuadrillas</Label>
+                <Input type="number" min={1} max={10} value={form.crews} onChange={e => setForm(f => ({ ...f, crews: Math.max(1, +e.target.value || 1) }))} className="h-7 text-xs" />
+              </div>
+              <div>
+                <Label className="text-[10px]">Ritmo efectivo</Label>
+                <div className="h-7 flex items-center text-xs font-medium text-primary px-2 bg-primary/5 rounded border border-border">
+                  {(form.rate * form.crews).toFixed(1)} u/d
+                </div>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <div>
                 <Label className="text-[10px]">Buffer (días)</Label>
                 <Input type="number" min={0} value={form.bufferDays} onChange={e => setForm(f => ({ ...f, bufferDays: +e.target.value }))} className="h-7 text-xs" />
               </div>
