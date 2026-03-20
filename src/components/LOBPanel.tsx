@@ -135,6 +135,11 @@ export function LOBPanel() {
     setProject(p => {
       const acts = [...p.activities];
       if (newIndex < 0 || newIndex >= acts.length) return p;
+      // Swap activities and their startDates so chart X-axis reflects new order
+      const dateA = acts[index].startDate;
+      const dateB = acts[newIndex].startDate;
+      acts[index] = { ...acts[index], startDate: dateB };
+      acts[newIndex] = { ...acts[newIndex], startDate: dateA };
       [acts[index], acts[newIndex]] = [acts[newIndex], acts[index]];
       return { ...p, activities: acts };
     });
