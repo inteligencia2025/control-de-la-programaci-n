@@ -243,9 +243,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         undoStack.current = [];
         redoStack.current = [];
         skipHistory.current = false;
+        updateUndoRedoState();
       }
     } catch {}
-  }, []);
+  }, [updateUndoRedoState]);
 
   const deleteProject = useCallback((id: string) => {
     if (projectsList.length <= 1) return;
