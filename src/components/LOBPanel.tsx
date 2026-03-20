@@ -318,7 +318,18 @@ export function LOBPanel() {
           {project.activities.map((a, index) => {
             const pred = a.predecessorId ? project.activities.find(x => x.id === a.predecessorId) : null;
             return (
-              <div key={a.id} className={`group flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-secondary transition-colors cursor-pointer ${!a.enabled ? 'opacity-40' : ''} ${editId === a.id ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
+              <div
+                key={a.id}
+                draggable
+                onDragStart={() => handleDragStart(index)}
+                onDragOver={(e) => handleDragOver(e, index)}
+                onDrop={() => handleDrop(index)}
+                onDragEnd={handleDragEnd}
+                className={`group flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-secondary transition-colors ${!a.enabled ? 'opacity-40' : ''} ${editId === a.id ? 'ring-1 ring-primary bg-primary/5' : ''} ${dragOverIndex === index && dragIndex !== index ? 'border-t-2 border-primary' : ''} ${dragIndex === index ? 'opacity-30' : ''}`}
+              >
+                <div className="cursor-grab active:cursor-grabbing shrink-0 text-muted-foreground hover:text-foreground transition-colors" title="Arrastrar para reordenar">
+                  <GripVertical className="h-3.5 w-3.5" />
+                </div>
                 <input type="checkbox" checked={a.enabled} onChange={() => toggleActivityEnabled(a.id)} className="h-3 w-3 accent-primary cursor-pointer shrink-0" />
                 <div className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: a.color }} />
                 <div className="flex-1 min-w-0">
@@ -330,24 +341,6 @@ export function LOBPanel() {
                   </p>
                 </div>
                 <div className="flex gap-0.5 shrink-0">
-                  <button
-                    type="button"
-                    className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-                    onClick={(e) => { e.stopPropagation(); moveActivity(index, 'up'); }}
-                    disabled={index === 0}
-                    title="Subir"
-                  >
-                    <ArrowUp className="h-3 w-3" />
-                  </button>
-                  <button
-                    type="button"
-                    className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
-                    onClick={(e) => { e.stopPropagation(); moveActivity(index, 'down'); }}
-                    disabled={index === project.activities.length - 1}
-                    title="Bajar"
-                  >
-                    <ArrowDown className="h-3 w-3" />
-                  </button>
                   <button
                     type="button"
                     className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors"
