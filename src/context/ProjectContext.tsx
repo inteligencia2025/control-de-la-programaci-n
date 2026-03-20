@@ -265,12 +265,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             undoStack.current = [];
             redoStack.current = [];
             skipHistory.current = false;
+            updateUndoRedoState();
           }
         } catch {}
       }
       return updated;
     });
-  }, [projectsList, activeProjectId]);
+  }, [projectsList, activeProjectId, updateUndoRedoState]);
 
   const addActivity = useCallback((a: Activity) => {
     setProject(p => ({ ...p, activities: [...p.activities, a] }));
