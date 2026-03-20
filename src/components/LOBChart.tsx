@@ -455,6 +455,11 @@ export function LOBChart() {
             {clickTooltip.content}
           </div>
         )}
+        {hoverTooltip && !clickTooltip && (
+          <div className="absolute pointer-events-none bg-popover border border-border rounded-md shadow-md px-2.5 py-1 z-50 text-xs font-medium"
+            style={{ left: hoverTooltip.x, top: hoverTooltip.y }}>
+            {hoverTooltip.name}
+          </div>
       </div>
     </div>
   );
