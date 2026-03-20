@@ -55,7 +55,7 @@ export function LOBPanel() {
       name: '', unitStart: 1, unitEnd: defaultUnits,
       startDate: nextDate,
       rate: 1, color: DEFAULT_COLORS[project.activities.length % DEFAULT_COLORS.length],
-      category: 'estructura', predecessorId: '', bufferDays: 0, bufferUnits: 0,
+      category: 'estructura', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
     });
     setEditId(null);
   };
