@@ -135,27 +135,16 @@ export function LOBPanel() {
     setProject(p => {
       const acts = [...p.activities].map(a => ({ ...a }));
       if (newIndex < 0 || newIndex >= acts.length) return p;
-      const a = acts[index];
-      const b = acts[newIndex];
-      // Swap startDate, predecessorId, bufferDays, bufferUnits
-      const swap = (key: keyof Activity) => {
-        const tmp = (a as any)[key];
-        (a as any)[key] = (b as any)[key];
-        (b as any)[key] = tmp;
-      };
-      swap('startDate');
-      swap('predecessorId');
-      swap('bufferDays');
-      swap('bufferUnits');
-      // Update predecessor references: anything pointing to a should point to b and vice versa
-      const aId = a.id;
-      const bId = b.id;
-      for (const act of acts) {
-        if (act.id === aId || act.id === bId) continue;
-        if (act.predecessorId === aId) act.predecessorId = bId;
-        else if (act.predecessorId === bId) act.predecessorId = aId;
-      }
-      // Swap positions in array
+      // Simply swap positions in array and swap startDates only
+      const dateA = acts[index].startDate;
+      const dateB = acts[newIndex].startDate;
+      acts[index] = { ...acts[index], startDate: dateB };
+      acts[newIndex] = { ...acts[newIndex], startDate: dateA };
+      // Clear predecessor links between the two to avoid cycles
+      const aId = acts[index].id;
+      const bId = acts[newIndex].id;
+      if (acts[index].predecessorId === bId) acts[index].predecessorId = undefined;
+      if (acts[newIndex].predecessorId === aId) acts[newIndex].predecessorId = undefined;
       [acts[index], acts[newIndex]] = [acts[newIndex], acts[index]];
       return { ...p, activities: acts };
     });
