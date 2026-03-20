@@ -230,7 +230,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     undoStack.current = [];
     redoStack.current = [];
     skipHistory.current = false;
-  }, []);
+    updateUndoRedoState();
 
   const switchProject = useCallback((id: string) => {
     try {
