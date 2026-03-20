@@ -1,5 +1,5 @@
-import { useState, useMemo, useRef } from 'react';
-import { Plus, Trash2, Edit2, Home, Building2 } from 'lucide-react';
+import { useState, useMemo, useRef, useCallback } from 'react';
+import { Plus, Trash2, Edit2, Home, Building2, ArrowUp, ArrowDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -127,9 +127,18 @@ export function LOBPanel() {
 
   const handleDelete = (id: string) => {
     if (editId === id) resetForm();
-    // Defer to avoid React DOM reconciliation crash with large SVG
     requestAnimationFrame(() => removeActivity(id));
   };
+
+  const moveActivity = useCallback((index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    setProject(p => {
+      const acts = [...p.activities];
+      if (newIndex < 0 || newIndex >= acts.length) return p;
+      [acts[index], acts[newIndex]] = [acts[newIndex], acts[index]];
+      return { ...p, activities: acts };
+    });
+  }, [setProject]);
 
   const availablePredecessors = project.activities.filter(a => a.id !== editId);
   const unitLabel = project.projectType === 'casas' ? 'Unidad' : 'Piso';
@@ -272,7 +281,7 @@ export function LOBPanel() {
         </div>
 
         <div className="p-2 space-y-0.5">
-          {project.activities.map(a => {
+          {project.activities.map((a, index) => {
             const pred = a.predecessorId ? project.activities.find(x => x.id === a.predecessorId) : null;
             return (
               <div key={a.id} className={`group flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-secondary transition-colors cursor-pointer ${!a.enabled ? 'opacity-40' : ''} ${editId === a.id ? 'ring-1 ring-primary bg-primary/5' : ''}`}>
@@ -287,6 +296,24 @@ export function LOBPanel() {
                   </p>
                 </div>
                 <div className="flex gap-0.5 shrink-0">
+                  <button
+                    type="button"
+                    className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                    onClick={(e) => { e.stopPropagation(); moveActivity(index, 'up'); }}
+                    disabled={index === 0}
+                    title="Subir"
+                  >
+                    <ArrowUp className="h-3 w-3" />
+                  </button>
+                  <button
+                    type="button"
+                    className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors disabled:opacity-20 disabled:cursor-not-allowed"
+                    onClick={(e) => { e.stopPropagation(); moveActivity(index, 'down'); }}
+                    disabled={index === project.activities.length - 1}
+                    title="Bajar"
+                  >
+                    <ArrowDown className="h-3 w-3" />
+                  </button>
                   <button
                     type="button"
                     className="h-6 w-6 inline-flex items-center justify-center rounded hover:bg-muted transition-colors"
