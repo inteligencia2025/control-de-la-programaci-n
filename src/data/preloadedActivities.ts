@@ -6,6 +6,7 @@ export interface PreloadedActivity {
 }
 
 export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
+  // Estructura
   { name: 'MOVIMIENTO DE TIERRAS', category: 'estructura' },
   { name: 'PROVISIONALES DE OBRA', category: 'estructura' },
   { name: 'ADECUACIÓN CAMPAMENTOS', category: 'estructura' },
@@ -41,8 +42,43 @@ export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
   { name: 'PRUEBAS DE HERMETICIDAD Y PRESIÓN', category: 'estructura' },
   { name: 'SONDEO CAJAS ELÉCTRICAS', category: 'estructura' },
   { name: 'REDES DE GAS', category: 'estructura' },
+  // Acabados
   { name: 'BORDILLOS', category: 'acabados' },
   { name: 'CARTERAS', category: 'acabados' },
+  { name: 'REVOQUE', category: 'acabados' },
+  { name: 'ARGAMASA', category: 'acabados' },
+  { name: 'MORTERO', category: 'acabados' },
+  { name: 'ESTUCO', category: 'acabados' },
+  { name: 'FILETERÍA', category: 'acabados' },
+  { name: 'ESTRUCTURA LIVIANA', category: 'acabados' },
+  { name: 'PROLONGACIONES TUBERÍA HIDROSANITARIA Y ELÉCTRICA LIVIANA', category: 'acabados' },
+  { name: 'INSTALACIÓN SUPERBOARD (ACABADOS)', category: 'acabados' },
+  { name: 'ENCHAPE DE PARED', category: 'acabados' },
+  { name: 'INSTALACIÓN PLACA DE PARED', category: 'acabados' },
+  { name: 'MASILLADO', category: 'acabados' },
+  { name: 'ESTUCO (ACABADOS)', category: 'acabados' },
+  { name: 'PRIMERA Y SEGUNDA MANO DE PINTURA', category: 'acabados' },
+  { name: 'ENCHAPE PISOS', category: 'acabados' },
+  { name: 'PINTURA PARA CARPINTERÍA', category: 'acabados' },
+  { name: 'CARPINTERÍA', category: 'acabados' },
+  { name: 'ALAMBRADA', category: 'acabados' },
+  { name: 'APARATOS ELÉCTRICOS', category: 'acabados' },
+  { name: 'ENCHAPE PISOS (2)', category: 'acabados' },
+  { name: 'PISO LAMINADO', category: 'acabados' },
+  { name: '3RA MANO DE PINTURA', category: 'acabados' },
+  { name: 'FRAGUA', category: 'acabados' },
+  { name: 'APARATOS SANITARIOS', category: 'acabados' },
+  { name: 'DIVISIONES DE BAÑOS', category: 'acabados' },
+  { name: 'DETALLES FINALES', category: 'acabados' },
+  { name: 'ASEO', category: 'acabados' },
+  { name: 'PASAMANOS PUNTO FIJO ESCALAS', category: 'acabados' },
+  { name: 'ARGAMASA / MUROS LIVIANOS FACHADAS', category: 'acabados' },
+  { name: 'PINTURA DE FACHADA', category: 'acabados' },
+  { name: 'RED CONTRAINCENDIOS', category: 'acabados' },
+  { name: 'INSTALACIÓN VENTANAS', category: 'acabados' },
+  { name: 'CTO', category: 'acabados' },
+  { name: 'MEDIDORES ELÉCTRICOS', category: 'acabados' },
+  { name: 'MEDIDORES DE AGUA', category: 'acabados' },
 ];
 export function getDefaultColor(index: number): string {
   return DEFAULT_COLORS[index % DEFAULT_COLORS.length];
