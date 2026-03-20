@@ -422,8 +422,14 @@ export function LOBChart() {
                   fill="none" stroke={activity.color} strokeWidth={2} strokeDasharray="6 3" opacity={0.5} />
               );
             })}
+            {/* Crew lines (parallel, dashed) */}
+            {lines.map(({ activity, crewLines }) => crewLines.map((cl, ci) => (
+              <polyline key={`crew-${activity.id}-${ci}`}
+                points={cl.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
+                fill="none" stroke={activity.color} strokeWidth={1.5} strokeDasharray="4 3" opacity={0.6} strokeLinecap="round" />
+            )))}
             {/* Activity lines with data points */}
-            {lines.map(({ activity, points }) => (
+            {lines.map(({ activity, points, crewLines }) => (
               <g key={activity.id}>
                 <polyline points={points.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
                   fill="none" stroke={activity.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
@@ -433,7 +439,7 @@ export function LOBChart() {
                 {points.length > 0 && (
                   <text x={scaleX(points[points.length - 1].workdayIndex) + 6} y={scaleY(points[points.length - 1].unit)}
                     className="text-[10px] font-medium" fill={activity.color} dominantBaseline="middle">
-                    {activity.name}
+                    {activity.name}{(activity.crews || 1) > 1 ? ` (×${activity.crews})` : ''}
                   </text>
                 )}
               </g>
