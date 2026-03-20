@@ -159,18 +159,43 @@ export function LOBChart() {
     if (!chartData || !svgRef.current) return;
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
-    const { maxWorkday, workdays } = chartData;
-    const UNIT_H = 32;
-    const unitRange = chartData.maxUnit - chartData.minUnit;
-    const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
-    const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
-    const plotW = WIDTH - PADDING.left - PADDING.right;
+    const my = (e.clientY - rect.top) / zoom;
+    const { maxWorkday, workdays, lines, minUnit, maxUnit } = chartData;
+    const unitRange = maxUnit - minUnit;
+    const PAD = { top: 40, right: 30, bottom: 110, left: 80 };
+    const W = Math.max(900, maxWorkday * 40 + PAD.left + PAD.right);
+    const plotW = W - PAD.left - PAD.right;
+    const plotH = unitRange * 32;
 
-    const wdIdx = Math.round(((mx - PADDING.left) / plotW) * maxWorkday);
+    const wdIdx = Math.round(((mx - PAD.left) / plotW) * maxWorkday);
     if (wdIdx >= 0 && wdIdx < workdays.length) {
       setHoverDay(wdIdx);
     } else {
       setHoverDay(null);
+    }
+
+    // Find closest line segment
+    let bestDist = Infinity;
+    let bestName = '';
+    for (const { activity, points } of lines) {
+      for (let i = 0; i < points.length - 1; i++) {
+        const x1 = PAD.left + (points[i].workdayIndex / maxWorkday) * plotW;
+        const y1 = PAD.top + plotH - ((points[i].unit - minUnit) / unitRange) * plotH;
+        const x2 = PAD.left + (points[i + 1].workdayIndex / maxWorkday) * plotW;
+        const y2 = PAD.top + plotH - ((points[i + 1].unit - minUnit) / unitRange) * plotH;
+        const dx = x2 - x1, dy = y2 - y1;
+        const len2 = dx * dx + dy * dy;
+        const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((mx - x1) * dx + (my - y1) * dy) / len2));
+        const px = x1 + t * dx, py = y1 + t * dy;
+        const dist = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
+        if (dist < bestDist) { bestDist = dist; bestName = activity.name; }
+      }
+    }
+
+    if (bestDist < 15) {
+      setHoverTooltip({ x: e.clientX - rect.left + 12, y: e.clientY - rect.top - 24, name: bestName });
+    } else {
+      setHoverTooltip(null);
     }
   }, [chartData, zoom]);
 
