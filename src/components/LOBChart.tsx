@@ -16,12 +16,14 @@ function safeParse(dateStr: string): Date {
 
 interface LinePoint { workdayIndex: number; unit: number; }
 
-function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date {
+function getEffectiveStartDate(activity: Activity, activities: Activity[], visited: Set<string> = new Set()): Date {
   const baseStart = safeParse(activity.startDate);
   if (!activity.predecessorId) return baseStart;
+  if (visited.has(activity.id)) return baseStart; // break cycle
+  visited.add(activity.id);
   const pred = activities.find(a => a.id === activity.predecessorId);
   if (!pred) return baseStart;
-  const predStart = getEffectiveStartDate(pred, activities);
+  const predStart = getEffectiveStartDate(pred, activities, visited);
   const firstUnitWorkdays = Math.ceil(1 / pred.rate);
   const bufferDays = activity.bufferDays || 0;
   let current = new Date(predStart);
