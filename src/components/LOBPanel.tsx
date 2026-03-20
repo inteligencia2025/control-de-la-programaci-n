@@ -130,25 +130,49 @@ export function LOBPanel() {
     requestAnimationFrame(() => removeActivity(id));
   };
 
-  const moveActivity = useCallback((index: number, direction: 'up' | 'down') => {
-    const newIndex = direction === 'up' ? index - 1 : index + 1;
+  const [dragIndex, setDragIndex] = useState<number | null>(null);
+  const [dragOverIndex, setDragOverIndex] = useState<number | null>(null);
+
+  const handleDragStart = useCallback((index: number) => {
+    setDragIndex(index);
+  }, []);
+
+  const handleDragOver = useCallback((e: React.DragEvent, index: number) => {
+    e.preventDefault();
+    setDragOverIndex(index);
+  }, []);
+
+  const handleDrop = useCallback((dropIndex: number) => {
+    if (dragIndex === null || dragIndex === dropIndex) {
+      setDragIndex(null);
+      setDragOverIndex(null);
+      return;
+    }
     setProject(p => {
       const acts = [...p.activities].map(a => ({ ...a }));
-      if (newIndex < 0 || newIndex >= acts.length) return p;
-      // Simply swap positions in array and swap startDates only
-      const dateA = acts[index].startDate;
-      const dateB = acts[newIndex].startDate;
-      acts[index] = { ...acts[index], startDate: dateB };
-      acts[newIndex] = { ...acts[newIndex], startDate: dateA };
+      // Swap startDates
+      const dateA = acts[dragIndex].startDate;
+      const dateB = acts[dropIndex].startDate;
+      acts[dragIndex] = { ...acts[dragIndex], startDate: dateB };
+      acts[dropIndex] = { ...acts[dropIndex], startDate: dateA };
       // Clear predecessor links between the two to avoid cycles
-      const aId = acts[index].id;
-      const bId = acts[newIndex].id;
-      if (acts[index].predecessorId === bId) acts[index].predecessorId = undefined;
-      if (acts[newIndex].predecessorId === aId) acts[newIndex].predecessorId = undefined;
-      [acts[index], acts[newIndex]] = [acts[newIndex], acts[index]];
+      const aId = acts[dragIndex].id;
+      const bId = acts[dropIndex].id;
+      if (acts[dragIndex].predecessorId === bId) acts[dragIndex].predecessorId = undefined;
+      if (acts[dropIndex].predecessorId === aId) acts[dropIndex].predecessorId = undefined;
+      // Move element from dragIndex to dropIndex
+      const [moved] = acts.splice(dragIndex, 1);
+      acts.splice(dropIndex, 0, moved);
       return { ...p, activities: acts };
     });
-  }, [setProject]);
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }, [dragIndex, setProject]);
+
+  const handleDragEnd = useCallback(() => {
+    setDragIndex(null);
+    setDragOverIndex(null);
+  }, []);
 
   const availablePredecessors = project.activities.filter(a => a.id !== editId);
   const unitLabel = project.projectType === 'casas' ? 'Unidad' : 'Piso';
