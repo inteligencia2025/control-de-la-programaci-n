@@ -309,7 +309,7 @@ export function LOBChart() {
         <div ref={chartRef} className="bg-card rounded-lg border border-border p-2 inline-block origin-top-left" style={{ transform: `scale(${zoom})` }}>
           <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="select-none"
             onMouseMove={handleMouseMove}
-            onMouseLeave={() => setHoverDay(null)}
+            onMouseLeave={() => { setHoverDay(null); setHoverTooltip(null); }}
             onClick={(e) => { e.stopPropagation(); handleClick(e); }}>
             {/* Month shading */}
             {months.map((m, i) => (
