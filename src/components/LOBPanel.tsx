@@ -348,7 +348,7 @@ export function LOBPanel() {
                 <div className="flex-1 min-w-0">
                   <p className="text-[10px] font-medium truncate">{a.name}</p>
                   <p className="text-[9px] text-muted-foreground">
-                    {getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-{getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | {a.rate} u/d
+                    {getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-{getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | {a.rate} u/d{(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}
                     {a.bufferDays > 0 && ` | B:${a.bufferDays}d`}
                     {pred && <span className="ml-1">← {pred.name}</span>}
                   </p>
