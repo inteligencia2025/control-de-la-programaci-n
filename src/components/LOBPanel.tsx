@@ -127,9 +127,18 @@ export function LOBPanel() {
 
   const handleDelete = (id: string) => {
     if (editId === id) resetForm();
-    // Defer to avoid React DOM reconciliation crash with large SVG
     requestAnimationFrame(() => removeActivity(id));
   };
+
+  const moveActivity = useCallback((index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    setProject(p => {
+      const acts = [...p.activities];
+      if (newIndex < 0 || newIndex >= acts.length) return p;
+      [acts[index], acts[newIndex]] = [acts[newIndex], acts[index]];
+      return { ...p, activities: acts };
+    });
+  }, [setProject]);
 
   const availablePredecessors = project.activities.filter(a => a.id !== editId);
   const unitLabel = project.projectType === 'casas' ? 'Unidad' : 'Piso';
