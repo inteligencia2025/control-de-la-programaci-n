@@ -40,18 +40,52 @@ function getActivityLine(activity: Activity, projectStart: Date, activities: Act
   const bufferUnits = activity.bufferUnits || 0;
   const actualUnitStart = activity.unitStart + bufferUnits;
   const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
-  const totalWorkdays = Math.ceil(totalUnits / activity.rate);
+  const effectiveRate = activity.rate * (activity.crews || 1);
+  const totalWorkdays = Math.ceil(totalUnits / effectiveRate);
   let startIndex = 0;
   let current = new Date(projectStart);
   while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
   while (isWeekend(start)) { start = addDays(start, 1); startIndex++; }
   points.push({ workdayIndex: startIndex, unit: actualUnitStart });
   for (let i = 1; i <= totalWorkdays; i++) {
-    const unit = actualUnitStart + (activity.unitEnd > actualUnitStart ? 1 : -1) * activity.rate * i;
+    const unit = actualUnitStart + (activity.unitEnd > actualUnitStart ? 1 : -1) * effectiveRate * i;
     const clampedUnit = activity.unitEnd > actualUnitStart ? Math.min(unit, activity.unitEnd) : Math.max(unit, activity.unitEnd);
     points.push({ workdayIndex: startIndex + i, unit: clampedUnit });
   }
   return points;
+}
+
+/** Get individual crew lines for multi-crew activities */
+function getCrewLines(activity: Activity, projectStart: Date, activities: Activity[]): LinePoint[][] {
+  const crews = activity.crews || 1;
+  if (crews <= 1) return [];
+  let start = getEffectiveStartDate(activity, activities);
+  const bufferUnits = activity.bufferUnits || 0;
+  const actualUnitStart = activity.unitStart + bufferUnits;
+  const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
+  const direction = activity.unitEnd > actualUnitStart ? 1 : -1;
+  const unitsPerCrew = totalUnits / crews;
+
+  let startIndex = 0;
+  let current = new Date(projectStart);
+  while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
+  while (isWeekend(start)) { start = addDays(start, 1); startIndex++; }
+
+  const crewLines: LinePoint[][] = [];
+  for (let c = 0; c < crews; c++) {
+    const crewUnitStart = actualUnitStart + direction * Math.round(c * unitsPerCrew);
+    const crewUnitEnd = actualUnitStart + direction * Math.round((c + 1) * unitsPerCrew) - direction;
+    const crewUnits = Math.abs(crewUnitEnd - crewUnitStart) + 1;
+    const crewWorkdays = Math.ceil(crewUnits / activity.rate);
+    const points: LinePoint[] = [{ workdayIndex: startIndex, unit: crewUnitStart }];
+    for (let i = 1; i <= crewWorkdays; i++) {
+      const unit = crewUnitStart + direction * activity.rate * i;
+      const clamped = direction > 0 ? Math.min(unit, crewUnitEnd) : Math.max(unit, crewUnitEnd);
+      points.push({ workdayIndex: startIndex + i, unit: clamped });
+    }
+    crewLines.push(points);
+  }
+  return crewLines;
 }
 
 function getBufferLine(activity: Activity, projectStart: Date, activities: Activity[]): LinePoint[] | null {
