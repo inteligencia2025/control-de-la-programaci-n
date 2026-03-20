@@ -140,7 +140,8 @@ export function LOBChart() {
     const lines = enabledActivities.map(activity => {
       const points = getActivityLine(activity, projectStart, project.activities);
       const duration = points.length > 1 ? points[points.length - 1].workdayIndex - points[0].workdayIndex : 0;
-      return { activity, points, buffer: getBufferLine(activity, projectStart, project.activities), duration };
+      const crewLines = getCrewLines(activity, projectStart, project.activities);
+      return { activity, points, buffer: getBufferLine(activity, projectStart, project.activities), duration, crewLines };
     });
     const maxWorkday = Math.max(...lines.flatMap(l => {
       const pts = l.points.map(p => p.workdayIndex);
