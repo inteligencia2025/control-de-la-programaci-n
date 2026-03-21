@@ -92,7 +92,11 @@ export function ProjectToolbar() {
         <Button variant="secondary" size="sm" onClick={saveToFile} className="gap-1.5"><Save className="h-4 w-4" />Guardar</Button>
         <Button variant="secondary" size="sm" onClick={handleImport} className="gap-1.5"><Upload className="h-4 w-4" />Importar</Button>
         <Button variant="secondary" size="sm" onClick={handleExportExcel} className="gap-1.5"><FileSpreadsheet className="h-4 w-4" />Excel</Button>
+        {saving && <Loader2 className="h-4 w-4 text-primary-foreground/60 animate-spin" />}
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
+        <Button variant="secondary" size="icon" className="h-8 w-8" onClick={signOut} title="Cerrar sesión">
+          <LogOut className="h-4 w-4" />
+        </Button>
       </div>
     </header>
   );
