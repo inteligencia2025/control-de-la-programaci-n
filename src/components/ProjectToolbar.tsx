@@ -1,4 +1,5 @@
-import { Save, Upload, FileSpreadsheet, HardHat, PlusCircle, Trash2, Undo2, Redo2 } from 'lucide-react';
+import { Save, Upload, FileSpreadsheet, HardHat, PlusCircle, Trash2, Undo2, Redo2, LogOut, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
