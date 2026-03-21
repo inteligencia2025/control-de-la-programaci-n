@@ -1,8 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { ProjectData, Activity, LookaheadItem, PACRecord } from '@/types/project';
+import { useAuth } from '@/hooks/useAuth';
+import { supabase } from '@/integrations/supabase/client';
+import { useToast } from '@/hooks/use-toast';
 
-const STORAGE_KEY = 'lean-construction-project';
-const PROJECTS_INDEX_KEY = 'lean-construction-projects-index';
 const MAX_UNDO = 30;
 
 const defaultProject: ProjectData = {
@@ -22,49 +23,6 @@ const defaultProject: ProjectData = {
 interface ProjectIndexEntry {
   id: string;
   name: string;
-}
-
-function getProjectStorageKey(id: string) {
-  return `lean-project-${id}`;
-}
-
-function loadProjectsIndex(): ProjectIndexEntry[] {
-  try {
-    const raw = localStorage.getItem(PROJECTS_INDEX_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return [];
-}
-
-function saveProjectsIndex(index: ProjectIndexEntry[]) {
-  localStorage.setItem(PROJECTS_INDEX_KEY, JSON.stringify(index));
-}
-
-function migrateProject(parsed: any): ProjectData {
-  return {
-    ...defaultProject,
-    ...parsed,
-    projectType: parsed.projectType || 'casas',
-    buildingConfig: parsed.buildingConfig || { floors: 10, unitsPerFloor: 4 },
-    activities: (parsed.activities || []).map((a: any) => ({
-      ...a,
-      bufferDays: a.bufferDays ?? 0,
-      bufferUnits: a.bufferUnits ?? 0,
-      crews: a.crews ?? 1,
-      enabled: a.enabled ?? true,
-    })),
-    pacRecords: (parsed.pacRecords || []).map((r: any) => ({
-      ...r,
-      weekNumber: r.weekNumber ?? 1,
-    })),
-    lookahead: (parsed.lookahead || []).map((l: any) => ({
-      ...l,
-      restrictions: typeof l.restrictions === 'object' ? l.restrictions : {},
-    })),
-    responsibles: parsed.responsibles || [],
-    projectStartDate: parsed.projectStartDate || new Date().toISOString().split('T')[0],
-    defaultUnits: parsed.defaultUnits || 10,
-  };
 }
 
 interface ProjectContextType {
@@ -90,6 +48,7 @@ interface ProjectContextType {
   redo: () => void;
   canUndo: boolean;
   canRedo: boolean;
+  saving: boolean;
 }
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
@@ -100,36 +59,25 @@ export const useProject = () => {
   return ctx;
 };
 
+// Debounce helper
+function useDebouncedCallback<T extends (...args: any[]) => any>(fn: T, delay: number) {
+  const timer = useRef<ReturnType<typeof setTimeout>>();
+  return useCallback((...args: Parameters<T>) => {
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => fn(...args), delay);
+  }, [fn, delay]) as T;
+}
+
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [projectsList, setProjectsList] = useState<ProjectIndexEntry[]>(() => {
-    const idx = loadProjectsIndex();
-    if (idx.length > 0) return idx;
-    const oldData = localStorage.getItem(STORAGE_KEY);
-    const id = crypto.randomUUID();
-    const name = oldData ? (JSON.parse(oldData).name || 'Nuevo Proyecto') : 'Nuevo Proyecto';
-    const entry = { id, name };
-    if (oldData) {
-      localStorage.setItem(getProjectStorageKey(id), oldData);
-      localStorage.removeItem(STORAGE_KEY);
-    }
-    saveProjectsIndex([entry]);
-    return [entry];
-  });
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const [projectsList, setProjectsList] = useState<ProjectIndexEntry[]>([]);
+  const [activeProjectId, setActiveProjectId] = useState('');
+  const [project, setProjectInternal] = useState<ProjectData>(defaultProject);
+  const [saving, setSaving] = useState(false);
+  const [loaded, setLoaded] = useState(false);
 
-  const [activeProjectId, setActiveProjectId] = useState<string>(() => {
-    return projectsList[0]?.id || '';
-  });
-
-  const [project, setProjectInternal] = useState<ProjectData>(() => {
-    if (!activeProjectId) return defaultProject;
-    try {
-      const raw = localStorage.getItem(getProjectStorageKey(activeProjectId));
-      if (raw) return migrateProject(JSON.parse(raw));
-    } catch {}
-    return defaultProject;
-  });
-
-  // Undo/Redo stacks
+  // Undo/Redo
   const undoStack = useRef<ProjectData[]>([]);
   const redoStack = useRef<ProjectData[]>([]);
   const skipHistory = useRef(false);
@@ -158,9 +106,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         prev.projectStartDate !== next.projectStartDate ||
         prev.defaultUnits !== next.defaultUnits ||
         prev.projectType !== next.projectType;
-      if (structuralChange) {
-        pushUndo(prev);
-      }
+      if (structuralChange) pushUndo(prev);
       return next;
     });
   }, [pushUndo]);
@@ -187,127 +133,276 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     updateUndoRedoState();
   }, [updateUndoRedoState]);
 
-  // Keyboard shortcuts
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
-      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      }
-      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) {
-        e.preventDefault();
-        redo();
-      }
+      if ((e.ctrlKey || e.metaKey) && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      if ((e.ctrlKey || e.metaKey) && (e.key === 'y' || (e.key === 'z' && e.shiftKey))) { e.preventDefault(); redo(); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
   }, [undo, redo]);
 
-  // Save project whenever it changes
+  // ---- LOAD from Supabase ----
   useEffect(() => {
-    if (activeProjectId) {
-      localStorage.setItem(getProjectStorageKey(activeProjectId), JSON.stringify(project));
-      setProjectsList(prev => {
-        const updated = prev.map(p => p.id === activeProjectId ? { ...p, name: project.name } : p);
-        saveProjectsIndex(updated);
-        return updated;
-      });
+    if (!user) {
+      setProjectsList([]);
+      setActiveProjectId('');
+      setProjectInternal(defaultProject);
+      setLoaded(false);
+      return;
     }
-  }, [project, activeProjectId]);
+    const load = async () => {
+      const { data: projects } = await supabase
+        .from('projects')
+        .select('id, name')
+        .order('created_at', { ascending: true });
 
-  const createNewProject = useCallback((name?: string) => {
-    const id = crypto.randomUUID();
-    const newProject = { ...defaultProject, name: name || 'Nuevo Proyecto' };
-    localStorage.setItem(getProjectStorageKey(id), JSON.stringify(newProject));
-    setProjectsList(prev => {
-      const updated = [...prev, { id, name: newProject.name }];
-      saveProjectsIndex(updated);
-      return updated;
-    });
-    setActiveProjectId(id);
+      if (!projects || projects.length === 0) {
+        // Create first project
+        const { data: newP } = await supabase
+          .from('projects')
+          .insert({ user_id: user.id, name: 'Nuevo Proyecto' })
+          .select('id, name')
+          .single();
+        if (newP) {
+          setProjectsList([{ id: newP.id, name: newP.name }]);
+          setActiveProjectId(newP.id);
+          setProjectInternal(defaultProject);
+        }
+      } else {
+        setProjectsList(projects.map(p => ({ id: p.id, name: p.name })));
+        setActiveProjectId(projects[0].id);
+        await loadProject(projects[0].id);
+      }
+      setLoaded(true);
+    };
+    load();
+  }, [user]);
+
+  const loadProject = async (projectId: string) => {
+    const [
+      { data: proj },
+      { data: acts },
+      { data: look },
+      { data: pacs },
+    ] = await Promise.all([
+      supabase.from('projects').select('*').eq('id', projectId).single(),
+      supabase.from('activities').select('*').eq('project_id', projectId).order('sort_order'),
+      supabase.from('lookahead_items').select('*').eq('project_id', projectId),
+      supabase.from('pac_records').select('*').eq('project_id', projectId),
+    ]);
+
+    if (!proj) return;
+
+    const projectData: ProjectData = {
+      name: proj.name,
+      projectType: (proj.project_type as any) || 'casas',
+      buildingConfig: (proj.building_config as any) || { floors: 10, unitsPerFloor: 4 },
+      activities: (acts || []).map((a: any, i: number) => ({
+        id: a.id,
+        name: a.name,
+        unitStart: a.unit_start,
+        unitEnd: a.unit_end,
+        startDate: a.start_date,
+        rate: Number(a.rate),
+        color: a.color,
+        category: a.category,
+        predecessorId: a.predecessor_id || undefined,
+        bufferDays: Number(a.buffer_days),
+        bufferUnits: Number(a.buffer_units),
+        crews: a.crews,
+        enabled: a.enabled,
+      })),
+      lookahead: (look || []).map((l: any) => ({
+        id: l.id,
+        activityId: l.activity_id,
+        activityName: l.activity_name,
+        responsible: l.responsible,
+        week: l.week,
+        restrictions: (l.restrictions as any) || {},
+        commitment: l.commitment || undefined,
+        commitmentDate: l.commitment_date || undefined,
+        commitmentMet: l.commitment_met ?? undefined,
+        commitmentCause: l.commitment_cause || undefined,
+      })),
+      pacRecords: (pacs || []).map((r: any) => ({
+        id: r.id,
+        date: r.date,
+        weekNumber: r.week_number,
+        activityName: r.activity_name,
+        responsible: r.responsible,
+        planned: r.planned,
+        completed: r.completed,
+        failureCause: r.failure_cause,
+        failureDescription: r.failure_description || undefined,
+      })),
+      contractors: (proj.contractors as string[]) || [],
+      responsibles: (proj.responsibles as string[]) || [],
+      customFailureCauses: (proj.custom_failure_causes as string[]) || [],
+      projectStartDate: proj.project_start_date || undefined,
+      defaultUnits: proj.default_units || 10,
+    };
+
     skipHistory.current = true;
-    setProjectInternal(newProject);
+    setProjectInternal(projectData);
     undoStack.current = [];
     redoStack.current = [];
     skipHistory.current = false;
     updateUndoRedoState();
-  }, [updateUndoRedoState]);
+  };
 
-  const switchProject = useCallback((id: string) => {
+  // ---- SAVE to Supabase (debounced) ----
+  const saveProjectRef = useRef<ProjectData | null>(null);
+  const activeIdRef = useRef(activeProjectId);
+  activeIdRef.current = activeProjectId;
+
+  const doSave = useCallback(async (data: ProjectData, projectId: string) => {
+    if (!user || !projectId) return;
+    setSaving(true);
     try {
-      const raw = localStorage.getItem(getProjectStorageKey(id));
-      if (raw) {
-        setActiveProjectId(id);
-        skipHistory.current = true;
-        setProjectInternal(migrateProject(JSON.parse(raw)));
-        undoStack.current = [];
-        redoStack.current = [];
-        skipHistory.current = false;
-        updateUndoRedoState();
-      }
-    } catch {}
-  }, [updateUndoRedoState]);
+      // Update project metadata
+      await supabase.from('projects').update({
+        name: data.name,
+        project_type: data.projectType,
+        building_config: data.buildingConfig as any,
+        contractors: data.contractors,
+        responsibles: data.responsibles,
+        custom_failure_causes: data.customFailureCauses,
+        project_start_date: data.projectStartDate || null,
+        default_units: data.defaultUnits || 10,
+        updated_at: new Date().toISOString(),
+      }).eq('id', projectId);
 
-  const deleteProject = useCallback((id: string) => {
+      // Sync activities: delete all then insert
+      await supabase.from('activities').delete().eq('project_id', projectId);
+      if (data.activities.length > 0) {
+        await supabase.from('activities').insert(
+          data.activities.map((a, i) => ({
+            id: a.id,
+            project_id: projectId,
+            name: a.name,
+            unit_start: a.unitStart,
+            unit_end: a.unitEnd,
+            start_date: a.startDate,
+            rate: a.rate,
+            color: a.color,
+            category: a.category,
+            predecessor_id: a.predecessorId || null,
+            buffer_days: a.bufferDays,
+            buffer_units: a.bufferUnits,
+            crews: a.crews,
+            enabled: a.enabled,
+            sort_order: i,
+          }))
+        );
+      }
+
+      // Sync lookahead
+      await supabase.from('lookahead_items').delete().eq('project_id', projectId);
+      if (data.lookahead.length > 0) {
+        await supabase.from('lookahead_items').insert(
+          data.lookahead.map(l => ({
+            id: l.id,
+            project_id: projectId,
+            activity_id: l.activityId,
+            activity_name: l.activityName,
+            responsible: l.responsible,
+            week: l.week,
+            restrictions: l.restrictions as any,
+            commitment: l.commitment || null,
+            commitment_date: l.commitmentDate || null,
+            commitment_met: l.commitmentMet ?? null,
+            commitment_cause: l.commitmentCause || null,
+          }))
+        );
+      }
+
+      // Sync PAC records
+      await supabase.from('pac_records').delete().eq('project_id', projectId);
+      if (data.pacRecords.length > 0) {
+        await supabase.from('pac_records').insert(
+          data.pacRecords.map(r => ({
+            id: r.id,
+            project_id: projectId,
+            date: r.date,
+            week_number: r.weekNumber,
+            activity_name: r.activityName,
+            responsible: r.responsible,
+            planned: r.planned,
+            completed: r.completed,
+            failure_cause: r.failureCause,
+            failure_description: r.failureDescription || null,
+          }))
+        );
+      }
+    } catch (err) {
+      console.error('Error saving project:', err);
+    }
+    setSaving(false);
+  }, [user]);
+
+  const debouncedSave = useDebouncedCallback((data: ProjectData, projectId: string) => {
+    doSave(data, projectId);
+  }, 1500);
+
+  // Auto-save on project changes
+  useEffect(() => {
+    if (!loaded || !activeProjectId || !user) return;
+    debouncedSave(project, activeProjectId);
+  }, [project, activeProjectId, loaded, user, debouncedSave]);
+
+  // Also update project name in list
+  useEffect(() => {
+    if (!activeProjectId) return;
+    setProjectsList(prev => prev.map(p => p.id === activeProjectId ? { ...p, name: project.name } : p));
+  }, [project.name, activeProjectId]);
+
+  const createNewProject = useCallback(async (name?: string) => {
+    if (!user) return;
+    const { data: newP } = await supabase
+      .from('projects')
+      .insert({ user_id: user.id, name: name || 'Nuevo Proyecto' })
+      .select('id, name')
+      .single();
+    if (newP) {
+      setProjectsList(prev => [...prev, { id: newP.id, name: newP.name }]);
+      setActiveProjectId(newP.id);
+      skipHistory.current = true;
+      setProjectInternal({ ...defaultProject, name: newP.name });
+      undoStack.current = [];
+      redoStack.current = [];
+      skipHistory.current = false;
+      updateUndoRedoState();
+    }
+  }, [user, updateUndoRedoState]);
+
+  const switchProject = useCallback(async (id: string) => {
+    setActiveProjectId(id);
+    await loadProject(id);
+  }, []);
+
+  const deleteProject = useCallback(async (id: string) => {
     if (projectsList.length <= 1) return;
-    localStorage.removeItem(getProjectStorageKey(id));
+    await supabase.from('projects').delete().eq('id', id);
     setProjectsList(prev => {
       const updated = prev.filter(p => p.id !== id);
-      saveProjectsIndex(updated);
       if (id === activeProjectId && updated.length > 0) {
-        const newActive = updated[0];
-        setActiveProjectId(newActive.id);
-        try {
-          const raw = localStorage.getItem(getProjectStorageKey(newActive.id));
-          if (raw) {
-            skipHistory.current = true;
-            setProjectInternal(migrateProject(JSON.parse(raw)));
-            undoStack.current = [];
-            redoStack.current = [];
-            skipHistory.current = false;
-            updateUndoRedoState();
-          }
-        } catch {}
+        setActiveProjectId(updated[0].id);
+        loadProject(updated[0].id);
       }
       return updated;
     });
-  }, [projectsList, activeProjectId, updateUndoRedoState]);
+  }, [projectsList, activeProjectId]);
 
-  const addActivity = useCallback((a: Activity) => {
-    setProject(p => ({ ...p, activities: [...p.activities, a] }));
-  }, [setProject]);
-
-  const updateActivity = useCallback((a: Activity) => {
-    setProject(p => ({ ...p, activities: p.activities.map(x => x.id === a.id ? a : x) }));
-  }, [setProject]);
-
-  const removeActivity = useCallback((id: string) => {
-    setProject(p => ({ ...p, activities: p.activities.filter(x => x.id !== id) }));
-  }, [setProject]);
-
-  const addLookahead = useCallback((item: LookaheadItem) => {
-    setProject(p => ({ ...p, lookahead: [...p.lookahead, item] }));
-  }, [setProject]);
-
-  const updateLookahead = useCallback((item: LookaheadItem) => {
-    setProject(p => ({ ...p, lookahead: p.lookahead.map(x => x.id === item.id ? item : x) }));
-  }, [setProject]);
-
-  const removeLookahead = useCallback((id: string) => {
-    setProject(p => ({ ...p, lookahead: p.lookahead.filter(x => x.id !== id) }));
-  }, [setProject]);
-
-  const addPACRecord = useCallback((r: PACRecord) => {
-    setProject(p => ({ ...p, pacRecords: [...p.pacRecords, r] }));
-  }, [setProject]);
-
-  const updatePACRecord = useCallback((r: PACRecord) => {
-    setProject(p => ({ ...p, pacRecords: p.pacRecords.map(x => x.id === r.id ? r : x) }));
-  }, [setProject]);
-
-  const removePACRecord = useCallback((id: string) => {
-    setProject(p => ({ ...p, pacRecords: p.pacRecords.filter(x => x.id !== id) }));
-  }, [setProject]);
+  const addActivity = useCallback((a: Activity) => setProject(p => ({ ...p, activities: [...p.activities, a] })), [setProject]);
+  const updateActivity = useCallback((a: Activity) => setProject(p => ({ ...p, activities: p.activities.map(x => x.id === a.id ? a : x) })), [setProject]);
+  const removeActivity = useCallback((id: string) => setProject(p => ({ ...p, activities: p.activities.filter(x => x.id !== id) })), [setProject]);
+  const addLookahead = useCallback((item: LookaheadItem) => setProject(p => ({ ...p, lookahead: [...p.lookahead, item] })), [setProject]);
+  const updateLookahead = useCallback((item: LookaheadItem) => setProject(p => ({ ...p, lookahead: p.lookahead.map(x => x.id === item.id ? item : x) })), [setProject]);
+  const removeLookahead = useCallback((id: string) => setProject(p => ({ ...p, lookahead: p.lookahead.filter(x => x.id !== id) })), [setProject]);
+  const addPACRecord = useCallback((r: PACRecord) => setProject(p => ({ ...p, pacRecords: [...p.pacRecords, r] })), [setProject]);
+  const updatePACRecord = useCallback((r: PACRecord) => setProject(p => ({ ...p, pacRecords: p.pacRecords.map(x => x.id === r.id ? r : x) })), [setProject]);
+  const removePACRecord = useCallback((id: string) => setProject(p => ({ ...p, pacRecords: p.pacRecords.filter(x => x.id !== id) })), [setProject]);
 
   const saveToFile = useCallback(() => {
     const blob = new Blob([JSON.stringify(project, null, 2)], { type: 'application/json' });
@@ -334,7 +429,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addLookahead, updateLookahead, removeLookahead,
       addPACRecord, updatePACRecord, removePACRecord,
       saveToFile, loadFromFile,
-      undo, redo, canUndo, canRedo,
+      undo, redo, canUndo, canRedo, saving,
     }}>
       {children}
     </ProjectContext.Provider>

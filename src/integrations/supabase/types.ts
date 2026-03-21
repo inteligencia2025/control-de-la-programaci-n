@@ -14,7 +14,219 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      activities: {
+        Row: {
+          buffer_days: number
+          buffer_units: number
+          category: string
+          color: string
+          created_at: string
+          crews: number
+          enabled: boolean
+          id: string
+          name: string
+          predecessor_id: string | null
+          project_id: string
+          rate: number
+          sort_order: number
+          start_date: string
+          unit_end: number
+          unit_start: number
+        }
+        Insert: {
+          buffer_days?: number
+          buffer_units?: number
+          category?: string
+          color?: string
+          created_at?: string
+          crews?: number
+          enabled?: boolean
+          id?: string
+          name: string
+          predecessor_id?: string | null
+          project_id: string
+          rate?: number
+          sort_order?: number
+          start_date: string
+          unit_end?: number
+          unit_start?: number
+        }
+        Update: {
+          buffer_days?: number
+          buffer_units?: number
+          category?: string
+          color?: string
+          created_at?: string
+          crews?: number
+          enabled?: boolean
+          id?: string
+          name?: string
+          predecessor_id?: string | null
+          project_id?: string
+          rate?: number
+          sort_order?: number
+          start_date?: string
+          unit_end?: number
+          unit_start?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "activities_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lookahead_items: {
+        Row: {
+          activity_id: string
+          activity_name: string
+          commitment: string | null
+          commitment_cause: string | null
+          commitment_date: string | null
+          commitment_met: boolean | null
+          created_at: string
+          id: string
+          project_id: string
+          responsible: string
+          restrictions: Json
+          week: number
+        }
+        Insert: {
+          activity_id: string
+          activity_name: string
+          commitment?: string | null
+          commitment_cause?: string | null
+          commitment_date?: string | null
+          commitment_met?: boolean | null
+          created_at?: string
+          id?: string
+          project_id: string
+          responsible?: string
+          restrictions?: Json
+          week?: number
+        }
+        Update: {
+          activity_id?: string
+          activity_name?: string
+          commitment?: string | null
+          commitment_cause?: string | null
+          commitment_date?: string | null
+          commitment_met?: boolean | null
+          created_at?: string
+          id?: string
+          project_id?: string
+          responsible?: string
+          restrictions?: Json
+          week?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lookahead_items_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      pac_records: {
+        Row: {
+          activity_name: string
+          completed: boolean
+          created_at: string
+          date: string
+          failure_cause: string
+          failure_description: string | null
+          id: string
+          planned: boolean
+          project_id: string
+          responsible: string
+          week_number: number
+        }
+        Insert: {
+          activity_name: string
+          completed?: boolean
+          created_at?: string
+          date: string
+          failure_cause?: string
+          failure_description?: string | null
+          id?: string
+          planned?: boolean
+          project_id: string
+          responsible?: string
+          week_number?: number
+        }
+        Update: {
+          activity_name?: string
+          completed?: boolean
+          created_at?: string
+          date?: string
+          failure_cause?: string
+          failure_description?: string | null
+          id?: string
+          planned?: boolean
+          project_id?: string
+          responsible?: string
+          week_number?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "pac_records_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      projects: {
+        Row: {
+          building_config: Json
+          contractors: string[]
+          created_at: string
+          custom_failure_causes: string[]
+          default_units: number | null
+          id: string
+          name: string
+          project_start_date: string | null
+          project_type: string
+          responsibles: string[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          building_config?: Json
+          contractors?: string[]
+          created_at?: string
+          custom_failure_causes?: string[]
+          default_units?: number | null
+          id?: string
+          name?: string
+          project_start_date?: string | null
+          project_type?: string
+          responsibles?: string[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          building_config?: Json
+          contractors?: string[]
+          created_at?: string
+          custom_failure_causes?: string[]
+          default_units?: number | null
+          id?: string
+          name?: string
+          project_start_date?: string | null
+          project_type?: string
+          responsibles?: string[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never

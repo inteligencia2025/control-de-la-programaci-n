@@ -8,13 +8,14 @@ import { LOBChart } from '@/components/LOBChart';
 import { LookaheadTable } from '@/components/LookaheadTable';
 import { ProductionControl } from '@/components/ProductionControl';
 import { GanttChart } from '@/components/GanttChart';
+import { useAuth } from '@/hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
   state = { hasError: false };
   static getDerivedStateFromError() { return { hasError: true }; }
   componentDidCatch(error: Error, info: ErrorInfo) {
     console.warn('Chart recovered from render error:', error.message);
-    // Auto-recover on next tick
     setTimeout(() => this.setState({ hasError: false }), 50);
   }
   render() {
@@ -40,6 +41,20 @@ const tabs = [
 ];
 
 const Index = () => {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-muted-foreground">Cargando...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/auth" replace />;
+  }
+
   return (
     <ProjectProvider>
       <div className="flex flex-col h-screen bg-background">
