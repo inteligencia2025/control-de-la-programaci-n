@@ -344,7 +344,8 @@ export function LOBChart() {
     else months[months.length - 1].endIdx = i;
   });
 
-  const legendY = PADDING.top + plotH + 75;
+  const ganttAreaY = PADDING.top + plotH + 68;
+  const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
   return (
