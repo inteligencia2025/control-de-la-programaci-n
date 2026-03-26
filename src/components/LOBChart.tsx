@@ -145,11 +145,23 @@ export function LOBChart() {
       const crewLines = getCrewLines(activity, projectStart, project.activities);
       return { activity, points, buffer: getBufferLine(activity, projectStart, project.activities), duration, crewLines };
     });
-    const maxWorkday = Math.max(...lines.flatMap(l => {
+    const lobMaxWorkday = lines.length > 0 ? Math.max(...lines.flatMap(l => {
       const pts = l.points.map(p => p.workdayIndex);
       if (l.buffer) pts.push(...l.buffer.map(p => p.workdayIndex));
       return pts;
-    })) + 5;
+    })) : 0;
+    // We'll compute gantt bars after workdays are built, but need a preliminary maxWorkday
+    const prelimGanttMax = ganttActivities.reduce((max, activity) => {
+      const start = getEffectiveStartDate(activity, project.activities);
+      const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+      const effectiveRate = activity.rate * (activity.crews || 1);
+      const durationDays = Math.ceil(totalUnits / effectiveRate);
+      let startIdx = 0;
+      let cur = new Date(projectStart);
+      while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
+      return Math.max(max, startIdx + durationDays);
+    }, 0);
+    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax) + 5;
     const allUnits = enabledActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const minUnit = Math.min(...allUnits) - 1;
     const maxUnit = Math.max(...allUnits) + 1;
