@@ -320,7 +320,7 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
