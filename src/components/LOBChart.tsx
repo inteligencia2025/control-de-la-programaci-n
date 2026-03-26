@@ -132,6 +132,8 @@ export function LOBChart() {
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
+  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales'), [enabledActivities]);
+  const ganttActivities = useMemo(() => enabledActivities.filter(a => a.category === 'zonas_sociales'), [enabledActivities]);
 
   const chartData = useMemo(() => {
     if (enabledActivities.length === 0) return null;
