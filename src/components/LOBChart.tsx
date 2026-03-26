@@ -190,7 +190,7 @@ export function LOBChart() {
     });
     const totalDuration = maxWorkday - 5;
     return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars };
-  }, [enabledActivities, project.activities]);
+  }, [lobActivities, ganttActivities, enabledActivities, project.activities]);
 
   const handleExportPNG = async () => {
     if (!svgRef.current) return;
