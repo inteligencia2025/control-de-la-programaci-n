@@ -463,6 +463,30 @@ export function LOBChart() {
                 <title>Conflicto: {inter.a1} × {inter.a2}</title>
               </g>
             ))}
+            {/* Gantt bars for Zonas Sociales */}
+            {ganttBars.length > 0 && (
+              <g>
+                <text x={PADDING.left} y={ganttAreaY - 4} className="fill-foreground text-[11px] font-semibold">
+                  Zonas Sociales
+                </text>
+                <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={ganttAreaY} y2={ganttAreaY}
+                  stroke="hsl(var(--border))" strokeWidth={0.5} />
+                {ganttBars.map(({ activity, startIdx, endIdx, duration }, i) => {
+                  const barY = ganttAreaY + 4 + i * 28;
+                  const barX = scaleX(startIdx);
+                  const barW = scaleX(endIdx) - scaleX(startIdx);
+                  return (
+                    <g key={`gantt-${activity.id}`}>
+                      <rect x={barX} y={barY} width={Math.max(barW, 4)} height={20} rx={4}
+                        fill={activity.color} opacity={0.85} />
+                      <text x={barX + 5} y={barY + 14} className="text-[10px] font-medium" fill="white" dominantBaseline="middle">
+                        {activity.name} ({duration}d)
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            )}
             {/* Axis lines */}
             <line x1={PADDING.left} x2={PADDING.left} y1={PADDING.top} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
             <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={PADDING.top + plotH} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
