@@ -40,7 +40,7 @@ export function LOBPanel() {
     startDate: suggestedStartDate,
     rate: 1,
     color: DEFAULT_COLORS[0],
-    category: 'estructura' as 'estructura' | 'acabados',
+    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales',
     predecessorId: '' as string,
     bufferDays: 0,
     bufferUnits: 0,
