@@ -13,7 +13,7 @@ export interface Activity {
   startDate: string; // YYYY-MM-DD
   rate: number; // units per day
   color: string;
-  category: 'estructura' | 'acabados';
+  category: 'estructura' | 'acabados' | 'zonas_sociales';
   predecessorId?: string;
   bufferDays: number;
   bufferUnits: number;

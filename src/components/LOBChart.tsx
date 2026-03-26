@@ -132,22 +132,36 @@ export function LOBChart() {
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
+  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales'), [enabledActivities]);
+  const ganttActivities = useMemo(() => enabledActivities.filter(a => a.category === 'zonas_sociales'), [enabledActivities]);
 
   const chartData = useMemo(() => {
     if (enabledActivities.length === 0) return null;
     const effectiveStarts = enabledActivities.map(a => getEffectiveStartDate(a, project.activities));
     const projectStart = new Date(Math.min(...effectiveStarts.map(d => d.getTime())));
-    const lines = enabledActivities.map(activity => {
+    const lines = lobActivities.map(activity => {
       const points = getActivityLine(activity, projectStart, project.activities);
       const duration = points.length > 1 ? points[points.length - 1].workdayIndex - points[0].workdayIndex : 0;
       const crewLines = getCrewLines(activity, projectStart, project.activities);
       return { activity, points, buffer: getBufferLine(activity, projectStart, project.activities), duration, crewLines };
     });
-    const maxWorkday = Math.max(...lines.flatMap(l => {
+    const lobMaxWorkday = lines.length > 0 ? Math.max(...lines.flatMap(l => {
       const pts = l.points.map(p => p.workdayIndex);
       if (l.buffer) pts.push(...l.buffer.map(p => p.workdayIndex));
       return pts;
-    })) + 5;
+    })) : 0;
+    // We'll compute gantt bars after workdays are built, but need a preliminary maxWorkday
+    const prelimGanttMax = ganttActivities.reduce((max, activity) => {
+      const start = getEffectiveStartDate(activity, project.activities);
+      const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+      const effectiveRate = activity.rate * (activity.crews || 1);
+      const durationDays = Math.ceil(totalUnits / effectiveRate);
+      let startIdx = 0;
+      let cur = new Date(projectStart);
+      while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
+      return Math.max(max, startIdx + durationDays);
+    }, 0);
+    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax) + 5;
     const allUnits = enabledActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const minUnit = Math.min(...allUnits) - 1;
     const maxUnit = Math.max(...allUnits) + 1;
@@ -163,8 +177,19 @@ export function LOBChart() {
       current = addDays(current, 1);
     }
     const intersections = findIntersections(lines.map(l => ({ activity: l.activity, points: l.points })));
+    // Compute Gantt bars for zonas_sociales
+    const ganttBars = ganttActivities.map(activity => {
+      const start = getEffectiveStartDate(activity, project.activities);
+      const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+      const effectiveRate = activity.rate * (activity.crews || 1);
+      const durationDays = Math.ceil(totalUnits / effectiveRate);
+      let startIdx = 0;
+      let cur = new Date(projectStart);
+      while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
+      return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
+    });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration };
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars };
   }, [enabledActivities, project.activities]);
 
   const handleExportPNG = async () => {
@@ -295,17 +320,19 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
+  const allLegendItems = [...lines.map(l => ({ activity: l.activity, duration: l.duration })), ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration }))];
   const LEGEND_ITEMS_PER_ROW = 4;
-  const legendRows = Math.ceil(lines.length / LEGEND_ITEMS_PER_ROW);
+  const legendRows = Math.ceil(allLegendItems.length / LEGEND_ITEMS_PER_ROW);
   const LEGEND_H = legendRows * 22 + 10;
+  const GANTT_AREA_H = ganttBars.length > 0 ? ganttBars.length * 28 + 20 : 0;
   const DURATION_BOX_H = 32;
   const plotH = unitRange * UNIT_H;
-  const HEIGHT = PADDING.top + plotH + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
+  const HEIGHT = PADDING.top + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
   const plotW = WIDTH - PADDING.left - PADDING.right;
 
   const scaleX = (v: number) => PADDING.left + (v / maxWorkday) * plotW;
@@ -317,7 +344,8 @@ export function LOBChart() {
     else months[months.length - 1].endIdx = i;
   });
 
-  const legendY = PADDING.top + plotH + 75;
+  const ganttAreaY = PADDING.top + plotH + 68;
+  const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
   return (
@@ -435,6 +463,30 @@ export function LOBChart() {
                 <title>Conflicto: {inter.a1} × {inter.a2}</title>
               </g>
             ))}
+            {/* Gantt bars for Zonas Sociales */}
+            {ganttBars.length > 0 && (
+              <g>
+                <text x={PADDING.left} y={ganttAreaY - 4} className="fill-foreground text-[11px] font-semibold">
+                  Zonas Sociales
+                </text>
+                <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={ganttAreaY} y2={ganttAreaY}
+                  stroke="hsl(var(--border))" strokeWidth={0.5} />
+                {ganttBars.map(({ activity, startIdx, endIdx, duration }, i) => {
+                  const barY = ganttAreaY + 4 + i * 28;
+                  const barX = scaleX(startIdx);
+                  const barW = scaleX(endIdx) - scaleX(startIdx);
+                  return (
+                    <g key={`gantt-${activity.id}`}>
+                      <rect x={barX} y={barY} width={Math.max(barW, 4)} height={20} rx={4}
+                        fill={activity.color} opacity={0.85} />
+                      <text x={barX + 5} y={barY + 14} className="text-[10px] font-medium" fill="white" dominantBaseline="middle">
+                        {activity.name} ({duration}d)
+                      </text>
+                    </g>
+                  );
+                })}
+              </g>
+            )}
             {/* Axis lines */}
             <line x1={PADDING.left} x2={PADDING.left} y1={PADDING.top} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
             <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={PADDING.top + plotH} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
@@ -448,7 +500,7 @@ export function LOBChart() {
               Tiempo (Días laborales L-V)
             </text>
             {/* Legend — BIGGER font */}
-            {lines.map(({ activity, duration }, i) => {
+            {allLegendItems.map(({ activity, duration }, i) => {
               const col = i % LEGEND_ITEMS_PER_ROW;
               const row = Math.floor(i / LEGEND_ITEMS_PER_ROW);
               const x = PADDING.left + col * legendItemW;
@@ -457,7 +509,7 @@ export function LOBChart() {
                 <g key={`lbl-${activity.id}`}>
                   <rect x={x} y={y} width={10} height={10} rx={2} fill={activity.color} />
                   <text x={x + 14} y={y + 9} className="fill-foreground text-[12px] font-medium" dominantBaseline="middle">
-                    {activity.name} ({duration}d)
+                    {activity.name} ({duration}d){activity.category === 'zonas_sociales' ? ' ■' : ''}
                   </text>
                 </g>
               );

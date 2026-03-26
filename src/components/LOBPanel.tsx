@@ -40,7 +40,7 @@ export function LOBPanel() {
     startDate: suggestedStartDate,
     rate: 1,
     color: DEFAULT_COLORS[0],
-    category: 'estructura' as 'estructura' | 'acabados',
+    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales',
     predecessorId: '' as string,
     bufferDays: 0,
     bufferUnits: 0,
@@ -240,60 +240,91 @@ export function LOBPanel() {
               <Label className="text-[10px]">Nombre</Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Cimentación" className="h-7 text-xs" />
             </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px]">{unitLabel} Inicio</Label>
-                <Input type="number" value={form.unitStart} onChange={e => setForm(f => ({ ...f, unitStart: +e.target.value }))} className="h-7 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px]">{unitLabel} Final</Label>
-                <Input type="number" value={form.unitEnd} onChange={e => setForm(f => ({ ...f, unitEnd: +e.target.value }))} className="h-7 text-xs" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px]">Fecha Inicio</Label>
-                <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px]">Ritmo (u/día)</Label>
-                <Input type="number" step="0.1" min="0.1" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: +e.target.value }))} className="h-7 text-xs" />
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px]">Cuadrillas</Label>
-                <Input type="number" min={1} max={10} value={form.crews} onChange={e => setForm(f => ({ ...f, crews: Math.max(1, +e.target.value || 1) }))} className="h-7 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px]">Ritmo efectivo</Label>
-                <div className="h-7 flex items-center text-xs font-medium text-primary px-2 bg-primary/5 rounded border border-border">
-                  {(form.rate * form.crews).toFixed(1)} u/d
+            {form.category === 'zonas_sociales' ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Fecha Inicio</Label>
+                    <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Duración (días)</Label>
+                    <Input type="number" min={1} value={Math.abs(form.unitEnd - form.unitStart) + 1}
+                      onChange={e => setForm(f => ({ ...f, unitStart: 1, unitEnd: Math.max(1, +e.target.value || 1), rate: 1 }))}
+                      className="h-7 text-xs" />
+                  </div>
                 </div>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px]">Buffer (días)</Label>
-                <Input type="number" min={0} value={form.bufferDays} onChange={e => setForm(f => ({ ...f, bufferDays: +e.target.value }))} className="h-7 text-xs" />
-              </div>
-              <div>
-                <Label className="text-[10px]">Buffer (unidades)</Label>
-                <Input type="number" min={0} value={form.bufferUnits} onChange={e => setForm(f => ({ ...f, bufferUnits: +e.target.value }))} className="h-7 text-xs" />
-              </div>
-            </div>
-            <div>
-              <Label className="text-[10px]">Predecesora</Label>
-              <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
-                <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
-                <SelectContent className="max-h-48">
-                  <SelectItem value="_none">Sin predecesora</SelectItem>
-                  {availablePredecessors.map(a => (
-                    <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+                <div>
+                  <Label className="text-[10px]">Predecesora</Label>
+                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      <SelectItem value="_none">Sin predecesora</SelectItem>
+                      {availablePredecessors.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">{unitLabel} Inicio</Label>
+                    <Input type="number" value={form.unitStart} onChange={e => setForm(f => ({ ...f, unitStart: +e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">{unitLabel} Final</Label>
+                    <Input type="number" value={form.unitEnd} onChange={e => setForm(f => ({ ...f, unitEnd: +e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Fecha Inicio</Label>
+                    <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Ritmo (u/día)</Label>
+                    <Input type="number" step="0.1" min="0.1" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: +e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Cuadrillas</Label>
+                    <Input type="number" min={1} max={10} value={form.crews} onChange={e => setForm(f => ({ ...f, crews: Math.max(1, +e.target.value || 1) }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Ritmo efectivo</Label>
+                    <div className="h-7 flex items-center text-xs font-medium text-primary px-2 bg-primary/5 rounded border border-border">
+                      {(form.rate * form.crews).toFixed(1)} u/d
+                    </div>
+                  </div>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Buffer (días)</Label>
+                    <Input type="number" min={0} value={form.bufferDays} onChange={e => setForm(f => ({ ...f, bufferDays: +e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Buffer (unidades)</Label>
+                    <Input type="number" min={0} value={form.bufferUnits} onChange={e => setForm(f => ({ ...f, bufferUnits: +e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-[10px]">Predecesora</Label>
+                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      <SelectItem value="_none">Sin predecesora</SelectItem>
+                      {availablePredecessors.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
+            )}
             <div className="grid grid-cols-2 gap-2">
               <div>
                 <Label className="text-[10px]">Categoría</Label>
@@ -302,6 +333,7 @@ export function LOBPanel() {
                   <SelectContent>
                     <SelectItem value="estructura">Estructura</SelectItem>
                     <SelectItem value="acabados">Acabados</SelectItem>
+                    <SelectItem value="zonas_sociales">Zonas Sociales</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
