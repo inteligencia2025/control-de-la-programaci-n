@@ -500,7 +500,7 @@ export function LOBChart() {
               Tiempo (Días laborales L-V)
             </text>
             {/* Legend — BIGGER font */}
-            {lines.map(({ activity, duration }, i) => {
+            {allLegendItems.map(({ activity, duration }, i) => {
               const col = i % LEGEND_ITEMS_PER_ROW;
               const row = Math.floor(i / LEGEND_ITEMS_PER_ROW);
               const x = PADDING.left + col * legendItemW;
@@ -509,7 +509,7 @@ export function LOBChart() {
                 <g key={`lbl-${activity.id}`}>
                   <rect x={x} y={y} width={10} height={10} rx={2} fill={activity.color} />
                   <text x={x + 14} y={y + 9} className="fill-foreground text-[12px] font-medium" dominantBaseline="middle">
-                    {activity.name} ({duration}d)
+                    {activity.name} ({duration}d){activity.category === 'zonas_sociales' ? ' ■' : ''}
                   </text>
                 </g>
               );
