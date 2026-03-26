@@ -325,12 +325,14 @@ export function LOBChart() {
   const UNIT_H = 32;
   const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
+  const allLegendItems = [...lines.map(l => ({ activity: l.activity, duration: l.duration })), ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration }))];
   const LEGEND_ITEMS_PER_ROW = 4;
-  const legendRows = Math.ceil(lines.length / LEGEND_ITEMS_PER_ROW);
+  const legendRows = Math.ceil(allLegendItems.length / LEGEND_ITEMS_PER_ROW);
   const LEGEND_H = legendRows * 22 + 10;
+  const GANTT_AREA_H = ganttBars.length > 0 ? ganttBars.length * 28 + 20 : 0;
   const DURATION_BOX_H = 32;
   const plotH = unitRange * UNIT_H;
-  const HEIGHT = PADDING.top + plotH + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
+  const HEIGHT = PADDING.top + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
   const plotW = WIDTH - PADDING.left - PADDING.right;
 
   const scaleX = (v: number) => PADDING.left + (v / maxWorkday) * plotW;
