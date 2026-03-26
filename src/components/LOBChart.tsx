@@ -162,9 +162,9 @@ export function LOBChart() {
       return Math.max(max, startIdx + durationDays);
     }, 0);
     const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax) + 5;
-    const allUnits = enabledActivities.flatMap(a => [a.unitStart, a.unitEnd]);
-    const minUnit = Math.min(...allUnits) - 1;
-    const maxUnit = Math.max(...allUnits) + 1;
+    const lobUnits = lobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
+    const minUnit = lobUnits.length > 0 ? Math.min(...lobUnits) - 1 : 0;
+    const maxUnit = lobUnits.length > 0 ? Math.max(...lobUnits) + 1 : 2;
     const workdays: { date: Date; label: string; dayName: string; month: string; monthIdx: number }[] = [];
     let current = new Date(projectStart);
     let monthCounter = 0; let lastMonth = '';
