@@ -165,8 +165,19 @@ export function LOBChart() {
       current = addDays(current, 1);
     }
     const intersections = findIntersections(lines.map(l => ({ activity: l.activity, points: l.points })));
+    // Compute Gantt bars for zonas_sociales
+    const ganttBars = ganttActivities.map(activity => {
+      const start = getEffectiveStartDate(activity, project.activities);
+      const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+      const effectiveRate = activity.rate * (activity.crews || 1);
+      const durationDays = Math.ceil(totalUnits / effectiveRate);
+      let startIdx = 0;
+      let cur = new Date(projectStart);
+      while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
+      return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
+    });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration };
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars };
   }, [enabledActivities, project.activities]);
 
   const handleExportPNG = async () => {

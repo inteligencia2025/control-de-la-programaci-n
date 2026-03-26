@@ -302,6 +302,7 @@ export function LOBPanel() {
                   <SelectContent>
                     <SelectItem value="estructura">Estructura</SelectItem>
                     <SelectItem value="acabados">Acabados</SelectItem>
+                    <SelectItem value="zonas_sociales">Zonas Sociales</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
