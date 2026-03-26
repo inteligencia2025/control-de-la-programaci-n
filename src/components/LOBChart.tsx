@@ -139,7 +139,7 @@ export function LOBChart() {
     if (enabledActivities.length === 0) return null;
     const effectiveStarts = enabledActivities.map(a => getEffectiveStartDate(a, project.activities));
     const projectStart = new Date(Math.min(...effectiveStarts.map(d => d.getTime())));
-    const lines = enabledActivities.map(activity => {
+    const lines = lobActivities.map(activity => {
       const points = getActivityLine(activity, projectStart, project.activities);
       const duration = points.length > 1 ? points[points.length - 1].workdayIndex - points[0].workdayIndex : 0;
       const crewLines = getCrewLines(activity, projectStart, project.activities);
