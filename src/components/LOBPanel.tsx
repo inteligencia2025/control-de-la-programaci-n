@@ -345,7 +345,7 @@ export function LOBPanel() {
                   </div>
                   <div>
                     <Label className="text-[10px]">Ritmo (u/día)</Label>
-                    <Input type="number" step="0.1" min="0.1" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: +e.target.value }))} className="h-7 text-xs" />
+                    <Input type="number" step="0.001" min="0.001" value={form.rate} onChange={e => setForm(f => ({ ...f, rate: +e.target.value || 0 }))} className="h-7 text-xs" />
                   </div>
                 </div>
                 <div className="grid grid-cols-2 gap-2">
