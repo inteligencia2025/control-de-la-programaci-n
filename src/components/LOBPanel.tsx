@@ -350,6 +350,9 @@ export function LOBPanel() {
           </form>
         </div>
 
+        {/* Y-Axis Unit Labels Editor */}
+        <UnitLabelsEditor />
+
         {/* Preloaded Activities Button */}
         <div className="p-3 border-b border-border">
           <Button variant="outline" size="sm" className="w-full gap-1.5 h-7 text-xs" onClick={handleLoadPreloaded}>
