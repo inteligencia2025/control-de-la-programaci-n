@@ -19,6 +19,65 @@ function getNextWorkday(dateStr: string): string {
   return cur.toISOString().split('T')[0];
 }
 
+function UnitLabelsEditor() {
+  const { project, setProject } = useProject();
+  const [open, setOpen] = useState(false);
+
+  const lobActivities = project.activities.filter(a => a.category !== 'zonas_sociales' && a.enabled);
+  const allUnits = lobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
+  const minUnit = allUnits.length > 0 ? Math.min(...allUnits) : 1;
+  const maxUnit = allUnits.length > 0 ? Math.max(...allUnits) : (project.defaultUnits || 10);
+  const units = Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i);
+  const labels = project.unitLabels || {};
+
+  const handleLabelChange = (unit: number, value: string) => {
+    setProject(p => {
+      const newLabels = { ...(p.unitLabels || {}) };
+      if (value.trim()) {
+        newLabels[String(unit)] = value;
+      } else {
+        delete newLabels[String(unit)];
+      }
+      return { ...p, unitLabels: newLabels };
+    });
+  };
+
+  if (units.length === 0) return null;
+
+  return (
+    <div className="border-b border-border">
+      <button
+        type="button"
+        className="w-full flex items-center gap-1.5 px-3 py-2 text-xs font-semibold hover:bg-secondary/50 transition-colors"
+        onClick={() => setOpen(!open)}
+      >
+        <Tag className="h-3 w-3" />
+        Etiquetas Eje Y
+        {open ? <ChevronDown className="h-3 w-3 ml-auto" /> : <ChevronRight className="h-3 w-3 ml-auto" />}
+      </button>
+      {open && (
+        <div className="px-3 pb-3 space-y-1 max-h-48 overflow-y-auto">
+          <p className="text-[9px] text-muted-foreground mb-1">Personaliza las etiquetas de cada unidad en el gráfico</p>
+          {units.map(u => {
+            const defaultLabel = getUnitLabel(u, project.projectType, project.buildingConfig);
+            return (
+              <div key={u} className="flex items-center gap-1.5">
+                <span className="text-[10px] text-muted-foreground w-6 text-right shrink-0">{defaultLabel}</span>
+                <Input
+                  value={labels[String(u)] || ''}
+                  onChange={e => handleLabelChange(u, e.target.value)}
+                  placeholder={defaultLabel}
+                  className="h-6 text-[10px] flex-1"
+                />
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function LOBPanel() {
   const { project, setProject, addActivity, removeActivity, updateActivity } = useProject();
   const [editId, setEditId] = useState<string | null>(null);
