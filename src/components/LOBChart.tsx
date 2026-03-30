@@ -447,27 +447,6 @@ export function LOBChart() {
                 {points.map((p, i) => (
                   <circle key={i} cx={scaleX(p.workdayIndex)} cy={scaleY(p.unit)} r={3} fill={activity.color} stroke="white" strokeWidth={1} className="cursor-pointer" />
                 ))}
-                {/* Crew dots for multi-crew activities */}
-                {crews > 1 && (() => {
-                  const dots: React.ReactNode[] = [];
-                  const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
-                  for (let c = 0; c < crews; c++) {
-                    // Each crew starts offset by c units from the beginning
-                    for (let u = 0; u < totalUnits; u++) {
-                      const unit = actualUnitStart + direction * u;
-                      // This crew reaches this unit at: startWd + (u + c) / effectiveRate workdays
-                      // Because with N crews working in parallel, each offset by 1 unit,
-                      // crew c starts c/effectiveRate days later than crew 0
-                      const wd = startWd + (u * crews + c) / effectiveRate;
-                      if (wd > points[points.length - 1]?.workdayIndex) continue;
-                      dots.push(
-                        <circle key={`crew-${c}-${u}`} cx={scaleX(wd)} cy={scaleY(unit)} r={2.5}
-                          fill={activity.color} opacity={0.5} />
-                      );
-                    }
-                  }
-                  return dots;
-                })()}
                 {points.length > 0 && (
                   <text x={scaleX(points[points.length - 1].workdayIndex) + 6} y={scaleY(points[points.length - 1].unit)}
                     className="text-[10px] font-medium" fill={activity.color} dominantBaseline="middle">
