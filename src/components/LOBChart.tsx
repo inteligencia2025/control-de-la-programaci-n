@@ -429,7 +429,16 @@ export function LOBChart() {
             {/* Month labels */}
             {months.map((m, i) => (
               <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={PADDING.top + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
-            ))}
+                ))}
+                {/* Buffer line (dashed extension) */}
+                {(() => {
+                  const buf = chartData.lines.find(l => l.activity.id === activity.id)?.buffer;
+                  if (!buf || buf.length < 2) return null;
+                  return (
+                    <polyline points={buf.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
+                      fill="none" stroke={activity.color} strokeWidth={2} strokeDasharray="6 4" opacity={0.6} strokeLinecap="round" />
+                  );
+                })()}
 
 
             {/* Activity lines with data points */}
