@@ -294,7 +294,10 @@ export function LOBChart() {
           if (best!.wdIdx >= l.points[i].workdayIndex && best!.wdIdx <= l.points[i+1].workdayIndex) {
             const t = (best!.wdIdx - l.points[i].workdayIndex) / (l.points[i+1].workdayIndex - l.points[i].workdayIndex || 1);
             const interpUnit = l.points[i].unit + t * (l.points[i+1].unit - l.points[i].unit);
-            return `${l.activity.name}: Unidad ${getUnitLabel(Math.round(interpUnit), project.projectType, project.buildingConfig)}`;
+            const unitNum = Math.round(interpUnit);
+            const customLabel = project.unitLabels?.[String(unitNum)];
+            const unitLbl = customLabel || getUnitLabel(unitNum, project.projectType, project.buildingConfig);
+            return `${l.activity.name}: Unidad ${unitLbl}`;
           }
         }
         return l.activity.name;
