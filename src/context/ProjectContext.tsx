@@ -271,6 +271,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         custom_failure_causes: data.customFailureCauses,
         project_start_date: data.projectStartDate || null,
         default_units: data.defaultUnits || 10,
+        unit_labels: (data.unitLabels || {}) as any,
         updated_at: new Date().toISOString(),
       }).eq('id', projectId);
 
