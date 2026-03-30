@@ -24,7 +24,8 @@ function getEffectiveStartDate(activity: Activity, activities: Activity[], visit
   const pred = activities.find(a => a.id === activity.predecessorId);
   if (!pred) return baseStart;
   const predStart = getEffectiveStartDate(pred, activities, visited);
-  const firstUnitWorkdays = Math.ceil(1 / pred.rate);
+  const effectivePredRate = pred.rate * (pred.crews || 1);
+  const firstUnitWorkdays = Math.ceil(1 / effectivePredRate);
   const bufferDays = activity.bufferDays || 0;
   let current = new Date(predStart);
   let count = 0;
