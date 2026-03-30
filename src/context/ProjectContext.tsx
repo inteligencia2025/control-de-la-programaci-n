@@ -59,13 +59,15 @@ export const useProject = () => {
   return ctx;
 };
 
-// Debounce helper
+// Debounce helper - uses ref to avoid dependency on fn changing
 function useDebouncedCallback<T extends (...args: any[]) => any>(fn: T, delay: number) {
   const timer = useRef<ReturnType<typeof setTimeout>>();
+  const fnRef = useRef(fn);
+  fnRef.current = fn;
   return useCallback((...args: Parameters<T>) => {
     if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => fn(...args), delay);
-  }, [fn, delay]) as T;
+    timer.current = setTimeout(() => fnRef.current(...args), delay);
+  }, [delay]) as T;
 }
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
