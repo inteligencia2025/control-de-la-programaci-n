@@ -433,19 +433,18 @@ export function LOBChart() {
 
 
             {/* Activity lines with data points */}
-            {lines.map(({ activity, points, crewLines }) => {
+            {lines.map(({ activity, points, crewDots }) => {
               const crews = activity.crews || 1;
-              const effectiveRate = activity.rate * crews;
-              const bufferUnits = activity.bufferUnits || 0;
-              const actualUnitStart = activity.unitStart + bufferUnits;
-              const direction = activity.unitEnd > actualUnitStart ? 1 : -1;
-              const startWd = points.length > 0 ? points[0].workdayIndex : 0;
               return (
               <g key={activity.id}>
                 <polyline points={points.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
                   fill="none" stroke={activity.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                 {points.map((p, i) => (
                   <circle key={i} cx={scaleX(p.workdayIndex)} cy={scaleY(p.unit)} r={3} fill={activity.color} stroke="white" strokeWidth={1} className="cursor-pointer" />
+                ))}
+                {/* Crew dots for multi-crew activities */}
+                {crewDots.map((dot, i) => (
+                  <circle key={`crew-${i}`} cx={scaleX(dot.workdayIndex)} cy={scaleY(dot.unit)} r={4} fill={activity.color} opacity={0.7} stroke="white" strokeWidth={0.5} />
                 ))}
                 {/* Buffer line (dashed extension) */}
                 {(() => {
