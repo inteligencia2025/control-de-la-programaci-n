@@ -356,7 +356,7 @@ export function LOBPanel() {
                   <div>
                     <Label className="text-[10px]">Ritmo efectivo</Label>
                     <div className="h-7 flex items-center text-xs font-medium text-primary px-2 bg-primary/5 rounded border border-border">
-                      {(form.rate * form.crews).toFixed(1)} u/d
+                      {(form.rate * form.crews).toFixed(3)} u/d
                     </div>
                   </div>
                 </div>
