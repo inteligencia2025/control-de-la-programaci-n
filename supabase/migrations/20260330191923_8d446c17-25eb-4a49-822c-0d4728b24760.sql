@@ -1,0 +1,1 @@
+ALTER TABLE public.projects ADD COLUMN unit_labels jsonb DEFAULT '{}'::jsonb;

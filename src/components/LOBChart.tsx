@@ -294,7 +294,10 @@ export function LOBChart() {
           if (best!.wdIdx >= l.points[i].workdayIndex && best!.wdIdx <= l.points[i+1].workdayIndex) {
             const t = (best!.wdIdx - l.points[i].workdayIndex) / (l.points[i+1].workdayIndex - l.points[i].workdayIndex || 1);
             const interpUnit = l.points[i].unit + t * (l.points[i+1].unit - l.points[i].unit);
-            return `${l.activity.name}: Unidad ${getUnitLabel(Math.round(interpUnit), project.projectType, project.buildingConfig)}`;
+            const unitNum = Math.round(interpUnit);
+            const customLabel = project.unitLabels?.[String(unitNum)];
+            const unitLbl = customLabel || getUnitLabel(unitNum, project.projectType, project.buildingConfig);
+            return `${l.activity.name}: Unidad ${unitLbl}`;
           }
         }
         return l.activity.name;
@@ -391,16 +394,20 @@ export function LOBChart() {
               <line key={`h-${u}`} x1={PADDING.left} x2={WIDTH - PADDING.right} y1={scaleY(u)} y2={scaleY(u)} stroke="hsl(var(--border))" strokeWidth={0.5} />
             ))}
             {/* Y axis labels — BIGGER */}
-            {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => (
-              <g key={`yl-${u}`}>
-                <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle" className="fill-foreground text-[13px] font-semibold">
-                  {getUnitLabel(u, project.projectType, project.buildingConfig)}
-                </text>
-                {u % 2 === 0 && u < maxUnit && (
-                  <rect x={PADDING.left} y={scaleY(u + 1)} width={plotW} height={UNIT_H} fill="hsl(var(--muted))" opacity={0.12} />
-                )}
-              </g>
-            ))}
+            {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => {
+              const customLabel = project.unitLabels?.[String(u)];
+              const label = customLabel || getUnitLabel(u, project.projectType, project.buildingConfig);
+              return (
+                <g key={`yl-${u}`}>
+                  <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle" className="fill-foreground text-[13px] font-semibold">
+                    {label}
+                  </text>
+                  {u % 2 === 0 && u < maxUnit && (
+                    <rect x={PADDING.left} y={scaleY(u + 1)} width={plotW} height={UNIT_H} fill="hsl(var(--muted))" opacity={0.12} />
+                  )}
+                </g>
+              );
+            })}
             {/* Vertical cursor line for hovered day */}
             {hoverDay !== null && (
               <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={PADDING.top} y2={PADDING.top + plotH}

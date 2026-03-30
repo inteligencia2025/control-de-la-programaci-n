@@ -156,6 +156,7 @@ export interface ProjectData {
   customFailureCauses: string[];
   projectStartDate?: string;
   defaultUnits?: number;
+  unitLabels?: Record<string, string>; // key: unit number as string, value: custom label
 }
 
 export const DEFAULT_COLORS = [

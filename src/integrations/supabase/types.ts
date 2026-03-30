@@ -194,6 +194,7 @@ export type Database = {
           project_start_date: string | null
           project_type: string
           responsibles: string[]
+          unit_labels: Json | null
           updated_at: string
           user_id: string
         }
@@ -208,6 +209,7 @@ export type Database = {
           project_start_date?: string | null
           project_type?: string
           responsibles?: string[]
+          unit_labels?: Json | null
           updated_at?: string
           user_id: string
         }
@@ -222,6 +224,7 @@ export type Database = {
           project_start_date?: string | null
           project_type?: string
           responsibles?: string[]
+          unit_labels?: Json | null
           updated_at?: string
           user_id?: string
         }

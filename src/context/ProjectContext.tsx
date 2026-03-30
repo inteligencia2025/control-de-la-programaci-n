@@ -241,6 +241,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       customFailureCauses: (proj.custom_failure_causes as string[]) || [],
       projectStartDate: proj.project_start_date || undefined,
       defaultUnits: proj.default_units || 10,
+      unitLabels: (proj.unit_labels as Record<string, string>) || {},
     };
 
     skipHistory.current = true;
@@ -270,6 +271,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         custom_failure_causes: data.customFailureCauses,
         project_start_date: data.projectStartDate || null,
         default_units: data.defaultUnits || 10,
+        unit_labels: (data.unitLabels || {}) as any,
         updated_at: new Date().toISOString(),
       }).eq('id', projectId);
 
