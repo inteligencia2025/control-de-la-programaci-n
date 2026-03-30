@@ -241,6 +241,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       customFailureCauses: (proj.custom_failure_causes as string[]) || [],
       projectStartDate: proj.project_start_date || undefined,
       defaultUnits: proj.default_units || 10,
+      unitLabels: (proj.unit_labels as Record<string, string>) || {},
     };
 
     skipHistory.current = true;
