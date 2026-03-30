@@ -450,6 +450,15 @@ export function LOBChart() {
                 {points.map((p, i) => (
                   <circle key={i} cx={scaleX(p.workdayIndex)} cy={scaleY(p.unit)} r={3} fill={activity.color} stroke="white" strokeWidth={1} className="cursor-pointer" />
                 ))}
+                {/* Buffer line (dashed extension) */}
+                {(() => {
+                  const buf = chartData.lines.find(l => l.activity.id === activity.id)?.buffer;
+                  if (!buf || buf.length < 2) return null;
+                  return (
+                    <polyline points={buf.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
+                      fill="none" stroke={activity.color} strokeWidth={2} strokeDasharray="6 4" opacity={0.6} strokeLinecap="round" />
+                  );
+                })()}
                 {points.length > 0 && (
                   <text x={scaleX(points[points.length - 1].workdayIndex) + 6} y={scaleY(points[points.length - 1].unit)}
                     className="text-[10px] font-medium" fill={activity.color} dominantBaseline="middle">
