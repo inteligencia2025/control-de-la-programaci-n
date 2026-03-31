@@ -253,6 +253,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     redoStack.current = [];
     skipHistory.current = false;
     updateUndoRedoState();
+    // Mark that DB data has been loaded into state
+    loadedFromDbRef.current = true;
   };
 
   // ---- SAVE to Supabase (debounced) ----
