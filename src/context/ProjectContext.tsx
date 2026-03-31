@@ -152,6 +152,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setActiveProjectId('');
       setProjectInternal(defaultProject);
       setLoaded(false);
+      loadedFromDbRef.current = false;
       return;
     }
     const load = async () => {
