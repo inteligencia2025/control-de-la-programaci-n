@@ -78,6 +78,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [project, setProjectInternal] = useState<ProjectData>(defaultProject);
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
+  const loadedFromDbRef = useRef(false); // true only after DB data is set into state
 
   // Undo/Redo
   const undoStack = useRef<ProjectData[]>([]);
@@ -151,6 +152,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       setActiveProjectId('');
       setProjectInternal(defaultProject);
       setLoaded(false);
+      loadedFromDbRef.current = false;
       return;
     }
     const load = async () => {
@@ -252,6 +254,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     redoStack.current = [];
     skipHistory.current = false;
     updateUndoRedoState();
+    // Mark that DB data has been loaded into state
+    loadedFromDbRef.current = true;
   };
 
   // ---- SAVE to Supabase (debounced) ----
@@ -349,9 +353,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     doSave(data, projectId);
   }, 1500);
 
-  // Auto-save on project changes
+  // Auto-save on project changes — only after DB data has been loaded
   useEffect(() => {
-    if (!loaded || !activeProjectId || !user) return;
+    if (!loaded || !activeProjectId || !user || !loadedFromDbRef.current) return;
     debouncedSave(project, activeProjectId);
   }, [project, activeProjectId, loaded, user, debouncedSave]);
 
