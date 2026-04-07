@@ -98,6 +98,37 @@ export function GanttChart() {
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
+  const handleExportJSON = () => {
+    if (!chartData) return;
+    const data = {
+      project: project.name,
+      projectStart: format(chartData.projectStart, 'yyyy-MM-dd'),
+      projectEnd: format(chartData.projectEndDate, 'yyyy-MM-dd'),
+      totalWorkdays: chartData.totalWorkdays,
+      activities: [...chartData.estructura, ...chartData.acabados].map(({ activity, startIdx, duration }) => ({
+        id: activity.id,
+        name: activity.name,
+        category: activity.category,
+        rate: activity.rate,
+        crews: activity.crews,
+        unitStart: activity.unitStart,
+        unitEnd: activity.unitEnd,
+        startDate: activity.startDate,
+        effectiveStartWorkday: startIdx,
+        durationWorkdays: duration,
+        bufferDays: activity.bufferDays,
+        predecessorId: activity.predecessorId || null,
+        color: activity.color,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `gantt-${project.name || 'proyecto'}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   if (!chartData) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
