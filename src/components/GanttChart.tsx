@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
 import { Activity } from '@/types/project';
