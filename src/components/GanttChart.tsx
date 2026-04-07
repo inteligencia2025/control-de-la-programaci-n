@@ -172,7 +172,10 @@ export function GanttChart() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         <h3 className="text-sm font-semibold">Diagrama Gantt</h3>
-        <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5"><Camera className="h-3.5 w-3.5" />Exportar PNG</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportJSON} className="gap-1.5"><Download className="h-3.5 w-3.5" />Exportar JSON</Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5"><Camera className="h-3.5 w-3.5" />Exportar PNG</Button>
+        </div>
       </div>
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-card rounded-lg border border-border inline-block">
