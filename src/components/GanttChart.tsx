@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Camera } from 'lucide-react';
+import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
 import { Activity } from '@/types/project';
@@ -98,6 +98,37 @@ export function GanttChart() {
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
+  const handleExportJSON = () => {
+    if (!chartData) return;
+    const data = {
+      project: project.name,
+      projectStart: format(chartData.projectStart, 'yyyy-MM-dd'),
+      projectEnd: format(chartData.projectEndDate, 'yyyy-MM-dd'),
+      totalWorkdays: chartData.totalWorkdays,
+      activities: [...chartData.estructura, ...chartData.acabados].map(({ activity, startIdx, duration }) => ({
+        id: activity.id,
+        name: activity.name,
+        category: activity.category,
+        rate: activity.rate,
+        crews: activity.crews,
+        unitStart: activity.unitStart,
+        unitEnd: activity.unitEnd,
+        startDate: activity.startDate,
+        effectiveStartWorkday: startIdx,
+        durationWorkdays: duration,
+        bufferDays: activity.bufferDays,
+        predecessorId: activity.predecessorId || null,
+        color: activity.color,
+      })),
+    };
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `gantt-${project.name || 'proyecto'}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  };
+
   if (!chartData) {
     return (
       <div className="flex-1 flex items-center justify-center text-muted-foreground">
@@ -141,7 +172,10 @@ export function GanttChart() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
         <h3 className="text-sm font-semibold">Diagrama Gantt</h3>
-        <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5"><Camera className="h-3.5 w-3.5" />Exportar PNG</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportJSON} className="gap-1.5"><Download className="h-3.5 w-3.5" />Exportar JSON</Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5"><Camera className="h-3.5 w-3.5" />Exportar PNG</Button>
+        </div>
       </div>
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-card rounded-lg border border-border inline-block">
