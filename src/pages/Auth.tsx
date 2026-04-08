@@ -8,12 +8,14 @@ import { HardHat, LogIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
-  const { user, loading } = useAuth();
+  const { user, loading: authLoading, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="text-muted-foreground">Cargando...</div></div>;
+  if (user) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
