@@ -12,6 +12,7 @@ import { RESTRICTION_CATEGORIES } from '@/types/project';
 export function ProjectToolbar() {
   const { project, setProject, saveToFile, loadFromFile, activeProjectId, projectsList, createNewProject, switchProject, deleteProject, undo, redo, canUndo, canRedo, saving } = useProject();
   const { signOut } = useAuth();
+  const { isAdmin } = useUserRole();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = () => fileInputRef.current?.click();
