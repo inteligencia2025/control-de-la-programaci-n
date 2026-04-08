@@ -57,9 +57,9 @@ const Auth = () => {
               required
               minLength={6}
             />
-            <Button type="submit" className="w-full gap-2" disabled={loading}>
+            <Button type="submit" className="w-full gap-2" disabled={submitting}>
               <LogIn className="h-4 w-4" />
-              {loading ? 'Cargando...' : 'Iniciar sesión'}
+              {submitting ? 'Cargando...' : 'Iniciar sesión'}
             </Button>
           </form>
         </CardContent>
