@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import { Navigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
@@ -7,17 +8,20 @@ import { HardHat, LogIn } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 const Auth = () => {
+  const { user, loading: authLoading, signIn } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [loading, setLoading] = useState(false);
-  const { signIn } = useAuth();
+  const [submitting, setSubmitting] = useState(false);
   const { toast } = useToast();
+
+  if (authLoading) return <div className="min-h-screen flex items-center justify-center bg-background"><div className="text-muted-foreground">Cargando...</div></div>;
+  if (user) return <Navigate to="/" replace />;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await signIn(email, password);
-    setLoading(false);
+    setSubmitting(false);
 
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
@@ -53,9 +57,9 @@ const Auth = () => {
               required
               minLength={6}
             />
-            <Button type="submit" className="w-full gap-2" disabled={loading}>
+            <Button type="submit" className="w-full gap-2" disabled={submitting}>
               <LogIn className="h-4 w-4" />
-              {loading ? 'Cargando...' : 'Iniciar sesión'}
+              {submitting ? 'Cargando...' : 'Iniciar sesión'}
             </Button>
           </form>
         </CardContent>
