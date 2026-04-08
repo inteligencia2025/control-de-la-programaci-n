@@ -78,12 +78,18 @@ const Admin = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   const callAdmin = useCallback(async (body: Record<string, unknown>) => {
-    const { data: sessionData } = await supabase.auth.getSession();
+    // Refresh session to avoid stale tokens
+    const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
     const token = sessionData?.session?.access_token;
-    if (!token) throw new Error('No autenticado');
+    if (sessionError || !token) {
+      throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+    }
 
     const { data, error } = await supabase.functions.invoke('admin-manage-users', { body });
-    if (error) throw new Error(error.message);
+    if (error) {
+      const msg = error.message || 'Error al comunicarse con el servidor';
+      throw new Error(msg);
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   }, []);
@@ -135,13 +141,22 @@ const Admin = () => {
     return matchesSearch && matchesStatus && matchesRole;
   });
 
+  const validatePassword = (password: string): string | null => {
+    if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
+    if (!/[A-Z]/.test(password)) return 'La contraseña debe contener al menos una letra mayúscula';
+    if (!/[a-z]/.test(password)) return 'La contraseña debe contener al menos una letra minúscula';
+    if (!/[0-9]/.test(password)) return 'La contraseña debe contener al menos un número';
+    return null;
+  };
+
   const handleCreate = async () => {
     if (!newEmail || !newName || !newPassword) {
-      toast({ title: 'Error', description: 'Todos los campos son obligatorios', variant: 'destructive' });
+      toast({ title: 'Campos requeridos', description: 'Todos los campos son obligatorios', variant: 'destructive' });
       return;
     }
-    if (newPassword.length < 8) {
-      toast({ title: 'Error', description: 'La contraseña debe tener al menos 8 caracteres', variant: 'destructive' });
+    const pwError = validatePassword(newPassword);
+    if (pwError) {
+      toast({ title: 'Contraseña inválida', description: pwError, variant: 'destructive' });
       return;
     }
     setActionLoading(true);
@@ -152,7 +167,7 @@ const Admin = () => {
       setNewEmail(''); setNewName(''); setNewPassword(''); setNewRole('user');
       loadUsers(); loadAudit();
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error al crear usuario', description: err.message, variant: 'destructive' });
     }
     setActionLoading(false);
   };
@@ -183,6 +198,13 @@ const Admin = () => {
 
   const handleResetPassword = async () => {
     if (!selectedUser) return;
+    if (resetPassword) {
+      const pwError = validatePassword(resetPassword);
+      if (pwError) {
+        toast({ title: 'Contraseña inválida', description: pwError, variant: 'destructive' });
+        return;
+      }
+    }
     setActionLoading(true);
     try {
       await callAdmin({
@@ -199,18 +221,21 @@ const Admin = () => {
     setActionLoading(false);
   };
 
-  const handleChangeRole = async (u: AdminUser, newRole: string) => {
+  const handleChangeRole = async (u: AdminUser, newRoleValue: string) => {
     if (u.id === user.id) {
       toast({ title: 'Error', description: 'No puedes cambiar tu propio rol', variant: 'destructive' });
       return;
     }
+    if (u.role === newRoleValue) return; // No change needed
+    setActionLoading(true);
     try {
-      await callAdmin({ action: 'change_role', user_id: u.id, new_role: newRole });
-      toast({ title: 'Éxito', description: 'Rol actualizado' });
+      await callAdmin({ action: 'change_role', user_id: u.id, new_role: newRoleValue });
+      toast({ title: 'Éxito', description: `Rol cambiado a ${newRoleValue === 'admin' ? 'Administrador' : 'Usuario'}` });
       loadUsers(); loadAudit();
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error al cambiar rol', description: err.message, variant: 'destructive' });
     }
+    setActionLoading(false);
   };
 
   const formatDate = (d: string | null) => {
