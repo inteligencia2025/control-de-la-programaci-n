@@ -221,18 +221,21 @@ const Admin = () => {
     setActionLoading(false);
   };
 
-  const handleChangeRole = async (u: AdminUser, newRole: string) => {
+  const handleChangeRole = async (u: AdminUser, newRoleValue: string) => {
     if (u.id === user.id) {
       toast({ title: 'Error', description: 'No puedes cambiar tu propio rol', variant: 'destructive' });
       return;
     }
+    if (u.role === newRoleValue) return; // No change needed
+    setActionLoading(true);
     try {
-      await callAdmin({ action: 'change_role', user_id: u.id, new_role: newRole });
-      toast({ title: 'Éxito', description: 'Rol actualizado' });
+      await callAdmin({ action: 'change_role', user_id: u.id, new_role: newRoleValue });
+      toast({ title: 'Éxito', description: `Rol cambiado a ${newRoleValue === 'admin' ? 'Administrador' : 'Usuario'}` });
       loadUsers(); loadAudit();
     } catch (err: any) {
-      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+      toast({ title: 'Error al cambiar rol', description: err.message, variant: 'destructive' });
     }
+    setActionLoading(false);
   };
 
   const formatDate = (d: string | null) => {
