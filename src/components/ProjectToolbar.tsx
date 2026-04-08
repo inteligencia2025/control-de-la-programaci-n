@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useProject } from '@/context/ProjectContext';
 import { useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { RESTRICTION_CATEGORIES } from '@/types/project';
 
@@ -13,6 +14,7 @@ export function ProjectToolbar() {
   const { project, setProject, saveToFile, loadFromFile, activeProjectId, projectsList, createNewProject, switchProject, deleteProject, undo, redo, canUndo, canRedo, saving } = useProject();
   const { signOut } = useAuth();
   const { isAdmin } = useUserRole();
+  const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleImport = () => fileInputRef.current?.click();
@@ -97,7 +99,7 @@ export function ProjectToolbar() {
         {saving && <Loader2 className="h-4 w-4 text-primary-foreground/60 animate-spin" />}
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
         {isAdmin && (
-          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => window.location.href = '/admin'} title="Gestión de usuarios">
+          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => navigate('/admin')} title="Gestión de usuarios">
             <Shield className="h-4 w-4" />
           </Button>
         )}

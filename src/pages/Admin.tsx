@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
-import { Navigate } from 'react-router-dom';
+import { Navigate, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -53,6 +53,7 @@ const Admin = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
@@ -228,7 +229,7 @@ const Admin = () => {
       {/* Header */}
       <div className="border-b border-border bg-card">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => window.location.href = '/'}>
+          <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div className="flex items-center gap-2">
