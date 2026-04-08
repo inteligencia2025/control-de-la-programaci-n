@@ -53,6 +53,7 @@ const Admin = () => {
   const { user, loading: authLoading } = useAuth();
   const { isAdmin, loading: roleLoading } = useUserRole();
   const { toast } = useToast();
+  const navigate = useNavigate();
 
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [auditLog, setAuditLog] = useState<AuditEntry[]>([]);
