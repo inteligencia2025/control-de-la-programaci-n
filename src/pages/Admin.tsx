@@ -198,6 +198,13 @@ const Admin = () => {
 
   const handleResetPassword = async () => {
     if (!selectedUser) return;
+    if (resetPassword) {
+      const pwError = validatePassword(resetPassword);
+      if (pwError) {
+        toast({ title: 'Contraseña inválida', description: pwError, variant: 'destructive' });
+        return;
+      }
+    }
     setActionLoading(true);
     try {
       await callAdmin({
