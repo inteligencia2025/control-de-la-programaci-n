@@ -78,12 +78,18 @@ const Admin = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   const callAdmin = useCallback(async (body: Record<string, unknown>) => {
-    const { data: sessionData } = await supabase.auth.getSession();
+    // Refresh session to avoid stale tokens
+    const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
     const token = sessionData?.session?.access_token;
-    if (!token) throw new Error('No autenticado');
+    if (sessionError || !token) {
+      throw new Error('Sesión expirada. Por favor, vuelve a iniciar sesión.');
+    }
 
     const { data, error } = await supabase.functions.invoke('admin-manage-users', { body });
-    if (error) throw new Error(error.message);
+    if (error) {
+      const msg = error.message || 'Error al comunicarse con el servidor';
+      throw new Error(msg);
+    }
     if (data?.error) throw new Error(data.error);
     return data;
   }, []);
