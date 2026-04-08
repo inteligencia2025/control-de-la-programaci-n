@@ -287,19 +287,12 @@ async function changeRole(
   if (!user_id || !new_role) return jsonResponse({ error: "user_id y new_role son obligatorios" }, 400);
   if (!["admin", "user"].includes(new_role)) return jsonResponse({ error: "Rol no válido" }, 400);
 
-  // Update existing role
+  // Delete existing role and insert new one
+  await client.from("user_roles").delete().eq("user_id", user_id);
   const { error } = await client
     .from("user_roles")
-    .update({ role: new_role })
-    .eq("user_id", user_id);
-
-  if (error) {
-    // If no row exists, insert instead
-    const { error: insertError } = await client
-      .from("user_roles")
-      .insert({ user_id, role: new_role });
-    if (insertError) return jsonResponse({ error: insertError.message }, 500);
-  }
+    .insert({ user_id, role: new_role });
+  if (error) return jsonResponse({ error: error.message }, 500);
 
   // Audit log
   await client.from("admin_audit_log").insert({
