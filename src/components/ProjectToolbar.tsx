@@ -96,6 +96,11 @@ export function ProjectToolbar() {
         <Button variant="secondary" size="sm" onClick={handleExportExcel} className="gap-1.5"><FileSpreadsheet className="h-4 w-4" />Excel</Button>
         {saving && <Loader2 className="h-4 w-4 text-primary-foreground/60 animate-spin" />}
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
+        {isAdmin && (
+          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => window.location.href = '/admin'} title="Gestión de usuarios">
+            <Shield className="h-4 w-4" />
+          </Button>
+        )}
         <Button variant="secondary" size="icon" className="h-8 w-8" onClick={signOut} title="Cerrar sesión">
           <LogOut className="h-4 w-4" />
         </Button>
