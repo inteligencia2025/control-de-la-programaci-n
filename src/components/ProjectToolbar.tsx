@@ -99,7 +99,7 @@ export function ProjectToolbar() {
         {saving && <Loader2 className="h-4 w-4 text-primary-foreground/60 animate-spin" />}
         <input ref={fileInputRef} type="file" accept=".json" className="hidden" onChange={handleFileChange} />
         {isAdmin && (
-          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => window.location.href = '/admin'} title="Gestión de usuarios">
+          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => navigate('/admin')} title="Gestión de usuarios">
             <Shield className="h-4 w-4" />
           </Button>
         )}
