@@ -19,9 +19,9 @@ const Auth = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setLoading(true);
+    setSubmitting(true);
     const { error } = await signIn(email, password);
-    setLoading(false);
+    setSubmitting(false);
 
     if (error) {
       toast({ title: 'Error', description: error.message, variant: 'destructive' });
