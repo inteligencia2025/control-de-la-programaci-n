@@ -87,7 +87,16 @@ const Admin = () => {
 
     const { data, error } = await supabase.functions.invoke('admin-manage-users', { body });
     if (error) {
-      const msg = error.message || 'Error al comunicarse con el servidor';
+      // Try to parse error body for a user-friendly message
+      let msg = 'Error al comunicarse con el servidor';
+      try {
+        const parsed = typeof error.message === 'string' ? JSON.parse(error.message) : null;
+        if (parsed?.error) msg = parsed.error;
+      } catch {
+        if (error.message) msg = error.message;
+      }
+      // Check if the data still contains an error (edge function returned non-2xx with body)
+      if (data?.error) msg = data.error;
       throw new Error(msg);
     }
     if (data?.error) throw new Error(data.error);
