@@ -87,9 +87,10 @@ Deno.serve(async (req) => {
   }
 });
 
-function jsonResponse(data: unknown, status = 200) {
+function jsonResponse(data: unknown, _status = 200) {
+  // Always return 200 so supabase.functions.invoke passes data to the client
   return new Response(JSON.stringify(data), {
-    status,
+    status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
