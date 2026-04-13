@@ -79,8 +79,11 @@ Deno.serve(async (req) => {
     }
   } catch (err) {
     console.error("Error:", err);
-    return new Response(JSON.stringify({ error: err.message || "Error interno" }), {
-      status: 500,
+    const message = err.message || "Error interno";
+    // Return 400 for known validation/policy errors, 500 for unexpected ones
+    const isValidationError = message.includes("Password") || message.includes("password") || message.includes("email");
+    return new Response(JSON.stringify({ error: message }), {
+      status: isValidationError ? 400 : 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
