@@ -148,7 +148,8 @@ async function createUser(
   });
 
   if (createError) {
-    return jsonResponse({ error: createError.message }, 400);
+    const msg = createError.message || "Error al crear usuario";
+    return jsonResponse({ error: msg }, msg.toLowerCase().includes("password") ? 400 : 400);
   }
 
   // Update profile name (trigger already created the profile)
