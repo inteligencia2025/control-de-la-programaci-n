@@ -80,18 +80,17 @@ Deno.serve(async (req) => {
   } catch (err) {
     console.error("Error:", err);
     const message = err.message || "Error interno";
-    // Return 400 for known validation/policy errors, 500 for unexpected ones
-    const isValidationError = message.includes("Password") || message.includes("password") || message.includes("email");
     return new Response(JSON.stringify({ error: message }), {
-      status: isValidationError ? 400 : 500,
+      status: 200,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });
 
-function jsonResponse(data: unknown, status = 200) {
+function jsonResponse(data: unknown, _status = 200) {
+  // Always return 200 so supabase.functions.invoke passes data to the client
   return new Response(JSON.stringify(data), {
-    status,
+    status: 200,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 }
