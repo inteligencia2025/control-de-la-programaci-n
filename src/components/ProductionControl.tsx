@@ -74,7 +74,7 @@ export function ProductionControl() {
     for (const a of enabledActivities) {
       const start = getEffectiveStartDate(a, project.activities);
       const totalUnits = Math.abs(a.unitEnd - a.unitStart) + 1;
-      const totalWorkdays = Math.ceil(totalUnits / a.rate);
+      const totalWorkdays = smartCeil(totalUnits / a.rate);
       let endDate = new Date(start); let count = 0;
       while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
       if (!earliest || start < earliest) earliest = start;
@@ -114,7 +114,7 @@ export function ProductionControl() {
       .filter(a => {
         const start = getEffectiveStartDate(a, project.activities);
         const totalUnits = Math.abs(a.unitEnd - a.unitStart) + 1;
-        const totalWorkdays = Math.ceil(totalUnits / a.rate);
+        const totalWorkdays = smartCeil(totalUnits / a.rate);
         let endDate = new Date(start); let count = 0;
         while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
         return start <= weekEnd && endDate >= weekStart;
