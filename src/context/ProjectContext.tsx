@@ -4,7 +4,6 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getEffectiveStartDateSimple } from '@/utils/schedulingUtils';
-import { useToast } from '@/hooks/use-toast';
 
 const MAX_UNDO = 30;
 
