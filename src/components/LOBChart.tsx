@@ -5,7 +5,7 @@ import { addDays, isWeekend, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Camera, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-import { getEffectiveStartDate as getEffectiveStartDateShared, smartCeil } from '@/utils/schedulingUtils';
+import { getEffectiveStartDate as getEffectiveStartDateShared, smartCeil, getEffectiveRate, normalizeRate } from '@/utils/schedulingUtils';
 
 interface LinePoint { workdayIndex: number; unit: number; }
 
@@ -19,7 +19,7 @@ function getActivityLine(activity: Activity, projectStart: Date, activities: Act
   const bufferUnits = activity.bufferUnits || 0;
   const actualUnitStart = activity.unitStart + bufferUnits;
   const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
-  const effectiveRate = activity.rate * (activity.crews || 1);
+  const effectiveRate = getEffectiveRate(activity);
   const totalWorkdays = smartCeil(totalUnits / effectiveRate);
   let startIndex = 0;
   let current = new Date(projectStart);
@@ -55,10 +55,10 @@ function getCrewLines(activity: Activity, projectStart: Date, activities: Activi
     const crewUnitStart = actualUnitStart + direction * Math.round(c * unitsPerCrew);
     const crewUnitEnd = actualUnitStart + direction * Math.round((c + 1) * unitsPerCrew) - direction;
     const crewUnits = Math.abs(crewUnitEnd - crewUnitStart) + 1;
-    const crewWorkdays = smartCeil(crewUnits / activity.rate);
+    const crewWorkdays = smartCeil(crewUnits / normalizeRate(activity.rate));
     const points: LinePoint[] = [{ workdayIndex: startIndex, unit: crewUnitStart }];
     for (let i = 1; i <= crewWorkdays; i++) {
-      const unit = crewUnitStart + direction * activity.rate * i;
+      const unit = crewUnitStart + direction * normalizeRate(activity.rate) * i;
       const clamped = direction > 0 ? Math.min(unit, crewUnitEnd) : Math.max(unit, crewUnitEnd);
       points.push({ workdayIndex: startIndex + i, unit: clamped });
     }
@@ -133,7 +133,7 @@ export function LOBChart() {
     const prelimGanttMax = ganttActivities.reduce((max, activity) => {
       const start = getEffectiveStartDate(activity, project.activities);
       const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-      const effectiveRate = activity.rate * (activity.crews || 1);
+      const effectiveRate = getEffectiveRate(activity);
       const durationDays = smartCeil(totalUnits / effectiveRate);
       let startIdx = 0;
       let cur = new Date(projectStart);
@@ -160,7 +160,7 @@ export function LOBChart() {
     const ganttBars = ganttActivities.map(activity => {
       const start = getEffectiveStartDate(activity, project.activities);
       const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-      const effectiveRate = activity.rate * (activity.crews || 1);
+      const effectiveRate = getEffectiveRate(activity);
       const durationDays = smartCeil(totalUnits / effectiveRate);
       let startIdx = 0;
       let cur = new Date(projectStart);

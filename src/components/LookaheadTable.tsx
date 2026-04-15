@@ -13,7 +13,7 @@ import { useProject } from '@/context/ProjectContext';
 import { LookaheadItem, Activity, RESTRICTION_CATEGORIES, createEmptyRestrictions, DEFAULT_FAILURE_CAUSES } from '@/types/project';
 import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
-import { getEffectiveStartDateSimple, smartCeil, advanceWorkdays } from '@/utils/schedulingUtils';
+import { getEffectiveStartDateSimple, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 
 const MAX_WEEKS = 12;
 
@@ -24,7 +24,7 @@ function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date
 function getActivityWeekRange(activity: Activity, activities: Activity[]): { start: Date; end: Date } {
   const start = getEffectiveStartDate(activity, activities);
   const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-  const totalWorkdays = smartCeil(totalUnits / activity.rate);
+  const totalWorkdays = calcActivityWorkdays(activity);
   return { start, end: advanceWorkdays(start, totalWorkdays) };
 }
 
