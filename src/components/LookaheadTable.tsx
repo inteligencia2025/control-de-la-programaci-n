@@ -23,7 +23,6 @@ function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date
 
 function getActivityWeekRange(activity: Activity, activities: Activity[]): { start: Date; end: Date } {
   const start = getEffectiveStartDate(activity, activities);
-  const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
   const totalWorkdays = calcActivityWorkdays(activity);
   return { start, end: advanceWorkdays(start, totalWorkdays) };
 }

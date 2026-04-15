@@ -23,7 +23,6 @@ export function GanttChart() {
     const projectStart = new Date(Math.min(...enabled.map(a => getEffectiveStartDate(a, project.activities).getTime())));
     const activities = enabled.map(activity => {
       const start = getEffectiveStartDate(activity, project.activities);
-      const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
       const totalWorkdays = calcActivityWorkdays(activity);
       let startIdx = 0;
       let cur = new Date(projectStart);
