@@ -3,32 +3,10 @@ import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
 import { Activity } from '@/types/project';
-import { addDays, isWeekend, format, parseISO } from 'date-fns';
+import { addDays, isWeekend, format } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { getEffectiveStartDateSimple as getEffectiveStartDate, smartCeil } from '@/utils/schedulingUtils';
 
-function safeParse(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (y && m && d) return new Date(y, m - 1, d);
-  const parsed = parseISO(dateStr);
-  if (!isNaN(parsed.getTime())) return parsed;
-  return new Date();
-}
-
-function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date {
-  const baseStart = safeParse(activity.startDate);
-  if (!activity.predecessorId) return baseStart;
-  const pred = activities.find(a => a.id === activity.predecessorId);
-  if (!pred) return baseStart;
-  const predStart = getEffectiveStartDate(pred, activities);
-  const firstUnitWorkdays = Math.ceil(1 / pred.rate);
-  const bufferDays = activity.bufferDays || 0;
-  let current = new Date(predStart);
-  let count = 0;
-  while (count < firstUnitWorkdays + bufferDays) { current = addDays(current, 1); if (!isWeekend(current)) count++; }
-  let successorStart = current;
-  while (isWeekend(successorStart)) successorStart = addDays(successorStart, 1);
-  return successorStart > baseStart ? successorStart : baseStart;
-}
 
 const ESTRUCTURA_COLOR = 'hsl(var(--primary))';
 const ACABADOS_COLOR = '#e69500';
@@ -46,7 +24,7 @@ export function GanttChart() {
     const activities = enabled.map(activity => {
       const start = getEffectiveStartDate(activity, project.activities);
       const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-      const totalWorkdays = Math.ceil(totalUnits / activity.rate);
+      const totalWorkdays = smartCeil(totalUnits / activity.rate);
       let startIdx = 0;
       let cur = new Date(projectStart);
       while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }

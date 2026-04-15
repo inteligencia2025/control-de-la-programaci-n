@@ -11,43 +11,21 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useProject } from '@/context/ProjectContext';
 import { LookaheadItem, Activity, RESTRICTION_CATEGORIES, createEmptyRestrictions, DEFAULT_FAILURE_CAUSES } from '@/types/project';
-import { addDays, isWeekend, startOfWeek, parseISO, format } from 'date-fns';
+import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { getEffectiveStartDateSimple, smartCeil, advanceWorkdays } from '@/utils/schedulingUtils';
 
 const MAX_WEEKS = 12;
 
-function safeParse(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (y && m && d) return new Date(y, m - 1, d);
-  const parsed = parseISO(dateStr);
-  if (!isNaN(parsed.getTime())) return parsed;
-  return new Date();
-}
-
 function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date {
-  const baseStart = safeParse(activity.startDate);
-  if (!activity.predecessorId) return baseStart;
-  const pred = activities.find(a => a.id === activity.predecessorId);
-  if (!pred) return baseStart;
-  const predStart = getEffectiveStartDate(pred, activities);
-  const firstUnitWorkdays = Math.ceil(1 / pred.rate);
-  const bufferDays = activity.bufferDays || 0;
-  let current = new Date(predStart);
-  let count = 0;
-  while (count < firstUnitWorkdays + bufferDays) { current = addDays(current, 1); if (!isWeekend(current)) count++; }
-  let successorStart = current;
-  while (isWeekend(successorStart)) successorStart = addDays(successorStart, 1);
-  return successorStart > baseStart ? successorStart : baseStart;
+  return getEffectiveStartDateSimple(activity, activities);
 }
 
 function getActivityWeekRange(activity: Activity, activities: Activity[]): { start: Date; end: Date } {
   const start = getEffectiveStartDate(activity, activities);
   const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-  const totalWorkdays = Math.ceil(totalUnits / activity.rate);
-  let endDate = new Date(start);
-  let count = 0;
-  while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
-  return { start, end: endDate };
+  const totalWorkdays = smartCeil(totalUnits / activity.rate);
+  return { start, end: advanceWorkdays(start, totalWorkdays) };
 }
 
 function getProjectWeekStartDate(weekNum: number, activities: Activity[]): Date {

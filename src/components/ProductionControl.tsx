@@ -12,8 +12,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProject } from '@/context/ProjectContext';
 import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity } from '@/types/project';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, LineChart, Line, ReferenceLine, ComposedChart } from 'recharts';
-import { addDays, isWeekend, startOfWeek, parseISO, format } from 'date-fns';
+import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
+import { getEffectiveStartDateSimple, smartCeil, advanceWorkdays } from '@/utils/schedulingUtils';
 
 const PIE_COLORS = ['#c0392b', '#2980b9', '#e69500', '#8e44ad', '#16a085', '#7f8c8d', '#d35400', '#27ae60', '#1e3a5f', '#e74c3c'];
 
@@ -30,28 +31,8 @@ function getCurrentWeekNumber(): number {
   return Math.ceil(diff / (7 * 24 * 60 * 60 * 1000));
 }
 
-function safeParse(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (y && m && d) return new Date(y, m - 1, d);
-  const parsed = parseISO(dateStr);
-  if (!isNaN(parsed.getTime())) return parsed;
-  return new Date();
-}
-
 function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date {
-  const baseStart = safeParse(activity.startDate);
-  if (!activity.predecessorId) return baseStart;
-  const pred = activities.find(a => a.id === activity.predecessorId);
-  if (!pred) return baseStart;
-  const predStart = getEffectiveStartDate(pred, activities);
-  const firstUnitWorkdays = Math.ceil(1 / pred.rate);
-  const bufferDays = activity.bufferDays || 0;
-  let current = new Date(predStart);
-  let count = 0;
-  while (count < firstUnitWorkdays + bufferDays) { current = addDays(current, 1); if (!isWeekend(current)) count++; }
-  let successorStart = current;
-  while (isWeekend(successorStart)) successorStart = addDays(successorStart, 1);
-  return successorStart > baseStart ? successorStart : baseStart;
+  return getEffectiveStartDateSimple(activity, activities);
 }
 
 function getProjectWeekDates(weekNum: number, activities: Activity[]) {
@@ -93,7 +74,7 @@ export function ProductionControl() {
     for (const a of enabledActivities) {
       const start = getEffectiveStartDate(a, project.activities);
       const totalUnits = Math.abs(a.unitEnd - a.unitStart) + 1;
-      const totalWorkdays = Math.ceil(totalUnits / a.rate);
+      const totalWorkdays = smartCeil(totalUnits / a.rate);
       let endDate = new Date(start); let count = 0;
       while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
       if (!earliest || start < earliest) earliest = start;
@@ -133,7 +114,7 @@ export function ProductionControl() {
       .filter(a => {
         const start = getEffectiveStartDate(a, project.activities);
         const totalUnits = Math.abs(a.unitEnd - a.unitStart) + 1;
-        const totalWorkdays = Math.ceil(totalUnits / a.rate);
+        const totalWorkdays = smartCeil(totalUnits / a.rate);
         let endDate = new Date(start); let count = 0;
         while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
         return start <= weekEnd && endDate >= weekStart;
