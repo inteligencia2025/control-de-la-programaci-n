@@ -7,9 +7,6 @@ import { addDays, isWeekend, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { getEffectiveStartDateSimple as getEffectiveStartDate, smartCeil } from '@/utils/schedulingUtils';
 
-function getEffectiveStartDateLocal(activity: Activity, activities: Activity[]): Date {
-  return getEffectiveStartDate(activity, activities);
-}
 
 const ESTRUCTURA_COLOR = 'hsl(var(--primary))';
 const ACABADOS_COLOR = '#e69500';
