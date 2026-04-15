@@ -225,8 +225,10 @@ export function LookaheadTable() {
         </div>
       )}
 
-      {showReview ? (
+      {viewMode === 'review' ? (
         <LookaheadReview items={filteredItems} weekStart={weekStart} allCauses={allCauses} responsibles={responsibles} updateItem={updateLookahead} removeItem={removeLookahead} />
+      ) : viewMode === 'dashboard' ? (
+        <LookaheadDashboard items={filteredItems} weekFilter={weekFilter} allItems={project.lookahead} totalWeeks={totalProjectWeeks} />
       ) : (
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-3">
@@ -262,7 +264,6 @@ export function LookaheadTable() {
                         const completedCount = cat.items.filter(i => item.restrictions[i.id]).length;
                         return (
                           <div key={cat.id} className="relative">
-                            {/* Horizontal connector line */}
                             <div className="absolute left-0 top-[14px] w-3 border-t border-primary/20" />
                             <Collapsible open={isOpen} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
                               <div className="flex items-center ml-4">
@@ -292,7 +293,7 @@ export function LookaheadTable() {
                               </div>
                               <CollapsibleContent>
                                 <div className="ml-4 border-l-2 border-muted-foreground/15 pl-1">
-                                  {cat.items.map((ri, idx) => {
+                                  {cat.items.map(ri => {
                                     const checked = item.restrictions[ri.id] || false;
                                     return (
                                       <div key={ri.id} className="relative flex items-center">
