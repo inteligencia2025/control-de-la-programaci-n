@@ -60,8 +60,12 @@ export function ProjectToolbar() {
     <header className="lean-gradient px-6 py-3 flex items-center gap-4 shadow-md">
       <div className="flex items-center gap-2">
         <HardHat className="h-7 w-7 text-accent" />
-        <Input value={project.name} onChange={e => setProject(p => ({ ...p, name: e.target.value }))}
-          className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground font-semibold text-lg w-48 placeholder:text-primary-foreground/50" />
+        {isAdmin ? (
+          <Input value={project.name} onChange={e => setProject(p => ({ ...p, name: e.target.value }))}
+            className="bg-primary-foreground/10 border-primary-foreground/20 text-primary-foreground font-semibold text-lg w-48 placeholder:text-primary-foreground/50" />
+        ) : (
+          <span className="text-primary-foreground font-semibold text-lg truncate max-w-[12rem]">{project.name}</span>
+        )}
       </div>
 
       {/* Project selector */}
@@ -81,7 +85,7 @@ export function ProjectToolbar() {
             <PlusCircle className="h-4 w-4" />
           </Button>
         )}
-        {projectsList.length > 1 && (
+        {isAdmin && projectsList.length > 1 && (
           <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => deleteProject(activeProjectId)} title="Eliminar proyecto actual">
             <Trash2 className="h-4 w-4" />
           </Button>
