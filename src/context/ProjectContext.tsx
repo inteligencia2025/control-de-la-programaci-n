@@ -3,6 +3,7 @@ import { ProjectData, Activity, LookaheadItem, PACRecord } from '@/types/project
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
+import { getEffectiveStartDateSimple } from '@/utils/schedulingUtils';
 
 const MAX_UNDO = 30;
 
@@ -403,7 +404,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [projectsList, activeProjectId]);
 
   const addActivity = useCallback((a: Activity) => setProject(p => ({ ...p, activities: [...p.activities, a] })), [setProject]);
-  const updateActivity = useCallback((a: Activity) => setProject(p => ({ ...p, activities: p.activities.map(x => x.id === a.id ? a : x) })), [setProject]);
+  const updateActivity = useCallback((a: Activity) => setProject(p => {
+    let activities = p.activities.map(x => x.id === a.id ? a : x);
+    // Cascade: update stored startDate of all successors
+    const cascadeSuccessors = (changedId: string) => {
+      const successors = activities.filter(s => s.predecessorId === changedId);
+      for (const succ of successors) {
+        const effectiveStart = getEffectiveStartDateSimple(succ, activities);
+        const newDateStr = effectiveStart.toISOString().split('T')[0];
+        if (succ.startDate !== newDateStr) {
+          activities = activities.map(x => x.id === succ.id ? { ...x, startDate: newDateStr } : x);
+          cascadeSuccessors(succ.id);
+        }
+      }
+    };
+    cascadeSuccessors(a.id);
+    return { ...p, activities };
+  }), [setProject]);
   const removeActivity = useCallback((id: string) => setProject(p => ({ ...p, activities: p.activities.filter(x => x.id !== id) })), [setProject]);
   const addLookahead = useCallback((item: LookaheadItem) => setProject(p => ({ ...p, lookahead: [...p.lookahead, item] })), [setProject]);
   const updateLookahead = useCallback((item: LookaheadItem) => setProject(p => ({ ...p, lookahead: p.lookahead.map(x => x.id === item.id ? item : x) })), [setProject]);
