@@ -252,29 +252,42 @@ export function LookaheadTable() {
                     <div className={`h-full rounded-full transition-all ${isComplete ? 'bg-success' : 'bg-primary'}`} style={{ width: `${progress}%` }} />
                   </div>
                   {!isComplete && (
-                    <div className="space-y-1">
+                    <div className="mt-2 border-l-2 border-primary/20 ml-1">
                       {RESTRICTION_CATEGORIES.map(cat => {
                         const isOpen = !collapsedCats[`${item.id}-${cat.id}`];
                         const complete = catComplete(item.restrictions, cat.id);
                         const completedCount = cat.items.filter(i => item.restrictions[i.id]).length;
                         return (
-                          <Collapsible key={cat.id} open={isOpen} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
-                            <CollapsibleTrigger className="flex items-center gap-1.5 w-full text-left px-2 py-1 rounded hover:bg-secondary/50 transition-colors">
-                              {isOpen ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                              <span className="text-[10px] font-medium flex-1">{cat.name}</span>
-                              <span className={`text-[9px] ${complete ? 'text-success' : 'text-muted-foreground'}`}>{completedCount}/{cat.items.length}</span>
-                            </CollapsibleTrigger>
-                            <CollapsibleContent>
-                              <div className="grid grid-cols-2 gap-x-4 gap-y-0.5 pl-6 py-1">
-                                {cat.items.map(ri => (
-                                  <label key={ri.id} className="flex items-center gap-1.5 cursor-pointer py-0.5">
-                                    <Checkbox checked={item.restrictions[ri.id] || false} onCheckedChange={() => toggleRestriction(item, ri.id)} className="h-3 w-3" />
-                                    <span className="text-[10px]">{ri.label}</span>
-                                  </label>
-                                ))}
-                              </div>
-                            </CollapsibleContent>
-                          </Collapsible>
+                          <div key={cat.id} className="relative">
+                            {/* Horizontal connector line */}
+                            <div className="absolute left-0 top-[14px] w-3 border-t border-primary/20" />
+                            <Collapsible open={isOpen} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
+                              <CollapsibleTrigger className="flex items-center gap-1.5 w-full text-left ml-4 px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors group">
+                                {isOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                                <span className={`text-[11px] font-medium flex-1 ${complete ? 'text-success line-through' : ''}`}>{cat.name}</span>
+                                <Badge variant={complete ? 'default' : 'secondary'} className={`text-[9px] h-4 px-1.5 ${complete ? 'bg-success text-success-foreground' : ''}`}>
+                                  {completedCount}/{cat.items.length}
+                                </Badge>
+                              </CollapsibleTrigger>
+                              <CollapsibleContent>
+                                <div className="ml-4 border-l-2 border-muted-foreground/15 pl-1">
+                                  {cat.items.map((ri, idx) => {
+                                    const checked = item.restrictions[ri.id] || false;
+                                    return (
+                                      <div key={ri.id} className="relative flex items-center">
+                                        {/* Horizontal connector for each item */}
+                                        <div className="absolute left-0 top-1/2 w-3 border-t border-muted-foreground/15" />
+                                        <label className="flex items-center gap-2 cursor-pointer py-1 pl-4 pr-2 ml-1 rounded hover:bg-secondary/30 transition-colors w-full">
+                                          <Checkbox checked={checked} onCheckedChange={() => toggleRestriction(item, ri.id)} className="h-3.5 w-3.5" />
+                                          <span className={`text-[10px] ${checked ? 'text-muted-foreground line-through' : ''}`}>{ri.label}</span>
+                                        </label>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </CollapsibleContent>
+                            </Collapsible>
+                          </div>
                         );
                       })}
                     </div>
