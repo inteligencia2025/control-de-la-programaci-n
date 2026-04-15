@@ -1,11 +1,12 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, FileSpreadsheet, ChevronDown, ChevronRight, UserPlus, CheckCheck } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, FileSpreadsheet, ChevronDown, ChevronRight, UserPlus, CheckCheck, BarChart3 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -61,7 +62,7 @@ export function LookaheadTable() {
   const { project, addLookahead, updateLookahead, removeLookahead, setProject } = useProject();
   const [weekFilter, setWeekFilter] = useState<number>(1);
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
-  const [showReview, setShowReview] = useState(false);
+  const [viewMode, setViewMode] = useState<'restrictions' | 'review' | 'dashboard'>('restrictions');
   const [showAddResponsible, setShowAddResponsible] = useState(false);
   const [newResponsible, setNewResponsible] = useState('');
 
@@ -204,7 +205,9 @@ export function LookaheadTable() {
         </div>
         <span className="text-[10px] text-muted-foreground">{format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 4), 'dd/MM')}</span>
         <div className="ml-auto flex gap-1">
-          <Button size="sm" variant="outline" onClick={() => setShowReview(!showReview)} className="gap-1 h-6 text-[10px]">{showReview ? 'Restricciones' : 'Revisión'}</Button>
+          <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-6 text-[10px]">Restricciones</Button>
+          <Button size="sm" variant={viewMode === 'review' ? 'default' : 'outline'} onClick={() => setViewMode('review')} className="gap-1 h-6 text-[10px]">Revisión</Button>
+          <Button size="sm" variant={viewMode === 'dashboard' ? 'default' : 'outline'} onClick={() => setViewMode('dashboard')} className="gap-1 h-6 text-[10px]"><BarChart3 className="h-3 w-3" />Resumen</Button>
           <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-6 text-[10px]"><FileSpreadsheet className="h-3 w-3" />Excel</Button>
           <Button size="sm" variant="outline" onClick={() => setShowAddResponsible(!showAddResponsible)} className="gap-1 h-6 text-[10px]"><UserPlus className="h-3 w-3" />Responsable</Button>
           <Button size="sm" variant="outline" onClick={handleAutoLoad} className="gap-1 h-6 text-[10px]" disabled={lobActivityCount === 0}>
@@ -222,8 +225,10 @@ export function LookaheadTable() {
         </div>
       )}
 
-      {showReview ? (
+      {viewMode === 'review' ? (
         <LookaheadReview items={filteredItems} weekStart={weekStart} allCauses={allCauses} responsibles={responsibles} updateItem={updateLookahead} removeItem={removeLookahead} />
+      ) : viewMode === 'dashboard' ? (
+        <LookaheadDashboard items={filteredItems} weekFilter={weekFilter} allItems={project.lookahead} totalWeeks={totalProjectWeeks} />
       ) : (
         <ScrollArea className="flex-1">
           <div className="p-3 space-y-3">
@@ -259,7 +264,6 @@ export function LookaheadTable() {
                         const completedCount = cat.items.filter(i => item.restrictions[i.id]).length;
                         return (
                           <div key={cat.id} className="relative">
-                            {/* Horizontal connector line */}
                             <div className="absolute left-0 top-[14px] w-3 border-t border-primary/20" />
                             <Collapsible open={isOpen} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
                               <div className="flex items-center ml-4">
@@ -289,7 +293,7 @@ export function LookaheadTable() {
                               </div>
                               <CollapsibleContent>
                                 <div className="ml-4 border-l-2 border-muted-foreground/15 pl-1">
-                                  {cat.items.map((ri, idx) => {
+                                  {cat.items.map(ri => {
                                     const checked = item.restrictions[ri.id] || false;
                                     return (
                                       <div key={ri.id} className="relative flex items-center">
@@ -414,5 +418,161 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
         </TableBody>
       </Table>
     </div>
+  );
+}
+
+interface DashboardProps {
+  items: LookaheadItem[];
+  weekFilter: number;
+  allItems: LookaheadItem[];
+  totalWeeks: number;
+}
+
+function LookaheadDashboard({ items, weekFilter, allItems, totalWeeks }: DashboardProps) {
+  const totalRestrictions = RESTRICTION_CATEGORIES.reduce((sum, c) => sum + c.items.length, 0);
+
+  const globalProgress = useMemo(() => {
+    if (items.length === 0) return 0;
+    const total = items.length * totalRestrictions;
+    const completed = items.reduce((sum, item) => {
+      return sum + RESTRICTION_CATEGORIES.flatMap(c => c.items).filter(ri => item.restrictions[ri.id]).length;
+    }, 0);
+    return total > 0 ? Math.round((completed / total) * 100) : 0;
+  }, [items, totalRestrictions]);
+
+  const categoryStats = useMemo(() => {
+    return RESTRICTION_CATEGORIES.map(cat => {
+      const totalItems = items.length * cat.items.length;
+      const completed = items.reduce((sum, item) => {
+        return sum + cat.items.filter(ri => item.restrictions[ri.id]).length;
+      }, 0);
+      const pct = totalItems > 0 ? Math.round((completed / totalItems) * 100) : 0;
+      return { id: cat.id, name: cat.name, completed, total: totalItems, pct };
+    });
+  }, [items]);
+
+  const activityStats = useMemo(() => {
+    return items.map(item => {
+      const completed = RESTRICTION_CATEGORIES.flatMap(c => c.items).filter(ri => item.restrictions[ri.id]).length;
+      const pct = totalRestrictions > 0 ? Math.round((completed / totalRestrictions) * 100) : 0;
+      return { name: item.activityName || 'Sin nombre', responsible: item.responsible || '—', completed, total: totalRestrictions, pct };
+    });
+  }, [items, totalRestrictions]);
+
+  const weeklyTrend = useMemo(() => {
+    return Array.from({ length: totalWeeks }, (_, i) => {
+      const w = i + 1;
+      const weekItems = allItems.filter(it => it.week === w);
+      if (weekItems.length === 0) return { week: w, pct: 0, count: 0 };
+      const total = weekItems.length * totalRestrictions;
+      const completed = weekItems.reduce((sum, item) => {
+        return sum + RESTRICTION_CATEGORIES.flatMap(c => c.items).filter(ri => item.restrictions[ri.id]).length;
+      }, 0);
+      return { week: w, pct: total > 0 ? Math.round((completed / total) * 100) : 0, count: weekItems.length };
+    });
+  }, [allItems, totalWeeks, totalRestrictions]);
+
+  const activitiesComplete = items.filter(item => getRestrictionProgress(item.restrictions) === 100).length;
+
+  return (
+    <ScrollArea className="flex-1">
+      <div className="p-4 space-y-4">
+        {/* Header cards */}
+        <div className="grid grid-cols-4 gap-3">
+          <div className="border rounded-lg p-3 bg-card text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Avance Global</p>
+            <p className="text-2xl font-bold mt-1">{globalProgress}%</p>
+            <Progress value={globalProgress} className="h-2 mt-2" />
+          </div>
+          <div className="border rounded-lg p-3 bg-card text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Actividades</p>
+            <p className="text-2xl font-bold mt-1">{items.length}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">Semana {weekFilter}</p>
+          </div>
+          <div className="border rounded-lg p-3 bg-card text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Liberadas</p>
+            <p className="text-2xl font-bold text-success mt-1">{activitiesComplete}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">de {items.length}</p>
+          </div>
+          <div className="border rounded-lg p-3 bg-card text-center">
+            <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Pendientes</p>
+            <p className="text-2xl font-bold text-destructive mt-1">{items.length - activitiesComplete}</p>
+            <p className="text-[10px] text-muted-foreground mt-1">por liberar</p>
+          </div>
+        </div>
+
+        {/* Category breakdown */}
+        <div className="border rounded-lg p-3 bg-card">
+          <h4 className="text-xs font-semibold mb-3">Avance por Categoría</h4>
+          <div className="space-y-3">
+            {categoryStats.map(cat => (
+              <div key={cat.id}>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-[11px] font-medium">{cat.name}</span>
+                  <span className="text-[10px] text-muted-foreground">{cat.completed}/{cat.total} — {cat.pct}%</span>
+                </div>
+                <div className="w-full h-2.5 bg-secondary rounded-full overflow-hidden">
+                  <div
+                    className={`h-full rounded-full transition-all ${cat.pct === 100 ? 'bg-success' : cat.pct >= 50 ? 'bg-primary' : 'bg-amber-500'}`}
+                    style={{ width: `${cat.pct}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Per-activity table */}
+        <div className="border rounded-lg p-3 bg-card">
+          <h4 className="text-xs font-semibold mb-3">Avance por Actividad</h4>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="text-[10px]">Actividad</TableHead>
+                <TableHead className="text-[10px] w-28">Responsable</TableHead>
+                <TableHead className="text-[10px] w-24 text-right">Progreso</TableHead>
+                <TableHead className="text-[10px] w-40">Barra</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {activityStats.map((a, i) => (
+                <TableRow key={i}>
+                  <TableCell className="text-[11px] py-2">{a.name}</TableCell>
+                  <TableCell className="text-[11px] py-2">{a.responsible}</TableCell>
+                  <TableCell className="text-[11px] py-2 text-right">{a.completed}/{a.total} ({a.pct}%)</TableCell>
+                  <TableCell className="py-2">
+                    <div className="w-full h-2 bg-secondary rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full transition-all ${a.pct === 100 ? 'bg-success' : a.pct >= 50 ? 'bg-primary' : 'bg-amber-500'}`}
+                        style={{ width: `${a.pct}%` }}
+                      />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+
+        {/* Weekly trend */}
+        <div className="border rounded-lg p-3 bg-card">
+          <h4 className="text-xs font-semibold mb-3">Tendencia Semanal</h4>
+          <div className="flex items-end gap-1 h-24">
+            {weeklyTrend.map(w => (
+              <div key={w.week} className="flex-1 flex flex-col items-center gap-1">
+                <div className="w-full flex justify-center">
+                  <div
+                    className={`w-full max-w-[20px] rounded-t transition-all ${w.week === weekFilter ? 'bg-primary' : 'bg-muted-foreground/30'} ${w.count === 0 ? 'opacity-30' : ''}`}
+                    style={{ height: `${Math.max(4, (w.pct / 100) * 72)}px` }}
+                    title={`S${w.week}: ${w.pct}% (${w.count} act.)`}
+                  />
+                </div>
+                <span className={`text-[8px] ${w.week === weekFilter ? 'font-bold' : 'text-muted-foreground'}`}>S{w.week}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </ScrollArea>
   );
 }
