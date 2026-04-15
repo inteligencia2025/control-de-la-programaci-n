@@ -163,17 +163,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         .order('created_at', { ascending: true });
 
       if (!projects || projects.length === 0) {
-        // Create first project
-        const { data: newP } = await supabase
-          .from('projects')
-          .insert({ user_id: user.id, name: 'Nuevo Proyecto' })
-          .select('id, name')
-          .single();
-        if (newP) {
-          setProjectsList([{ id: newP.id, name: newP.name }]);
-          setActiveProjectId(newP.id);
-          setProjectInternal(defaultProject);
-        }
+        // No projects available - set empty state (only admins can create)
+        setProjectsList([]);
+        setActiveProjectId('');
+        setProjectInternal(defaultProject);
+        loadedFromDbRef.current = true;
       } else {
         setProjectsList(projects.map(p => ({ id: p.id, name: p.name })));
         setActiveProjectId(projects[0].id);
