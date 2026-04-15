@@ -3,7 +3,7 @@ import { ProjectData, Activity, LookaheadItem, PACRecord } from '@/types/project
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
-import { getEffectiveStartDateSimple } from '@/utils/schedulingUtils';
+import { getEffectiveStartDateSimple, getEffectiveRate, smartCeil, ensureWorkday, advanceWorkdays, safeParse } from '@/utils/schedulingUtils';
 
 const MAX_UNDO = 30;
 
@@ -406,12 +406,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const addActivity = useCallback((a: Activity) => setProject(p => ({ ...p, activities: [...p.activities, a] })), [setProject]);
   const updateActivity = useCallback((a: Activity) => setProject(p => {
     let activities = p.activities.map(x => x.id === a.id ? a : x);
-    // Cascade: update stored startDate of all successors
+    // Cascade: update stored startDate of all successors based on predecessor constraint
     const cascadeSuccessors = (changedId: string) => {
       const successors = activities.filter(s => s.predecessorId === changedId);
       for (const succ of successors) {
-        const effectiveStart = getEffectiveStartDateSimple(succ, activities);
-        const newDateStr = effectiveStart.toISOString().split('T')[0];
+        const pred = activities.find(x => x.id === succ.predecessorId);
+        if (!pred) continue;
+        // Calculate predecessor-derived start (ignoring successor's stored baseStart)
+        const predStart = safeParse(pred.startDate);
+        const effectivePredRate = getEffectiveRate(pred);
+        const firstUnitWorkdays = smartCeil(1 / effectivePredRate);
+        const bufferDays = succ.bufferDays || 0;
+        const predConstraintDate = ensureWorkday(advanceWorkdays(predStart, firstUnitWorkdays + bufferDays));
+        const newDateStr = predConstraintDate.toISOString().split('T')[0];
         if (succ.startDate !== newDateStr) {
           activities = activities.map(x => x.id === succ.id ? { ...x, startDate: newDateStr } : x);
           cascadeSuccessors(succ.id);
