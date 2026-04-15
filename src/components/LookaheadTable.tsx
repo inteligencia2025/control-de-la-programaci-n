@@ -263,17 +263,14 @@ export function LookaheadTable() {
                             <div className="absolute left-0 top-[14px] w-3 border-t border-primary/20" />
                             <Collapsible open={isOpen} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
                               <div className="flex items-center ml-4">
-                                <CollapsibleTrigger className="flex items-center gap-1.5 flex-1 text-left px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors group">
-                                  {isOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-                                  <span className={`text-[11px] font-medium flex-1 ${complete ? 'text-success line-through' : ''}`}>{cat.name}</span>
-                                  <Badge variant={complete ? 'default' : 'secondary'} className={`text-[9px] h-4 px-1.5 ${complete ? 'bg-success text-success-foreground' : ''}`}>
-                                    {completedCount}/{cat.items.length}
-                                  </Badge>
+                                <CollapsibleTrigger className="flex items-center gap-1.5 flex-1 text-left px-2 py-2 rounded hover:bg-secondary/50 transition-colors group">
+                                  {isOpen ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                                  <span className={`text-xs font-semibold flex-1 ${complete ? 'text-success line-through' : ''}`}>{cat.name}</span>
                                 </CollapsibleTrigger>
                                 <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-5 w-5 ml-1 shrink-0"
+                                  variant={complete ? 'default' : 'outline'}
+                                  size="sm"
+                                  className={`h-6 text-[10px] px-2 gap-1 shrink-0 ${complete ? 'bg-success hover:bg-success/90 text-success-foreground' : ''}`}
                                   title={complete ? 'Desmarcar todo' : 'Marcar todo'}
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -283,8 +280,12 @@ export function LookaheadTable() {
                                     updateLookahead({ ...item, restrictions: newRestrictions });
                                   }}
                                 >
-                                  <CheckCheck className={`h-3 w-3 ${complete ? 'text-success' : 'text-muted-foreground'}`} />
+                                  <CheckCheck className="h-3.5 w-3.5" />
+                                  {complete ? 'Completado' : 'Marcar todo'}
                                 </Button>
+                                <Badge variant={complete ? 'default' : 'secondary'} className={`text-[10px] h-5 px-2 ml-1 ${complete ? 'bg-success text-success-foreground' : ''}`}>
+                                  {completedCount}/{cat.items.length}
+                                </Badge>
                               </div>
                               <CollapsibleContent>
                                 <div className="ml-4 border-l-2 border-muted-foreground/15 pl-1">
@@ -292,11 +293,10 @@ export function LookaheadTable() {
                                     const checked = item.restrictions[ri.id] || false;
                                     return (
                                       <div key={ri.id} className="relative flex items-center">
-                                        {/* Horizontal connector for each item */}
                                         <div className="absolute left-0 top-1/2 w-3 border-t border-muted-foreground/15" />
-                                        <label className="flex items-center gap-2 cursor-pointer py-1 pl-4 pr-2 ml-1 rounded hover:bg-secondary/30 transition-colors w-full">
+                                        <label className="flex items-center gap-2 cursor-pointer py-1.5 pl-4 pr-2 ml-1 rounded hover:bg-secondary/30 transition-colors w-full">
                                           <Checkbox checked={checked} onCheckedChange={() => toggleRestriction(item, ri.id)} className="h-3.5 w-3.5" />
-                                          <span className={`text-[10px] ${checked ? 'text-muted-foreground line-through' : ''}`}>{ri.label}</span>
+                                          <span className={`text-[11px] ${checked ? 'text-muted-foreground line-through' : ''}`}>{ri.label}</span>
                                         </label>
                                       </div>
                                     );
