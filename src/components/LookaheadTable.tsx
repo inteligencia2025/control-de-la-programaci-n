@@ -205,7 +205,9 @@ export function LookaheadTable() {
         </div>
         <span className="text-[10px] text-muted-foreground">{format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 4), 'dd/MM')}</span>
         <div className="ml-auto flex gap-1">
-          <Button size="sm" variant="outline" onClick={() => setShowReview(!showReview)} className="gap-1 h-6 text-[10px]">{showReview ? 'Restricciones' : 'Revisión'}</Button>
+          <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-6 text-[10px]">Restricciones</Button>
+          <Button size="sm" variant={viewMode === 'review' ? 'default' : 'outline'} onClick={() => setViewMode('review')} className="gap-1 h-6 text-[10px]">Revisión</Button>
+          <Button size="sm" variant={viewMode === 'dashboard' ? 'default' : 'outline'} onClick={() => setViewMode('dashboard')} className="gap-1 h-6 text-[10px]"><BarChart3 className="h-3 w-3" />Resumen</Button>
           <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-6 text-[10px]"><FileSpreadsheet className="h-3 w-3" />Excel</Button>
           <Button size="sm" variant="outline" onClick={() => setShowAddResponsible(!showAddResponsible)} className="gap-1 h-6 text-[10px]"><UserPlus className="h-3 w-3" />Responsable</Button>
           <Button size="sm" variant="outline" onClick={handleAutoLoad} className="gap-1 h-6 text-[10px]" disabled={lobActivityCount === 0}>
