@@ -402,10 +402,8 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
                   </Select>
                 </TableCell>
                 <TableCell>
-                  {commitmentMet === false ? (
-                    <Textarea value={commitmentCause} onChange={e => updateField(item, 'commitmentCause', e.target.value)}
-                      className="min-h-[32px] text-[10px] resize-none py-1" placeholder="Escribir causa..." />
-                  ) : <span className="text-[10px] text-muted-foreground">—</span>}
+                  <Textarea value={commitmentCause} onChange={e => updateField(item, 'commitmentCause', e.target.value)}
+                    className="min-h-[32px] text-[10px] resize-none py-1" placeholder="Escribir causa de incumplimiento..." />
                 </TableCell>
                 <TableCell>
                   <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive" onClick={() => removeItem(item.id)}>
