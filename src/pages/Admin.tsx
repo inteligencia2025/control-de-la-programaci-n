@@ -14,9 +14,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users, UserPlus, Shield, ShieldOff, KeyRound, ArrowLeft, Search,
-  RefreshCw, ClipboardList, CheckCircle2, XCircle, AlertTriangle
+  RefreshCw, ClipboardList, CheckCircle2, XCircle, AlertTriangle,
+  FolderOpen, UserCheck, UserMinus
 } from 'lucide-react';
 
 interface AdminUser {
@@ -37,6 +39,13 @@ interface AuditEntry {
   target_user_id: string | null;
   action: string;
   details: Record<string, unknown>;
+  created_at: string;
+}
+
+interface ProjectEntry {
+  id: string;
+  name: string;
+  user_id: string;
   created_at: string;
 }
 
@@ -62,6 +71,17 @@ const Admin = () => {
   const [filterStatus, setFilterStatus] = useState<string>('all');
   const [filterRole, setFilterRole] = useState<string>('all');
 
+  // Projects tab
+  const [projects, setProjects] = useState<ProjectEntry[]>([]);
+  const [loadingProjects, setLoadingProjects] = useState(false);
+  const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+  const [selectedProject, setSelectedProject] = useState<ProjectEntry | null>(null);
+  const [projectAssignments, setProjectAssignments] = useState<string[]>([]); // user_ids assigned
+  const [pendingAssignments, setPendingAssignments] = useState<string[]>([]);
+  const [assignSearch, setAssignSearch] = useState('');
+  const [savingAssignments, setSavingAssignments] = useState(false);
+  const [projectSearch, setProjectSearch] = useState('');
+
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
@@ -78,7 +98,6 @@ const Admin = () => {
   const [actionLoading, setActionLoading] = useState(false);
 
   const callAdmin = useCallback(async (body: Record<string, unknown>) => {
-    // Refresh session to avoid stale tokens
     const { data: sessionData, error: sessionError } = await supabase.auth.refreshSession();
     const token = sessionData?.session?.access_token;
     if (sessionError || !token) {
@@ -88,11 +107,9 @@ const Admin = () => {
     const { data, error } = await supabase.functions.invoke('admin-manage-users', { body });
     if (error) {
       let msg = 'Error al comunicarse con el servidor';
-      // supabase.functions.invoke returns data even on non-2xx responses
       if (data?.error) {
         msg = data.error;
       } else {
-        // Try to extract JSON error from the error message string
         try {
           const match = error.message?.match(/\{.*\}/);
           if (match) {
@@ -131,12 +148,23 @@ const Admin = () => {
     setAuditLog((data as AuditEntry[]) || []);
   }, []);
 
+  const loadProjects = useCallback(async () => {
+    setLoadingProjects(true);
+    const { data } = await supabase
+      .from('projects')
+      .select('id, name, user_id, created_at')
+      .order('created_at', { ascending: false });
+    setProjects((data as ProjectEntry[]) || []);
+    setLoadingProjects(false);
+  }, []);
+
   useEffect(() => {
     if (isAdmin) {
       loadUsers();
       loadAudit();
+      loadProjects();
     }
-  }, [isAdmin, loadUsers, loadAudit]);
+  }, [isAdmin, loadUsers, loadAudit, loadProjects]);
 
   if (authLoading || roleLoading) {
     return (
@@ -157,6 +185,10 @@ const Admin = () => {
     const matchesRole = filterRole === 'all' || u.role === filterRole;
     return matchesSearch && matchesStatus && matchesRole;
   });
+
+  const filteredProjects = projects.filter(p =>
+    !projectSearch || p.name.toLowerCase().includes(projectSearch.toLowerCase())
+  );
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 8) return 'La contraseña debe tener al menos 8 caracteres';
@@ -243,7 +275,7 @@ const Admin = () => {
       toast({ title: 'Error', description: 'No puedes cambiar tu propio rol', variant: 'destructive' });
       return;
     }
-    if (u.role === newRoleValue) return; // No change needed
+    if (u.role === newRoleValue) return;
     setActionLoading(true);
     try {
       await callAdmin({ action: 'change_role', user_id: u.id, new_role: newRoleValue });
@@ -253,6 +285,62 @@ const Admin = () => {
       toast({ title: 'Error al cambiar rol', description: err.message, variant: 'destructive' });
     }
     setActionLoading(false);
+  };
+
+  // Project assignment handlers
+  const openAssignDialog = async (project: ProjectEntry) => {
+    setSelectedProject(project);
+    setAssignSearch('');
+    // Load current assignments
+    const { data } = await supabase
+      .from('project_assignments')
+      .select('user_id')
+      .eq('project_id', project.id);
+    const assignedIds = (data || []).map(d => d.user_id);
+    setProjectAssignments(assignedIds);
+    setPendingAssignments(assignedIds);
+    setAssignDialogOpen(true);
+  };
+
+  const toggleUserAssignment = (userId: string) => {
+    setPendingAssignments(prev =>
+      prev.includes(userId) ? prev.filter(id => id !== userId) : [...prev, userId]
+    );
+  };
+
+  const saveAssignments = async () => {
+    if (!selectedProject) return;
+    setSavingAssignments(true);
+    try {
+      const toAdd = pendingAssignments.filter(id => !projectAssignments.includes(id));
+      const toRemove = projectAssignments.filter(id => !pendingAssignments.includes(id));
+
+      if (toRemove.length > 0) {
+        for (const userId of toRemove) {
+          await supabase
+            .from('project_assignments')
+            .delete()
+            .eq('project_id', selectedProject.id)
+            .eq('user_id', userId);
+        }
+      }
+
+      if (toAdd.length > 0) {
+        await supabase
+          .from('project_assignments')
+          .insert(toAdd.map(userId => ({
+            project_id: selectedProject.id,
+            user_id: userId,
+          })));
+      }
+
+      setProjectAssignments(pendingAssignments);
+      toast({ title: 'Éxito', description: 'Asignaciones actualizadas correctamente' });
+      setAssignDialogOpen(false);
+    } catch (err: any) {
+      toast({ title: 'Error', description: err.message, variant: 'destructive' });
+    }
+    setSavingAssignments(false);
   };
 
   const formatDate = (d: string | null) => {
@@ -265,6 +353,17 @@ const Admin = () => {
     const u = users.find(x => x.id === userId);
     return u?.email || userId.slice(0, 8) + '...';
   };
+
+  const getOwnerName = (userId: string) => {
+    const u = users.find(x => x.id === userId);
+    return u?.full_name || u?.email || '—';
+  };
+
+  const filteredAssignUsers = users.filter(u =>
+    !assignSearch ||
+    u.full_name.toLowerCase().includes(assignSearch.toLowerCase()) ||
+    u.email.toLowerCase().includes(assignSearch.toLowerCase())
+  );
 
   return (
     <div className="min-h-screen bg-background">
@@ -279,12 +378,12 @@ const Admin = () => {
               <Shield className="h-5 w-5 text-accent" />
             </div>
             <div>
-              <h1 className="text-lg font-semibold text-foreground">Gestión de Usuarios</h1>
-              <p className="text-xs text-muted-foreground">Panel de administración</p>
+              <h1 className="text-lg font-semibold text-foreground">Panel de Administración</h1>
+              <p className="text-xs text-muted-foreground">Gestión de usuarios y proyectos</p>
             </div>
           </div>
           <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => { loadUsers(); loadAudit(); }}>
+            <Button variant="outline" size="sm" onClick={() => { loadUsers(); loadAudit(); loadProjects(); }}>
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Actualizar
             </Button>
             <Button size="sm" onClick={() => setCreateOpen(true)}>
@@ -299,6 +398,9 @@ const Admin = () => {
           <TabsList className="mb-4">
             <TabsTrigger value="users" className="gap-1.5">
               <Users className="h-3.5 w-3.5" /> Usuarios
+            </TabsTrigger>
+            <TabsTrigger value="projects" className="gap-1.5">
+              <FolderOpen className="h-3.5 w-3.5" /> Proyectos
             </TabsTrigger>
             <TabsTrigger value="audit" className="gap-1.5">
               <ClipboardList className="h-3.5 w-3.5" /> Auditoría
@@ -427,6 +529,65 @@ const Admin = () => {
                                 <KeyRound className="h-3.5 w-3.5" />
                               </Button>
                             </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Projects Tab */}
+          <TabsContent value="projects">
+            <div className="flex flex-wrap gap-3 mb-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar proyectos..."
+                  value={projectSearch}
+                  onChange={e => setProjectSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {loadingProjects ? (
+                  <div className="p-8 text-center text-muted-foreground">Cargando proyectos...</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Proyecto</TableHead>
+                        <TableHead>Propietario</TableHead>
+                        <TableHead>Creado</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredProjects.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            No se encontraron proyectos
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredProjects.map(p => (
+                        <TableRow key={p.id}>
+                          <TableCell className="font-medium">{p.name}</TableCell>
+                          <TableCell className="text-muted-foreground">{getOwnerName(p.user_id)}</TableCell>
+                          <TableCell className="text-sm text-muted-foreground">{formatDate(p.created_at)}</TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="gap-1.5"
+                              onClick={() => openAssignDialog(p)}
+                            >
+                              <Users className="h-3.5 w-3.5" /> Gestionar usuarios
+                            </Button>
                           </TableCell>
                         </TableRow>
                       ))}
@@ -566,6 +727,74 @@ const Admin = () => {
             <Button variant="outline" onClick={() => setResetPwOpen(false)}>Cancelar</Button>
             <Button onClick={handleResetPassword} disabled={actionLoading}>
               {actionLoading ? 'Procesando...' : resetPassword ? 'Asignar contraseña' : 'Generar enlace'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Assign Users to Project Dialog */}
+      <Dialog open={assignDialogOpen} onOpenChange={setAssignDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[80vh] flex flex-col">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" /> Asignar usuarios
+            </DialogTitle>
+            <DialogDescription>
+              Proyecto: <strong>{selectedProject?.name}</strong>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative mb-2">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar usuarios..."
+              value={assignSearch}
+              onChange={e => setAssignSearch(e.target.value)}
+              className="pl-9"
+            />
+          </div>
+          <div className="flex-1 overflow-y-auto border rounded-md divide-y max-h-[400px]">
+            {filteredAssignUsers.length === 0 ? (
+              <div className="p-4 text-center text-muted-foreground text-sm">No se encontraron usuarios</div>
+            ) : filteredAssignUsers.map(u => {
+              const isAssigned = pendingAssignments.includes(u.id);
+              const isOwner = selectedProject?.user_id === u.id;
+              return (
+                <label
+                  key={u.id}
+                  className={`flex items-center gap-3 px-4 py-3 cursor-pointer hover:bg-muted/50 transition-colors ${isOwner ? 'opacity-60' : ''}`}
+                >
+                  <Checkbox
+                    checked={isAssigned || isOwner}
+                    disabled={isOwner}
+                    onCheckedChange={() => !isOwner && toggleUserAssignment(u.id)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-sm font-medium truncate">{u.full_name || '—'}</div>
+                    <div className="text-xs text-muted-foreground truncate">{u.email}</div>
+                  </div>
+                  {isOwner && (
+                    <Badge variant="outline" className="text-xs shrink-0">Propietario</Badge>
+                  )}
+                  {isAssigned && !isOwner && (
+                    <Badge className="bg-primary/10 text-primary border-primary/20 text-xs shrink-0">
+                      <UserCheck className="h-3 w-3 mr-1" /> Asignado
+                    </Badge>
+                  )}
+                </label>
+              );
+            })}
+          </div>
+          <div className="flex items-center justify-between pt-2 text-xs text-muted-foreground">
+            <span>{pendingAssignments.length} usuario(s) asignado(s)</span>
+            {pendingAssignments.length !== projectAssignments.length ||
+             !pendingAssignments.every(id => projectAssignments.includes(id)) ? (
+              <Badge variant="outline" className="text-xs">Cambios sin guardar</Badge>
+            ) : null}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancelar</Button>
+            <Button onClick={saveAssignments} disabled={savingAssignments}>
+              {savingAssignments ? 'Guardando...' : 'Guardar cambios'}
             </Button>
           </DialogFooter>
         </DialogContent>
