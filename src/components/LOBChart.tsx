@@ -20,7 +20,7 @@ function getActivityLine(activity: Activity, projectStart: Date, activities: Act
   const actualUnitStart = activity.unitStart + bufferUnits;
   const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
   const effectiveRate = activity.rate * (activity.crews || 1);
-  const totalWorkdays = Math.ceil(totalUnits / effectiveRate);
+  const totalWorkdays = smartCeil(totalUnits / effectiveRate);
   let startIndex = 0;
   let current = new Date(projectStart);
   while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
@@ -55,7 +55,7 @@ function getCrewLines(activity: Activity, projectStart: Date, activities: Activi
     const crewUnitStart = actualUnitStart + direction * Math.round(c * unitsPerCrew);
     const crewUnitEnd = actualUnitStart + direction * Math.round((c + 1) * unitsPerCrew) - direction;
     const crewUnits = Math.abs(crewUnitEnd - crewUnitStart) + 1;
-    const crewWorkdays = Math.ceil(crewUnits / activity.rate);
+    const crewWorkdays = smartCeil(crewUnits / activity.rate);
     const points: LinePoint[] = [{ workdayIndex: startIndex, unit: crewUnitStart }];
     for (let i = 1; i <= crewWorkdays; i++) {
       const unit = crewUnitStart + direction * activity.rate * i;
