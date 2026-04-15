@@ -134,7 +134,7 @@ export function LOBChart() {
       const start = getEffectiveStartDate(activity, project.activities);
       const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
       const effectiveRate = activity.rate * (activity.crews || 1);
-      const durationDays = Math.ceil(totalUnits / effectiveRate);
+      const durationDays = smartCeil(totalUnits / effectiveRate);
       let startIdx = 0;
       let cur = new Date(projectStart);
       while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
@@ -161,7 +161,7 @@ export function LOBChart() {
       const start = getEffectiveStartDate(activity, project.activities);
       const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
       const effectiveRate = activity.rate * (activity.crews || 1);
-      const durationDays = Math.ceil(totalUnits / effectiveRate);
+      const durationDays = smartCeil(totalUnits / effectiveRate);
       let startIdx = 0;
       let cur = new Date(projectStart);
       while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
