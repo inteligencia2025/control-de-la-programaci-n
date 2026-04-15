@@ -76,9 +76,11 @@ export function ProjectToolbar() {
             ))}
           </SelectContent>
         </Select>
-        <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => createNewProject()} title="Nuevo proyecto">
-          <PlusCircle className="h-4 w-4" />
-        </Button>
+        {isAdmin && (
+          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => createNewProject()} title="Nuevo proyecto">
+            <PlusCircle className="h-4 w-4" />
+          </Button>
+        )}
         {projectsList.length > 1 && (
           <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => deleteProject(activeProjectId)} title="Eliminar proyecto actual">
             <Trash2 className="h-4 w-4" />
