@@ -27,7 +27,7 @@ export function GanttChart() {
     const activities = enabled.map(activity => {
       const start = getEffectiveStartDate(activity, project.activities);
       const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-      const totalWorkdays = Math.ceil(totalUnits / activity.rate);
+      const totalWorkdays = smartCeil(totalUnits / activity.rate);
       let startIdx = 0;
       let cur = new Date(projectStart);
       while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
