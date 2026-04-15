@@ -14,7 +14,7 @@ import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity } from '@/types/project';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, LineChart, Line, ReferenceLine, ComposedChart } from 'recharts';
 import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
-import { getEffectiveStartDateSimple, smartCeil, advanceWorkdays } from '@/utils/schedulingUtils';
+import { getEffectiveStartDateSimple, smartCeil, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 
 const PIE_COLORS = ['#c0392b', '#2980b9', '#e69500', '#8e44ad', '#16a085', '#7f8c8d', '#d35400', '#27ae60', '#1e3a5f', '#e74c3c'];
 
@@ -73,8 +73,7 @@ export function ProductionControl() {
     let latest: Date | null = null;
     for (const a of enabledActivities) {
       const start = getEffectiveStartDate(a, project.activities);
-      const totalUnits = Math.abs(a.unitEnd - a.unitStart) + 1;
-      const totalWorkdays = smartCeil(totalUnits / a.rate);
+      const totalWorkdays = calcActivityWorkdays(a);
       let endDate = new Date(start); let count = 0;
       while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
       if (!earliest || start < earliest) earliest = start;
@@ -113,8 +112,7 @@ export function ProductionControl() {
       .filter(a => a.enabled)
       .filter(a => {
         const start = getEffectiveStartDate(a, project.activities);
-        const totalUnits = Math.abs(a.unitEnd - a.unitStart) + 1;
-        const totalWorkdays = smartCeil(totalUnits / a.rate);
+        const totalWorkdays = calcActivityWorkdays(a);
         let endDate = new Date(start); let count = 0;
         while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
         return start <= weekEnd && endDate >= weekStart;

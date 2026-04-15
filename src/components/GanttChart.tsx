@@ -5,7 +5,7 @@ import { useProject } from '@/context/ProjectContext';
 import { Activity } from '@/types/project';
 import { addDays, isWeekend, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getEffectiveStartDateSimple as getEffectiveStartDate, smartCeil } from '@/utils/schedulingUtils';
+import { getEffectiveStartDateSimple as getEffectiveStartDate, smartCeil, getEffectiveRate, calcActivityWorkdays } from '@/utils/schedulingUtils';
 
 
 const ESTRUCTURA_COLOR = 'hsl(var(--primary))';
@@ -23,8 +23,7 @@ export function GanttChart() {
     const projectStart = new Date(Math.min(...enabled.map(a => getEffectiveStartDate(a, project.activities).getTime())));
     const activities = enabled.map(activity => {
       const start = getEffectiveStartDate(activity, project.activities);
-      const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-      const totalWorkdays = smartCeil(totalUnits / activity.rate);
+      const totalWorkdays = calcActivityWorkdays(activity);
       let startIdx = 0;
       let cur = new Date(projectStart);
       while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }

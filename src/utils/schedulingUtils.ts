@@ -2,8 +2,26 @@ import { addDays, isWeekend, parseISO } from 'date-fns';
 import { Activity } from '@/types/project';
 
 /**
+ * Normalize a rate value: if it's extremely close to an integer
+ * (within 1e-3), snap it to that integer. This prevents floating-point
+ * noise like 0.999 or 1.001 from causing off-by-one scheduling errors.
+ */
+export function normalizeRate(rate: number): number {
+  const rounded = Math.round(rate);
+  if (rounded > 0 && Math.abs(rate - rounded) < 1e-3) return rounded;
+  return rate;
+}
+
+/**
+ * Get the effective rate for an activity: rate × crews, normalized.
+ */
+export function getEffectiveRate(activity: Activity): number {
+  return normalizeRate(activity.rate * (activity.crews || 1));
+}
+
+/**
  * Rounds a floating-point number to the nearest integer if it's
- * extremely close (within 1e-9), preventing Math.ceil errors
+ * extremely close (within 1e-4), preventing Math.ceil errors
  * like ceil(1.001) = 2 when the true value should be 1.
  */
 export function smartCeil(value: number): number {
@@ -50,6 +68,20 @@ export function workdayIndexBetween(projectStart: Date, target: Date): number {
   return count;
 }
 
+/** Calculate total workdays for an activity using normalized effective rate */
+export function calcActivityWorkdays(activity: Activity): number {
+  const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+  const effRate = getEffectiveRate(activity);
+  return smartCeil(totalUnits / effRate);
+}
+
+/**
+ * Compare two rates with tolerance: returns true if a > b by a meaningful margin.
+ */
+function rateGreaterThan(a: number, b: number): boolean {
+  return a - b > 1e-3;
+}
+
 /**
  * Calculate the effective start date for an activity, considering
  * predecessor constraints, buffer days, and LOB balancing.
@@ -68,8 +100,8 @@ export function getEffectiveStartDate(
   if (!pred) return baseStart;
 
   const predStart = getEffectiveStartDate(pred, activities, visited);
-  const effectivePredRate = pred.rate * (pred.crews || 1);
-  const effectiveSuccRate = activity.rate * (activity.crews || 1);
+  const effectivePredRate = getEffectiveRate(pred);
+  const effectiveSuccRate = getEffectiveRate(activity);
   const bufferDays = activity.bufferDays || 0;
 
   // Find overlapping unit range
@@ -82,12 +114,12 @@ export function getEffectiveStartDate(
   const overlapMin = Math.max(predMin, succMin);
   const overlapMax = Math.min(predMax, succMax);
 
-  // Check first unit constraint (using smartCeil to avoid float issues)
+  // Check first unit constraint
   const firstUnitWorkdays = smartCeil(1 / effectivePredRate);
   let maxDelay = firstUnitWorkdays;
 
-  // Check last overlapping unit — critical when successor is faster
-  if (overlapMin <= overlapMax && effectiveSuccRate > effectivePredRate) {
+  // Check last overlapping unit — critical when successor is truly faster
+  if (overlapMin <= overlapMax && rateGreaterThan(effectiveSuccRate, effectivePredRate)) {
     const lastUnit = overlapMax;
     const predWorkdaysToFinishUnit = smartCeil((lastUnit - predMin + 1) / effectivePredRate);
     const succWorkdaysToReachUnit = Math.floor((lastUnit - succMin) / effectiveSuccRate);
@@ -102,7 +134,6 @@ export function getEffectiveStartDate(
 /**
  * Simplified version of getEffectiveStartDate for components that don't
  * need the full LOB balancing (LookaheadTable, ProductionControl, GanttChart).
- * Uses smartCeil to prevent float rounding bugs.
  */
 export function getEffectiveStartDateSimple(
   activity: Activity,
@@ -118,17 +149,10 @@ export function getEffectiveStartDateSimple(
   if (!pred) return baseStart;
 
   const predStart = getEffectiveStartDateSimple(pred, activities, visited);
-  const effectivePredRate = pred.rate * (pred.crews || 1);
+  const effectivePredRate = getEffectiveRate(pred);
   const firstUnitWorkdays = smartCeil(1 / effectivePredRate);
   const bufferDays = activity.bufferDays || 0;
 
   const successorStart = ensureWorkday(advanceWorkdays(predStart, firstUnitWorkdays + bufferDays));
   return successorStart > baseStart ? successorStart : baseStart;
-}
-
-/** Calculate total workdays for an activity */
-export function calcActivityWorkdays(activity: Activity): number {
-  const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
-  const effectiveRate = activity.rate * (activity.crews || 1);
-  return smartCeil(totalUnits / effectiveRate);
 }
