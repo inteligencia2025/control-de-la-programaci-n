@@ -262,13 +262,30 @@ export function LookaheadTable() {
                             {/* Horizontal connector line */}
                             <div className="absolute left-0 top-[14px] w-3 border-t border-primary/20" />
                             <Collapsible open={isOpen} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
-                              <CollapsibleTrigger className="flex items-center gap-1.5 w-full text-left ml-4 px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors group">
-                                {isOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
-                                <span className={`text-[11px] font-medium flex-1 ${complete ? 'text-success line-through' : ''}`}>{cat.name}</span>
-                                <Badge variant={complete ? 'default' : 'secondary'} className={`text-[9px] h-4 px-1.5 ${complete ? 'bg-success text-success-foreground' : ''}`}>
-                                  {completedCount}/{cat.items.length}
-                                </Badge>
-                              </CollapsibleTrigger>
+                              <div className="flex items-center ml-4">
+                                <CollapsibleTrigger className="flex items-center gap-1.5 flex-1 text-left px-2 py-1.5 rounded hover:bg-secondary/50 transition-colors group">
+                                  {isOpen ? <ChevronDown className="h-3 w-3 text-muted-foreground" /> : <ChevronRight className="h-3 w-3 text-muted-foreground" />}
+                                  <span className={`text-[11px] font-medium flex-1 ${complete ? 'text-success line-through' : ''}`}>{cat.name}</span>
+                                  <Badge variant={complete ? 'default' : 'secondary'} className={`text-[9px] h-4 px-1.5 ${complete ? 'bg-success text-success-foreground' : ''}`}>
+                                    {completedCount}/{cat.items.length}
+                                  </Badge>
+                                </CollapsibleTrigger>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-5 w-5 ml-1 shrink-0"
+                                  title={complete ? 'Desmarcar todo' : 'Marcar todo'}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newRestrictions = { ...item.restrictions };
+                                    const newVal = !complete;
+                                    cat.items.forEach(ri => { newRestrictions[ri.id] = newVal; });
+                                    updateLookahead({ ...item, restrictions: newRestrictions });
+                                  }}
+                                >
+                                  <CheckCheck className={`h-3 w-3 ${complete ? 'text-success' : 'text-muted-foreground'}`} />
+                                </Button>
+                              </div>
                               <CollapsibleContent>
                                 <div className="ml-4 border-l-2 border-muted-foreground/15 pl-1">
                                   {cat.items.map((ri, idx) => {
