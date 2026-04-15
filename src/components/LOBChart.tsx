@@ -1,62 +1,16 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { Activity, getUnitLabel } from '@/types/project';
-import { addDays, isWeekend, format, parseISO } from 'date-fns';
+import { addDays, isWeekend, format } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Camera, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
-
-function safeParse(dateStr: string): Date {
-  const [y, m, d] = dateStr.split('-').map(Number);
-  if (y && m && d) return new Date(y, m - 1, d);
-  const parsed = parseISO(dateStr);
-  if (!isNaN(parsed.getTime())) return parsed;
-  return new Date();
-}
+import { getEffectiveStartDate as getEffectiveStartDateShared, smartCeil } from '@/utils/schedulingUtils';
 
 interface LinePoint { workdayIndex: number; unit: number; }
 
 function getEffectiveStartDate(activity: Activity, activities: Activity[], visited: Set<string> = new Set()): Date {
-  const baseStart = safeParse(activity.startDate);
-  if (!activity.predecessorId) return baseStart;
-  if (visited.has(activity.id)) return baseStart;
-  visited.add(activity.id);
-  const pred = activities.find(a => a.id === activity.predecessorId);
-  if (!pred) return baseStart;
-  const predStart = getEffectiveStartDate(pred, activities, visited);
-  const effectivePredRate = pred.rate * (pred.crews || 1);
-  const effectiveSuccRate = activity.rate * (activity.crews || 1);
-  const bufferDays = activity.bufferDays || 0;
-
-  // Find overlapping unit range
-  const predMin = Math.min(pred.unitStart, pred.unitEnd);
-  const predMax = Math.max(pred.unitStart, pred.unitEnd);
-  const succBufUnits = activity.bufferUnits || 0;
-  const succActualStart = activity.unitStart + succBufUnits;
-  const succMin = Math.min(succActualStart, activity.unitEnd);
-  const succMax = Math.max(succActualStart, activity.unitEnd);
-  const overlapMin = Math.max(predMin, succMin);
-  const overlapMax = Math.min(predMax, succMax);
-
-  // Check first unit constraint
-  const firstUnitWorkdays = Math.ceil(1 / effectivePredRate);
-  let maxDelay = firstUnitWorkdays;
-
-  // Check last overlapping unit — critical when successor is faster
-  if (overlapMin <= overlapMax && effectiveSuccRate > effectivePredRate) {
-    const lastUnit = overlapMax;
-    const predWorkdaysToFinishUnit = Math.ceil((lastUnit - predMin + 1) / effectivePredRate);
-    const succWorkdaysToReachUnit = Math.floor((lastUnit - succMin) / effectiveSuccRate);
-    const delayNeeded = predWorkdaysToFinishUnit - succWorkdaysToReachUnit;
-    if (delayNeeded > maxDelay) maxDelay = delayNeeded;
-  }
-
-  let current = new Date(predStart);
-  let count = 0;
-  while (count < maxDelay + bufferDays) { current = addDays(current, 1); if (!isWeekend(current)) count++; }
-  let successorStart = current;
-  while (isWeekend(successorStart)) successorStart = addDays(successorStart, 1);
-  return successorStart > baseStart ? successorStart : baseStart;
+  return getEffectiveStartDateShared(activity, activities, visited);
 }
 
 function getActivityLine(activity: Activity, projectStart: Date, activities: Activity[]): LinePoint[] {
