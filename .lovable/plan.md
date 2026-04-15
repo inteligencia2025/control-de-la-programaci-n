@@ -1,87 +1,61 @@
 
-Objetivo: corregir el salto injustificado de actividades que deberían poder iniciar un viernes cuando la predecesora completa su primera unidad el jueves, y eliminar el efecto colateral del “ritmo efectivo 0.999”.
+Objetivo: eliminar los saltos de 1 día hábil que siguen apareciendo y dejar una sola lógica consistente de programación.
 
 Qué encontré
-- La causa más probable sí está relacionada con ese 0.999.
-- En `src/components/LOBChart.tsx`, el inicio de una sucesora depende de:
-  - `effectivePredRate = pred.rate * (pred.crews || 1)`
-  - `firstUnitWorkdays = Math.ceil(1 / effectivePredRate)`
-- Si el ritmo guardado es `0.999`, entonces:
-  - `1 / 0.999 = 1.001...`
-  - `Math.ceil(...) = 2`
-  - el sistema interpreta que la primera unidad tarda 2 días hábiles, no 1
-  - por eso una predecesora que arranca jueves empuja la sucesora a lunes
-- Esto explica exactamente el patrón que reportas: el problema aparece “en todos los viernes”.
-- Además, la lógica está duplicada en varios componentes (`LOBChart.tsx`, `GanttChart.tsx`, `LookaheadTable.tsx`, `ProductionControl.tsx`), así que aunque se corrija en uno, hoy seguiría inconsistente en otros.
+- El arreglo anterior corrigió solo un caso: `Math.ceil(1 / rate)` con `smartCeil`.
+- El problema sigue porque el sistema todavía usa ritmos crudos en varios puntos:
+  - `src/utils/schedulingUtils.ts`
+    - `effectivePredRate = pred.rate * crews`
+    - `effectiveSuccRate = activity.rate * crews`
+    - comparación `effectiveSuccRate > effectivePredRate`
+    - cálculo de `delayNeeded`
+  - `src/components/GanttChart.tsx`, `LookaheadTable.tsx` y `ProductionControl.tsx`
+    - varias duraciones siguen usando `activity.rate` sin normalizar y, en algunos casos, sin aplicar cuadrillas
+  - `src/components/LOBChart.tsx`
+    - la línea principal, las barras internas y las líneas por cuadrilla mezclan ritmo efectivo y ritmo crudo
+- Esto permite que diferencias mínimas como `0.999`, `1.000`, `1.001` activen retrasos extra aunque no sea sábado.
+- Además, hoy hay inconsistencia entre vistas: no todas calculan fecha y duración exactamente igual.
 
-Implementación propuesta
-1. Centralizar la lógica de programación
-- Crear utilidades compartidas en `src/utils/dateUtils.ts` o en un nuevo módulo de scheduling.
-- Mover allí:
-  - parseo seguro de fecha
-  - cálculo de inicio efectivo
-  - duración en días hábiles
-  - conversión fecha ↔ índice hábil
-- Así evitamos 4 versiones distintas de la misma regla.
+Plan de implementación
+1. Fortalecer `src/utils/schedulingUtils.ts`
+- Agregar helpers compartidos:
+  - `normalizeRate(rate)`
+  - `getEffectiveRate(activity)` = ritmo × cuadrillas, ya normalizado
+  - helper de comparación con tolerancia para ritmos casi iguales
+  - `calcActivityWorkdays(activity)` usando el ritmo efectivo normalizado
+- Aplicar esos helpers dentro de:
+  - `getEffectiveStartDate`
+  - `getEffectiveStartDateSimple`
 
-2. Normalizar ritmos para evitar errores de flotantes
-- Agregar una función tipo:
-  - `normalizeRate(rate: number): number`
-- Regla:
-  - si el valor está extremadamente cerca de un entero (por ejemplo `0.999`, `1.0000001`), tratarlo como ese entero
-  - mantener decimales reales como `1.25`, `0.75`, etc.
-- Usar esa normalización antes de calcular:
+2. Corregir la lógica de predecesoras
+- En `getEffectiveStartDate`, dejar de comparar ritmos crudos.
+- Usar ritmo efectivo normalizado para:
   - `firstUnitWorkdays`
-  - `effectiveRate`
-  - duraciones
-  - líneas LOB y Gantt
+  - `predWorkdaysToFinishUnit`
+  - `succWorkdaysToReachUnit`
+- Ajustar la condición de “sucesor más rápido” para que no se active por ruido decimal; solo cuando realmente sea más rápido.
 
-3. Ajustar la regla de inicio de sucesoras
-- En vez de depender directamente de `Math.ceil(1 / rate)` con el número crudo, usar el ritmo normalizado.
-- Eso hará que:
-  - si la predecesora termina la primera unidad el jueves 9
-  - la sucesora pueda iniciar el viernes 10
-  - sin quitar la dependencia entre actividades
+3. Unificar duraciones en todas las vistas
+- Reemplazar cálculos manuales repetidos por helpers compartidos en:
+  - `src/components/LOBChart.tsx`
+  - `src/components/GanttChart.tsx`
+  - `src/components/LookaheadTable.tsx`
+  - `src/components/ProductionControl.tsx`
+- Corregir los lugares donde hoy se usa `activity.rate` en vez de `rate * crews`.
 
-4. Aplicar la corrección en todos los módulos afectados
-- `src/components/LOBChart.tsx`
-- `src/components/GanttChart.tsx`
-- `src/components/LookaheadTable.tsx`
-- `src/components/ProductionControl.tsx`
+4. Saneamiento visual
+- En `src/components/LOBPanel.tsx`, mostrar el ritmo efectivo ya normalizado para evitar valores engañosos como `0.999` cuando operativamente debe ser `1`.
 
-5. Revisar visualización del “ritmo efectivo”
-- En `src/components/LOBPanel.tsx`, el valor mostrado usa `toFixed(3)`.
-- Mantendría la precisión visual, pero mostrando una versión saneada:
-  - si es prácticamente 1, mostrar `1.000` o incluso `1`
-  - evitar que el usuario vea `0.999` cuando operativamente debe ser 1
-- Si prefieres, puedo dejarlo siempre con 3 decimales pero ya corregido.
+5. Validación funcional
+- Probar casos donde hoy falla:
+  - predecesora termina jueves y sucesora debe iniciar viernes
+  - salto de 1 día hábil en días no sábado
+  - actividades con 1 y varias cuadrillas
+  - ritmos reales decimales válidos como `0.333`, `0.75`, `1.25`
+- Verificar que LOB, Gantt, Lookahead y Producción muestren la misma fecha y duración.
 
-6. Validación funcional
-- Probar este caso:
-  - predecesora inicia jueves 9 de abril
-  - ritmo 1 u/día
-  - buffer 0
-  - sucesora con predecesora asignada
-- Resultado esperado:
-  - primera unidad de predecesora termina jueves 9
-  - sucesora inicia viernes 10
-- También validar que:
-  - si realmente la primera unidad tarda 2 días, sí salte correctamente
-  - no se rompan LOB, Gantt, Lookahead y Producción
-
-Detalle técnico
-```text
-Problema actual:
-0.999 u/día -> ceil(1 / 0.999) = ceil(1.001...) = 2 días
-
-Comportamiento esperado:
-0.999 ~ 1.0 -> tratar como 1
-ceil(1 / 1) = 1 día
-jueves 9 -> viernes 10
-```
-
-Resultado esperado tras el cambio
-- Las dependencias se conservan.
-- No habrá saltos artificiales de viernes a lunes por errores de precisión.
-- Todos los módulos usarán la misma lógica de programación.
-- El “ritmo efectivo” dejará de mostrar valores engañosos cerca de 1.
+Resultado esperado
+- Se eliminan los saltos artificiales de un día causados por precisión decimal.
+- La dependencia con predecesoras se mantiene.
+- Todas las vistas quedan alineadas con la misma lógica de programación.
+- El “ritmo efectivo” deja de mostrar valores confusos cerca de 1.
