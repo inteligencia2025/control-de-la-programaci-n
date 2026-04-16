@@ -249,9 +249,9 @@ export function ProductionControl() {
           </Select>
         )}
         <Select value={responsibleFilter} onValueChange={setResponsibleFilter}>
-          <SelectTrigger className="h-7 w-32 text-xs"><SelectValue placeholder="Todos" /></SelectTrigger>
+          <SelectTrigger className="h-7 w-40 text-xs"><SelectValue placeholder="Contratista" /></SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
+            <SelectItem value="all">Todos los contratistas</SelectItem>
             {responsibles.map(r => <SelectItem key={r} value={r}>{r}</SelectItem>)}
           </SelectContent>
         </Select>
