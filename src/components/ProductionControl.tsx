@@ -14,6 +14,8 @@ import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity } from '@/types/project';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, LineChart, Line, ReferenceLine, ComposedChart } from 'recharts';
 import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, smartCeil, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 
 const PIE_COLORS = ['#c0392b', '#2980b9', '#e69500', '#8e44ad', '#16a085', '#7f8c8d', '#d35400', '#27ae60', '#1e3a5f', '#e74c3c'];
@@ -207,6 +209,64 @@ export function ProductionControl() {
 
   const handlePrint = () => window.print();
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape' });
+    const pageWidth = doc.internal.pageSize.getWidth();
+
+    // Title
+    doc.setFontSize(16);
+    doc.text(`Control de Producción — PAC`, 14, 18);
+    doc.setFontSize(11);
+    doc.text(`Semana ${displayWeek}: ${format(weekStartDate, 'dd/MM/yyyy')} — ${format(weekEndDate, 'dd/MM/yyyy')}`, 14, 26);
+    doc.text(`PAC: ${weekPAC}% (${rating.label})`, 14, 33);
+    if (responsibleFilter !== 'all') {
+      doc.text(`Filtro: ${responsibleFilter}`, 14, 40);
+    }
+
+    // Activities table
+    const tableData = filtered.map(r => [
+      r.activityName || '-',
+      r.responsible || '-',
+      r.planned ? 'Sí' : 'No',
+      r.completed ? 'Sí' : 'No',
+      r.failureCause || '-',
+      r.failureDescription || '-',
+    ]);
+
+    autoTable(doc, {
+      startY: responsibleFilter !== 'all' ? 45 : 38,
+      head: [['Actividad', 'Responsable', 'Plan.', 'Compl.', 'Causa Incumplimiento', 'Descripción']],
+      body: tableData,
+      styles: { fontSize: 8, cellPadding: 2 },
+      headStyles: { fillColor: [30, 58, 95], textColor: 255, fontStyle: 'bold' },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 35 },
+        2: { cellWidth: 15, halign: 'center' },
+        3: { cellWidth: 15, halign: 'center' },
+        4: { cellWidth: 60 },
+        5: { cellWidth: 60 },
+      },
+    });
+
+    // Contractor PAC summary on next section
+    if (contractorPAC.length > 0) {
+      const finalY = (doc as any).lastAutoTable?.finalY || 80;
+      doc.setFontSize(12);
+      doc.text('Resumen por Contratista', 14, finalY + 10);
+
+      autoTable(doc, {
+        startY: finalY + 14,
+        head: [['Contratista', 'PAC %', 'Calificación', 'Planificadas', 'Completadas']],
+        body: contractorPAC.map(c => [c.name, `${c.pac}%`, c.label, String(c.planned), String(c.completed)]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 58, 95], textColor: 255, fontStyle: 'bold' },
+      });
+    }
+
+    doc.save(`pac_semana_${displayWeek}.pdf`);
+  };
+
   const handleExportExcel = () => {
     const rows = weekRecords.map(r => ({
       Semana: r.weekNumber, Actividad: r.activityName,
@@ -258,6 +318,7 @@ export function ProductionControl() {
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant="outline" onClick={handleLoadFromLOB} className="gap-1 h-7 text-xs">LOB</Button>
           <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-7 text-xs">Excel</Button>
+          <Button size="sm" variant="outline" onClick={handleExportPDF} className="gap-1 h-7 text-xs">PDF</Button>
           <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1 h-7 text-xs"><Printer className="h-3 w-3" />Imprimir</Button>
           <Button size="sm" variant="outline" onClick={() => setShowAddContractor(!showAddContractor)} className="gap-1 h-7 text-xs"><UserPlus className="h-3 w-3" />Contratista</Button>
           <Button size="sm" onClick={handleAdd} className="gap-1 h-7 text-xs"><Plus className="h-3 w-3" />Agregar</Button>
