@@ -447,7 +447,7 @@ export function ProductionControl() {
         </TabsContent>
 
         <TabsContent value="indicadores" className="flex-1 overflow-auto m-0 p-3 space-y-3">
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardHeader className="pb-1 pt-3 px-3">
                 <CardTitle className="text-sm font-bold">PAC Semana {displayWeek}</CardTitle>
@@ -455,6 +455,19 @@ export function ProductionControl() {
               <CardContent className="px-3 pb-3">
                 <div className="text-5xl font-bold" style={{ color: rating.color }}>{weekPAC}%</div>
                 <Badge className={`${rating.className} text-base px-4 py-1.5 mt-2`}>{rating.label}</Badge>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="pb-1 pt-3 px-3">
+                <CardTitle className="text-sm font-bold capitalize">PAC Mensual — {monthlyPAC.monthLabel}</CardTitle>
+              </CardHeader>
+              <CardContent className="px-3 pb-3">
+                <div className="text-5xl font-bold" style={{ color: monthlyRating.color }}>{monthlyPAC.pac}%</div>
+                <Badge className={`${monthlyRating.className} text-base px-4 py-1.5 mt-2`}>{monthlyRating.label}</Badge>
+                <p className="text-xs text-muted-foreground mt-2">
+                  {monthlyPAC.completed} de {monthlyPAC.planned} actividades planificadas
+                </p>
               </CardContent>
             </Card>
 
