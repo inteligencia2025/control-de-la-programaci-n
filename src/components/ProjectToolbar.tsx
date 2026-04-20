@@ -86,7 +86,7 @@ export function ProjectToolbar() {
           </Button>
         )}
         {isAdmin && projectsList.length > 1 && (
-          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => deleteProject(activeProjectId)} title="Eliminar proyecto actual">
+          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => deleteProject(activeProjectId)} title="Mover a papelera">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}

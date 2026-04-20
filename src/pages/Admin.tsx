@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users, UserPlus, Shield, ShieldOff, KeyRound, ArrowLeft, Search,
   RefreshCw, ClipboardList, CheckCircle2, XCircle, AlertTriangle,
-  FolderOpen, UserCheck, UserMinus
+  FolderOpen, UserCheck, UserMinus, Trash2, RotateCcw, Trash
 } from 'lucide-react';
 
 interface AdminUser {
@@ -47,6 +47,8 @@ interface ProjectEntry {
   name: string;
   user_id: string;
   created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 const ACTION_LABELS: Record<string, string> = {
