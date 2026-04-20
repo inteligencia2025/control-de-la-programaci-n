@@ -470,6 +470,12 @@ const Admin = () => {
             <TabsTrigger value="projects" className="gap-1.5">
               <FolderOpen className="h-3.5 w-3.5" /> Proyectos
             </TabsTrigger>
+            <TabsTrigger value="trash" className="gap-1.5">
+              <Trash2 className="h-3.5 w-3.5" /> Papelera
+              {deletedProjects.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">{deletedProjects.length}</Badge>
+              )}
+            </TabsTrigger>
             <TabsTrigger value="audit" className="gap-1.5">
               <ClipboardList className="h-3.5 w-3.5" /> Auditoría
             </TabsTrigger>
