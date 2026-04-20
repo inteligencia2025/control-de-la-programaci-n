@@ -281,6 +281,8 @@ export type Database = {
           created_at: string
           custom_failure_causes: string[]
           default_units: number | null
+          deleted_at: string | null
+          deleted_by: string | null
           id: string
           name: string
           project_start_date: string | null
@@ -296,6 +298,8 @@ export type Database = {
           created_at?: string
           custom_failure_causes?: string[]
           default_units?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           name?: string
           project_start_date?: string | null
@@ -311,6 +315,8 @@ export type Database = {
           created_at?: string
           custom_failure_causes?: string[]
           default_units?: number | null
+          deleted_at?: string | null
+          deleted_by?: string | null
           id?: string
           name?: string
           project_start_date?: string | null

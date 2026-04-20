@@ -18,7 +18,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import {
   Users, UserPlus, Shield, ShieldOff, KeyRound, ArrowLeft, Search,
   RefreshCw, ClipboardList, CheckCircle2, XCircle, AlertTriangle,
-  FolderOpen, UserCheck, UserMinus
+  FolderOpen, UserCheck, UserMinus, Trash2, RotateCcw, Trash
 } from 'lucide-react';
 
 interface AdminUser {
@@ -47,6 +47,8 @@ interface ProjectEntry {
   name: string;
   user_id: string;
   created_at: string;
+  deleted_at?: string | null;
+  deleted_by?: string | null;
 }
 
 const ACTION_LABELS: Record<string, string> = {
@@ -81,6 +83,14 @@ const Admin = () => {
   const [assignSearch, setAssignSearch] = useState('');
   const [savingAssignments, setSavingAssignments] = useState(false);
   const [projectSearch, setProjectSearch] = useState('');
+
+  // Trash bin
+  const [deletedProjects, setDeletedProjects] = useState<ProjectEntry[]>([]);
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
+  const [trashSearch, setTrashSearch] = useState('');
+  const [permDeleteOpen, setPermDeleteOpen] = useState(false);
+  const [projectToPermDelete, setProjectToPermDelete] = useState<ProjectEntry | null>(null);
+  const [trashActionLoading, setTrashActionLoading] = useState(false);
 
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
@@ -158,13 +168,25 @@ const Admin = () => {
     setLoadingProjects(false);
   }, []);
 
+  const loadDeletedProjects = useCallback(async () => {
+    setLoadingDeleted(true);
+    const { data } = await supabase
+      .from('projects')
+      .select('id, name, user_id, created_at, deleted_at, deleted_by')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+    setDeletedProjects((data as ProjectEntry[]) || []);
+    setLoadingDeleted(false);
+  }, []);
+
   useEffect(() => {
     if (isAdmin) {
       loadUsers();
       loadAudit();
       loadProjects();
+      loadDeletedProjects();
     }
-  }, [isAdmin, loadUsers, loadAudit, loadProjects]);
+  }, [isAdmin, loadUsers, loadAudit, loadProjects, loadDeletedProjects]);
 
   if (authLoading || roleLoading) {
     return (
@@ -365,6 +387,52 @@ const Admin = () => {
     u.email.toLowerCase().includes(assignSearch.toLowerCase())
   );
 
+  const filteredDeleted = deletedProjects.filter(p =>
+    !trashSearch || p.name.toLowerCase().includes(trashSearch.toLowerCase())
+  );
+
+  const daysRemaining = (deletedAt: string | null | undefined) => {
+    if (!deletedAt) return 0;
+    const elapsed = (Date.now() - new Date(deletedAt).getTime()) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(30 - elapsed));
+  };
+
+  const restoreProject = async (p: ProjectEntry) => {
+    setTrashActionLoading(true);
+    const { error } = await supabase
+      .from('projects')
+      .update({ deleted_at: null, deleted_by: null })
+      .eq('id', p.id);
+    if (error) {
+      toast({ title: 'Error', description: 'No se pudo restaurar el proyecto', variant: 'destructive' });
+    } else {
+      toast({ title: 'Proyecto restaurado', description: `"${p.name}" vuelve a estar disponible.` });
+      loadProjects();
+      loadDeletedProjects();
+    }
+    setTrashActionLoading(false);
+  };
+
+  const permanentlyDelete = async () => {
+    if (!projectToPermDelete) return;
+    setTrashActionLoading(true);
+    // Delete dependent rows first (no FK cascade configured)
+    await supabase.from('activities').delete().eq('project_id', projectToPermDelete.id);
+    await supabase.from('lookahead_items').delete().eq('project_id', projectToPermDelete.id);
+    await supabase.from('pac_records').delete().eq('project_id', projectToPermDelete.id);
+    await supabase.from('project_assignments').delete().eq('project_id', projectToPermDelete.id);
+    const { error } = await supabase.from('projects').delete().eq('id', projectToPermDelete.id);
+    if (error) {
+      toast({ title: 'Error', description: 'No se pudo eliminar definitivamente', variant: 'destructive' });
+    } else {
+      toast({ title: 'Proyecto eliminado', description: 'Los datos se han borrado permanentemente.' });
+      loadDeletedProjects();
+    }
+    setPermDeleteOpen(false);
+    setProjectToPermDelete(null);
+    setTrashActionLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -383,7 +451,7 @@ const Admin = () => {
             </div>
           </div>
           <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => { loadUsers(); loadAudit(); loadProjects(); }}>
+            <Button variant="outline" size="sm" onClick={() => { loadUsers(); loadAudit(); loadProjects(); loadDeletedProjects(); }}>
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Actualizar
             </Button>
             <Button size="sm" onClick={() => setCreateOpen(true)}>
@@ -401,6 +469,12 @@ const Admin = () => {
             </TabsTrigger>
             <TabsTrigger value="projects" className="gap-1.5">
               <FolderOpen className="h-3.5 w-3.5" /> Proyectos
+            </TabsTrigger>
+            <TabsTrigger value="trash" className="gap-1.5">
+              <Trash2 className="h-3.5 w-3.5" /> Papelera
+              {deletedProjects.length > 0 && (
+                <Badge variant="secondary" className="ml-1 h-4 px-1.5 text-[10px]">{deletedProjects.length}</Badge>
+              )}
             </TabsTrigger>
             <TabsTrigger value="audit" className="gap-1.5">
               <ClipboardList className="h-3.5 w-3.5" /> Auditoría
@@ -591,6 +665,89 @@ const Admin = () => {
                           </TableCell>
                         </TableRow>
                       ))}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Trash Bin Tab */}
+          <TabsContent value="trash">
+            <div className="flex flex-wrap gap-3 mb-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar en papelera..."
+                  value={trashSearch}
+                  onChange={e => setTrashSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground self-center">
+                Los proyectos eliminados se conservan 30 días antes del borrado definitivo.
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {loadingDeleted ? (
+                  <div className="p-8 text-center text-muted-foreground">Cargando papelera...</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Proyecto</TableHead>
+                        <TableHead>Eliminado por</TableHead>
+                        <TableHead>Fecha de eliminación</TableHead>
+                        <TableHead>Días restantes</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDeleted.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            La papelera está vacía
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredDeleted.map(p => {
+                        const days = daysRemaining(p.deleted_at);
+                        return (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.name}</TableCell>
+                            <TableCell className="text-muted-foreground">{getOwnerName(p.deleted_by || '')}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{formatDate(p.deleted_at || null)}</TableCell>
+                            <TableCell>
+                              <Badge variant={days <= 7 ? 'destructive' : 'outline'} className="text-xs">
+                                {days} días
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5"
+                                  onClick={() => restoreProject(p)}
+                                  disabled={trashActionLoading}
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => { setProjectToPermDelete(p); setPermDeleteOpen(true); }}
+                                  disabled={trashActionLoading}
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 )}
@@ -795,6 +952,26 @@ const Admin = () => {
             <Button variant="outline" onClick={() => setAssignDialogOpen(false)}>Cancelar</Button>
             <Button onClick={saveAssignments} disabled={savingAssignments}>
               {savingAssignments ? 'Guardando...' : 'Guardar cambios'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Permanently Delete Project Dialog */}
+      <Dialog open={permDeleteOpen} onOpenChange={setPermDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" /> Eliminar definitivamente
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción <strong>no se puede deshacer</strong>. El proyecto <strong>"{projectToPermDelete?.name}"</strong> y todos sus datos asociados (actividades, lookahead, PAC, asignaciones) se borrarán permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPermDeleteOpen(false)} disabled={trashActionLoading}>Cancelar</Button>
+            <Button variant="destructive" onClick={permanentlyDelete} disabled={trashActionLoading}>
+              {trashActionLoading ? 'Eliminando...' : 'Eliminar definitivamente'}
             </Button>
           </DialogFooter>
         </DialogContent>

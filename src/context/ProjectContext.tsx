@@ -386,7 +386,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const deleteProject = useCallback(async (id: string) => {
     if (projectsList.length <= 1) return;
-    await supabase.from('projects').delete().eq('id', id);
+    // Soft delete: mark as deleted instead of removing
+    const { error } = await supabase
+      .from('projects')
+      .update({ deleted_at: new Date().toISOString(), deleted_by: user?.id || null })
+      .eq('id', id);
+    if (error) {
+      toast({ title: 'Error', description: 'No se pudo mover a papelera', variant: 'destructive' });
+      return;
+    }
+    toast({
+      title: 'Proyecto movido a papelera',
+      description: 'Puede restaurarse desde Administración → Papelera durante 30 días.',
+    });
     setProjectsList(prev => {
       const updated = prev.filter(p => p.id !== id);
       if (id === activeProjectId && updated.length > 0) {
@@ -395,7 +407,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       return updated;
     });
-  }, [projectsList, activeProjectId]);
+  }, [projectsList, activeProjectId, user, toast]);
 
   const addActivity = useCallback((a: Activity) => setProject(p => ({ ...p, activities: [...p.activities, a] })), [setProject]);
   const updateActivity = useCallback((a: Activity) => setProject(p => {
