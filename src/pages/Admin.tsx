@@ -387,6 +387,52 @@ const Admin = () => {
     u.email.toLowerCase().includes(assignSearch.toLowerCase())
   );
 
+  const filteredDeleted = deletedProjects.filter(p =>
+    !trashSearch || p.name.toLowerCase().includes(trashSearch.toLowerCase())
+  );
+
+  const daysRemaining = (deletedAt: string | null | undefined) => {
+    if (!deletedAt) return 0;
+    const elapsed = (Date.now() - new Date(deletedAt).getTime()) / (1000 * 60 * 60 * 24);
+    return Math.max(0, Math.ceil(30 - elapsed));
+  };
+
+  const restoreProject = async (p: ProjectEntry) => {
+    setTrashActionLoading(true);
+    const { error } = await supabase
+      .from('projects')
+      .update({ deleted_at: null, deleted_by: null })
+      .eq('id', p.id);
+    if (error) {
+      toast({ title: 'Error', description: 'No se pudo restaurar el proyecto', variant: 'destructive' });
+    } else {
+      toast({ title: 'Proyecto restaurado', description: `"${p.name}" vuelve a estar disponible.` });
+      loadProjects();
+      loadDeletedProjects();
+    }
+    setTrashActionLoading(false);
+  };
+
+  const permanentlyDelete = async () => {
+    if (!projectToPermDelete) return;
+    setTrashActionLoading(true);
+    // Delete dependent rows first (no FK cascade configured)
+    await supabase.from('activities').delete().eq('project_id', projectToPermDelete.id);
+    await supabase.from('lookahead_items').delete().eq('project_id', projectToPermDelete.id);
+    await supabase.from('pac_records').delete().eq('project_id', projectToPermDelete.id);
+    await supabase.from('project_assignments').delete().eq('project_id', projectToPermDelete.id);
+    const { error } = await supabase.from('projects').delete().eq('id', projectToPermDelete.id);
+    if (error) {
+      toast({ title: 'Error', description: 'No se pudo eliminar definitivamente', variant: 'destructive' });
+    } else {
+      toast({ title: 'Proyecto eliminado', description: 'Los datos se han borrado permanentemente.' });
+      loadDeletedProjects();
+    }
+    setPermDeleteOpen(false);
+    setProjectToPermDelete(null);
+    setTrashActionLoading(false);
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
