@@ -84,6 +84,14 @@ const Admin = () => {
   const [savingAssignments, setSavingAssignments] = useState(false);
   const [projectSearch, setProjectSearch] = useState('');
 
+  // Trash bin
+  const [deletedProjects, setDeletedProjects] = useState<ProjectEntry[]>([]);
+  const [loadingDeleted, setLoadingDeleted] = useState(false);
+  const [trashSearch, setTrashSearch] = useState('');
+  const [permDeleteOpen, setPermDeleteOpen] = useState(false);
+  const [projectToPermDelete, setProjectToPermDelete] = useState<ProjectEntry | null>(null);
+  const [trashActionLoading, setTrashActionLoading] = useState(false);
+
   // Dialogs
   const [createOpen, setCreateOpen] = useState(false);
   const [suspendOpen, setSuspendOpen] = useState(false);
@@ -160,13 +168,25 @@ const Admin = () => {
     setLoadingProjects(false);
   }, []);
 
+  const loadDeletedProjects = useCallback(async () => {
+    setLoadingDeleted(true);
+    const { data } = await supabase
+      .from('projects')
+      .select('id, name, user_id, created_at, deleted_at, deleted_by')
+      .not('deleted_at', 'is', null)
+      .order('deleted_at', { ascending: false });
+    setDeletedProjects((data as ProjectEntry[]) || []);
+    setLoadingDeleted(false);
+  }, []);
+
   useEffect(() => {
     if (isAdmin) {
       loadUsers();
       loadAudit();
       loadProjects();
+      loadDeletedProjects();
     }
-  }, [isAdmin, loadUsers, loadAudit, loadProjects]);
+  }, [isAdmin, loadUsers, loadAudit, loadProjects, loadDeletedProjects]);
 
   if (authLoading || roleLoading) {
     return (
