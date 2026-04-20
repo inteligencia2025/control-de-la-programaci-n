@@ -956,6 +956,26 @@ const Admin = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Permanently Delete Project Dialog */}
+      <Dialog open={permDeleteOpen} onOpenChange={setPermDeleteOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" /> Eliminar definitivamente
+            </DialogTitle>
+            <DialogDescription>
+              Esta acción <strong>no se puede deshacer</strong>. El proyecto <strong>"{projectToPermDelete?.name}"</strong> y todos sus datos asociados (actividades, lookahead, PAC, asignaciones) se borrarán permanentemente.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setPermDeleteOpen(false)} disabled={trashActionLoading}>Cancelar</Button>
+            <Button variant="destructive" onClick={permanentlyDelete} disabled={trashActionLoading}>
+              {trashActionLoading ? 'Eliminando...' : 'Eliminar definitivamente'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
