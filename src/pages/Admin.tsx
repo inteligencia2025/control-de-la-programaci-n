@@ -451,7 +451,7 @@ const Admin = () => {
             </div>
           </div>
           <div className="ml-auto flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => { loadUsers(); loadAudit(); loadProjects(); }}>
+            <Button variant="outline" size="sm" onClick={() => { loadUsers(); loadAudit(); loadProjects(); loadDeletedProjects(); }}>
               <RefreshCw className="h-3.5 w-3.5 mr-1" /> Actualizar
             </Button>
             <Button size="sm" onClick={() => setCreateOpen(true)}>
