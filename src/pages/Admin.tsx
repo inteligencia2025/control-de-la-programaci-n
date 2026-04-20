@@ -672,6 +672,89 @@ const Admin = () => {
             </Card>
           </TabsContent>
 
+          {/* Trash Bin Tab */}
+          <TabsContent value="trash">
+            <div className="flex flex-wrap gap-3 mb-4">
+              <div className="relative flex-1 min-w-[200px]">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar en papelera..."
+                  value={trashSearch}
+                  onChange={e => setTrashSearch(e.target.value)}
+                  className="pl-9"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground self-center">
+                Los proyectos eliminados se conservan 30 días antes del borrado definitivo.
+              </div>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                {loadingDeleted ? (
+                  <div className="p-8 text-center text-muted-foreground">Cargando papelera...</div>
+                ) : (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Proyecto</TableHead>
+                        <TableHead>Eliminado por</TableHead>
+                        <TableHead>Fecha de eliminación</TableHead>
+                        <TableHead>Días restantes</TableHead>
+                        <TableHead className="text-right">Acciones</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {filteredDeleted.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
+                            La papelera está vacía
+                          </TableCell>
+                        </TableRow>
+                      ) : filteredDeleted.map(p => {
+                        const days = daysRemaining(p.deleted_at);
+                        return (
+                          <TableRow key={p.id}>
+                            <TableCell className="font-medium">{p.name}</TableCell>
+                            <TableCell className="text-muted-foreground">{getOwnerName(p.deleted_by || '')}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground">{formatDate(p.deleted_at || null)}</TableCell>
+                            <TableCell>
+                              <Badge variant={days <= 7 ? 'destructive' : 'outline'} className="text-xs">
+                                {days} días
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex gap-1 justify-end">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="gap-1.5"
+                                  onClick={() => restoreProject(p)}
+                                  disabled={trashActionLoading}
+                                >
+                                  <RotateCcw className="h-3.5 w-3.5" /> Restaurar
+                                </Button>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="text-destructive hover:text-destructive"
+                                  onClick={() => { setProjectToPermDelete(p); setPermDeleteOpen(true); }}
+                                  disabled={trashActionLoading}
+                                >
+                                  <Trash className="h-3.5 w-3.5" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
           <TabsContent value="audit">
             <Card>
               <CardHeader>
