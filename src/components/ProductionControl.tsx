@@ -183,6 +183,24 @@ export function ProductionControl() {
     }).sort((a, b) => b.pac - a.pac);
   }, [project.pacRecords]);
 
+  // PAC mensual: agrupa registros por mes calendario según fecha de inicio de cada semana
+  const monthlyPAC = useMemo(() => {
+    const currentMonthKey = format(weekStartDate, 'yyyy-MM');
+    let planned = 0;
+    let completed = 0;
+    project.pacRecords.forEach(r => {
+      const { weekStart } = getProjectWeekDates(r.weekNumber, project.activities);
+      if (format(weekStart, 'yyyy-MM') !== currentMonthKey) return;
+      if (responsibleFilter !== 'all' && r.responsible !== responsibleFilter) return;
+      if (r.planned) planned++;
+      if (r.completed) completed++;
+    });
+    const pac = planned > 0 ? Math.round((completed / planned) * 100) : 0;
+    return { pac, planned, completed, monthLabel: format(weekStartDate, 'MMMM yyyy') };
+  }, [project.pacRecords, project.activities, weekStartDate, responsibleFilter]);
+
+  const monthlyRating = getPACRating(monthlyPAC.pac);
+
   const weeklyEvolution = useMemo(() => {
     const byWeek: Record<number, { planned: number; completed: number }> = {};
     project.pacRecords.forEach(r => {
