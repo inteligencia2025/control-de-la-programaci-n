@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProject } from '@/context/ProjectContext';
-import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity } from '@/types/project';
+import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity, isPACCompliant } from '@/types/project';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, LineChart, Line, ReferenceLine, ComposedChart } from 'recharts';
 import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -101,7 +101,8 @@ export function ProductionControl() {
     const record: PACRecord = {
       id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0],
       weekNumber: displayWeek, activityName: '', responsible: '',
-      planned: true, completed: false, failureCause: '', failureDescription: '',
+      planned: true, completed: false, plannedPct: 100, completedPct: 0,
+      failureCause: '', failureDescription: '',
     };
     addPACRecord(record);
   };
@@ -123,7 +124,8 @@ export function ProductionControl() {
       .map(a => ({
         id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0],
         weekNumber: displayWeek, activityName: a.name, responsible: '',
-        planned: true, completed: false, failureCause: '', failureDescription: '',
+        planned: true, completed: false, plannedPct: 100, completedPct: 0,
+        failureCause: '', failureDescription: '',
       }));
     if (newRecords.length > 0) setProject(p => ({ ...p, pacRecords: [...p.pacRecords, ...newRecords] }));
   };
