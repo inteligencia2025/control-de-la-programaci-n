@@ -152,9 +152,9 @@ export function ProductionControl() {
   const filtered = responsibleFilter === 'all' ? weekRecords : weekRecords.filter(r => r.responsible === responsibleFilter);
 
   const weekPAC = useMemo(() => {
-    const planned = filtered.filter(r => r.planned);
-    const completed = planned.filter(r => r.completed);
-    return planned.length > 0 ? Math.round((completed.length / planned.length) * 100) : 0;
+    const planned = filtered.filter(r => r.plannedPct > 0);
+    const compliant = planned.filter(r => isPACCompliant(r));
+    return planned.length > 0 ? Math.round((compliant.length / planned.length) * 100) : 0;
   }, [filtered]);
 
   const contractorPAC = useMemo(() => {
@@ -162,8 +162,8 @@ export function ProductionControl() {
     weekRecords.forEach(r => {
       if (!r.responsible) return;
       if (!byResp[r.responsible]) byResp[r.responsible] = { planned: 0, completed: 0 };
-      if (r.planned) byResp[r.responsible].planned++;
-      if (r.completed) byResp[r.responsible].completed++;
+      if (r.plannedPct > 0) byResp[r.responsible].planned++;
+      if (isPACCompliant(r)) byResp[r.responsible].completed++;
     });
     return Object.entries(byResp).map(([name, data]) => {
       const pac = data.planned > 0 ? Math.round((data.completed / data.planned) * 100) : 0;
@@ -176,8 +176,8 @@ export function ProductionControl() {
     project.pacRecords.forEach(r => {
       if (!r.responsible) return;
       if (!byResp[r.responsible]) byResp[r.responsible] = { planned: 0, completed: 0 };
-      if (r.planned) byResp[r.responsible].planned++;
-      if (r.completed) byResp[r.responsible].completed++;
+      if (r.plannedPct > 0) byResp[r.responsible].planned++;
+      if (isPACCompliant(r)) byResp[r.responsible].completed++;
     });
     return Object.entries(byResp).map(([name, data]) => {
       const pac = data.planned > 0 ? Math.round((data.completed / data.planned) * 100) : 0;
@@ -194,8 +194,8 @@ export function ProductionControl() {
       const { weekStart } = getProjectWeekDates(r.weekNumber, project.activities);
       if (format(weekStart, 'yyyy-MM') !== currentMonthKey) return;
       if (responsibleFilter !== 'all' && r.responsible !== responsibleFilter) return;
-      if (r.planned) planned++;
-      if (r.completed) completed++;
+      if (r.plannedPct > 0) planned++;
+      if (isPACCompliant(r)) completed++;
     });
     const pac = planned > 0 ? Math.round((completed / planned) * 100) : 0;
     return { pac, planned, completed, monthLabel: format(weekStartDate, 'MMMM yyyy') };
@@ -207,8 +207,8 @@ export function ProductionControl() {
     const byWeek: Record<number, { planned: number; completed: number }> = {};
     project.pacRecords.forEach(r => {
       if (!byWeek[r.weekNumber]) byWeek[r.weekNumber] = { planned: 0, completed: 0 };
-      if (r.planned) byWeek[r.weekNumber].planned++;
-      if (r.completed) byWeek[r.weekNumber].completed++;
+      if (r.plannedPct > 0) byWeek[r.weekNumber].planned++;
+      if (isPACCompliant(r)) byWeek[r.weekNumber].completed++;
     });
     return Object.entries(byWeek).map(([week, data]) => ({
       week: `S${week}`, weekNum: +week,
@@ -218,7 +218,7 @@ export function ProductionControl() {
 
   const paretoData = useMemo(() => {
     const causes: Record<string, number> = {};
-    project.pacRecords.filter(r => r.planned && !r.completed && r.failureCause).forEach(r => {
+    project.pacRecords.filter(r => r.plannedPct > 0 && !isPACCompliant(r) && r.failureCause).forEach(r => {
       causes[r.failureCause] = (causes[r.failureCause] || 0) + 1;
     });
     const sorted = Object.entries(causes).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
