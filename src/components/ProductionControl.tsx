@@ -382,10 +382,10 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[320px] w-[40%] text-xs font-semibold">Actividad</TableHead>
+                  <TableHead className="min-w-[260px] w-[34%] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
-                  <TableHead className="text-center w-24 text-xs font-semibold">Programado %</TableHead>
-                  <TableHead className="text-center w-24 text-xs font-semibold">Ejecutado %</TableHead>
+                  <TableHead className="text-center w-32 text-xs font-semibold">Programado %</TableHead>
+                  <TableHead className="text-center w-32 text-xs font-semibold">Ejecutado %</TableHead>
                   <TableHead className="min-w-[260px] w-[36%] text-xs font-semibold">Causa / Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
@@ -399,7 +399,7 @@ export function ProductionControl() {
                   const clampPct = (v: number) => Math.max(0, Math.min(100, isFinite(v) ? v : 0));
                   return (
                   <TableRow key={r.id}>
-                    <TableCell className="min-w-[320px] w-[40%] align-top">
+                    <TableCell className="min-w-[260px] w-[34%] align-top">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
                     <TableCell className="align-top">
@@ -427,9 +427,9 @@ export function ProductionControl() {
                             const val = clampPct(parseFloat(e.target.value));
                             updatePACRecord({ ...r, plannedPct: val, planned: val > 0 });
                           }}
-                          className="h-7 text-xs text-right pr-5"
+                          className="h-8 text-sm text-right pr-6 font-medium"
                         />
-                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">%</span>
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center align-top">
@@ -444,9 +444,9 @@ export function ProductionControl() {
                             const val = clampPct(parseFloat(e.target.value));
                             updatePACRecord({ ...r, completedPct: val, completed: r.plannedPct > 0 && val >= r.plannedPct });
                           }}
-                          className={`h-7 text-xs text-right pr-5 ${compliant ? 'border-success' : hasShortfall ? 'border-destructive' : ''}`}
+                          className={`h-8 text-sm text-right pr-6 font-medium ${compliant ? 'border-success' : hasShortfall ? 'border-destructive' : ''}`}
                         />
-                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">%</span>
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
                       </div>
                     </TableCell>
                     <TableCell className="min-w-[260px] w-[36%] align-top">
