@@ -449,7 +449,7 @@ export function ProductionControl() {
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[260px] w-[36%] align-top">
+                    <TableCell className="min-w-[220px] w-[28%] align-top">
                       {hasShortfall ? (
                         <div className="flex flex-col gap-1.5">
                           <Select value={r.failureCause || 'none'} onValueChange={v => updatePACRecord({ ...r, failureCause: v === 'none' ? '' : v })}>
