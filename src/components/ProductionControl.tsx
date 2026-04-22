@@ -247,25 +247,25 @@ export function ProductionControl() {
     const tableData = filtered.map(r => [
       r.activityName || '-',
       r.responsible || '-',
-      r.planned ? 'Sí' : 'No',
-      r.completed ? 'Sí' : 'No',
+      `${r.plannedPct ?? 0}%`,
+      `${r.completedPct ?? 0}%`,
       r.failureCause || '-',
       r.failureDescription || '-',
     ]);
 
     autoTable(doc, {
       startY: responsibleFilter !== 'all' ? 45 : 38,
-      head: [['Actividad', 'Responsable', 'Plan.', 'Compl.', 'Causa Incumplimiento', 'Descripción']],
+      head: [['Actividad', 'Responsable', 'Programado', 'Ejecutado', 'Causa Incumplimiento', 'Descripción']],
       body: tableData,
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [30, 58, 95], textColor: 255, fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 50 },
         1: { cellWidth: 35 },
-        2: { cellWidth: 15, halign: 'center' },
-        3: { cellWidth: 15, halign: 'center' },
-        4: { cellWidth: 60 },
-        5: { cellWidth: 60 },
+        2: { cellWidth: 22, halign: 'center' },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 55 },
+        5: { cellWidth: 55 },
       },
     });
 
