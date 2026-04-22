@@ -399,7 +399,7 @@ export function ProductionControl() {
                   const clampPct = (v: number) => Math.max(0, Math.min(100, isFinite(v) ? v : 0));
                   return (
                   <TableRow key={r.id}>
-                    <TableCell className="min-w-[320px] w-[40%] align-top">
+                    <TableCell className="min-w-[260px] w-[34%] align-top">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
                     <TableCell className="align-top">
