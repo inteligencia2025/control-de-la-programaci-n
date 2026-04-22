@@ -163,12 +163,14 @@ export type Database = {
         Row: {
           activity_name: string
           completed: boolean
+          completed_pct: number
           created_at: string
           date: string
           failure_cause: string
           failure_description: string | null
           id: string
           planned: boolean
+          planned_pct: number
           project_id: string
           responsible: string
           week_number: number
@@ -176,12 +178,14 @@ export type Database = {
         Insert: {
           activity_name: string
           completed?: boolean
+          completed_pct?: number
           created_at?: string
           date: string
           failure_cause?: string
           failure_description?: string | null
           id?: string
           planned?: boolean
+          planned_pct?: number
           project_id: string
           responsible?: string
           week_number?: number
@@ -189,12 +193,14 @@ export type Database = {
         Update: {
           activity_name?: string
           completed?: boolean
+          completed_pct?: number
           created_at?: string
           date?: string
           failure_cause?: string
           failure_description?: string | null
           id?: string
           planned?: boolean
+          planned_pct?: number
           project_id?: string
           responsible?: string
           week_number?: number
