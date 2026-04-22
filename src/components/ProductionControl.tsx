@@ -391,7 +391,7 @@ export function ProductionControl() {
                   <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
                 ) : filtered.map(r => (
                   <TableRow key={r.id}>
-                    <TableCell className="min-w-[280px]">
+                    <TableCell className="min-w-[220px] w-[28%]">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
                     <TableCell>
