@@ -290,8 +290,11 @@ export function ProductionControl() {
   const handleExportExcel = () => {
     const rows = weekRecords.map(r => ({
       Semana: r.weekNumber, Actividad: r.activityName,
-      Responsable: r.responsible, Planificada: r.planned ? 'Sí' : 'No',
-      Completada: r.completed ? 'Sí' : 'No', 'Causa Incumplimiento': r.failureCause || '-',
+      Responsable: r.responsible,
+      'Programado %': r.plannedPct ?? 0,
+      'Ejecutado %': r.completedPct ?? 0,
+      Cumple: isPACCompliant(r) ? 'Sí' : 'No',
+      'Causa Incumplimiento': r.failureCause || '-',
       'Descripción': r.failureDescription || '-',
     }));
     const wb = XLSX.utils.book_new();
