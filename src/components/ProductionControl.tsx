@@ -377,7 +377,7 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-32 text-xs font-semibold">Actividad</TableHead>
+                  <TableHead className="min-w-[280px] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Plan.</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Compl.</TableHead>
