@@ -377,24 +377,23 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Actividad</TableHead>
+                  <TableHead className="min-w-[320px] w-[42%] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Plan.</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Compl.</TableHead>
-                  <TableHead className="w-36 text-xs font-semibold">Causa</TableHead>
-                  <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Descripción</TableHead>
+                  <TableHead className="min-w-[280px] w-[38%] text-xs font-semibold">Causa / Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
                 ) : filtered.map(r => (
                   <TableRow key={r.id}>
-                    <TableCell className="min-w-[220px] w-[28%]">
+                    <TableCell className="min-w-[320px] w-[42%] align-top">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="align-top">
                       {responsibles.length > 0 ? (
                         <Select value={r.responsible || '_empty'} onValueChange={v => updatePACRecord({ ...r, responsible: v === '_empty' ? '' : v })}>
                           <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
@@ -407,31 +406,29 @@ export function ProductionControl() {
                         <Input value={r.responsible} onChange={e => updatePACRecord({ ...r, responsible: e.target.value })} className="h-7 text-xs" placeholder="Responsable" />
                       )}
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center align-top">
                       <Checkbox checked={r.planned} onCheckedChange={() => updatePACRecord({ ...r, planned: !r.planned })} />
                     </TableCell>
-                    <TableCell className="text-center">
+                    <TableCell className="text-center align-top">
                       <Checkbox checked={r.completed} onCheckedChange={() => updatePACRecord({ ...r, completed: !r.completed })} />
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-[280px] w-[38%] align-top">
                       {r.planned && !r.completed ? (
-                        <Select value={r.failureCause || 'none'} onValueChange={v => updatePACRecord({ ...r, failureCause: v === 'none' ? '' : v })}>
-                          <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">— Seleccionar —</SelectItem>
-                            {allCauses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
-                          </SelectContent>
-                        </Select>
-                      ) : <span className="text-xs text-muted-foreground">—</span>}
-                    </TableCell>
-                    <TableCell className="min-w-[220px] w-[28%]">
-                      {r.planned && !r.completed ? (
-                        <Textarea
-                          value={r.failureDescription || ''}
-                          onChange={e => updatePACRecord({ ...r, failureDescription: e.target.value })}
-                          className="min-h-[28px] h-7 text-xs resize-none py-1 w-full"
-                          placeholder="Describir causa..."
-                        />
+                        <div className="flex flex-col gap-1.5">
+                          <Select value={r.failureCause || 'none'} onValueChange={v => updatePACRecord({ ...r, failureCause: v === 'none' ? '' : v })}>
+                            <SelectTrigger className="h-7 text-xs w-full"><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">— Seleccionar causa —</SelectItem>
+                              {allCauses.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                            </SelectContent>
+                          </Select>
+                          <Textarea
+                            value={r.failureDescription || ''}
+                            onChange={e => updatePACRecord({ ...r, failureDescription: e.target.value })}
+                            className="min-h-[40px] text-xs resize-y py-1 w-full"
+                            placeholder="Describir causa..."
+                          />
+                        </div>
                       ) : <span className="text-xs text-muted-foreground">—</span>}
                     </TableCell>
                     <TableCell>
