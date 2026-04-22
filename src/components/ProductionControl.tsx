@@ -424,12 +424,12 @@ export function ProductionControl() {
                         </Select>
                       ) : <span className="text-xs text-muted-foreground">—</span>}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-[220px] w-[28%]">
                       {r.planned && !r.completed ? (
                         <Textarea
                           value={r.failureDescription || ''}
                           onChange={e => updatePACRecord({ ...r, failureDescription: e.target.value })}
-                          className="min-h-[28px] h-7 text-xs resize-none py-1"
+                          className="min-h-[28px] h-7 text-xs resize-none py-1 w-full"
                           placeholder="Describir causa..."
                         />
                       ) : <span className="text-xs text-muted-foreground">—</span>}
