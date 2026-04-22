@@ -377,12 +377,12 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[280px] text-xs font-semibold">Actividad</TableHead>
+                  <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Plan.</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Compl.</TableHead>
-                  <TableHead className="w-40 text-xs font-semibold">Causa</TableHead>
-                  <TableHead className="w-44 text-xs font-semibold">Descripción</TableHead>
+                  <TableHead className="w-36 text-xs font-semibold">Causa</TableHead>
+                  <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -391,7 +391,7 @@ export function ProductionControl() {
                   <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
                 ) : filtered.map(r => (
                   <TableRow key={r.id}>
-                    <TableCell className="min-w-[280px]">
+                    <TableCell className="min-w-[220px] w-[28%]">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
                     <TableCell>
@@ -424,12 +424,12 @@ export function ProductionControl() {
                         </Select>
                       ) : <span className="text-xs text-muted-foreground">—</span>}
                     </TableCell>
-                    <TableCell>
+                    <TableCell className="min-w-[220px] w-[28%]">
                       {r.planned && !r.completed ? (
                         <Textarea
                           value={r.failureDescription || ''}
                           onChange={e => updatePACRecord({ ...r, failureDescription: e.target.value })}
-                          className="min-h-[28px] h-7 text-xs resize-none py-1"
+                          className="min-h-[28px] h-7 text-xs resize-none py-1 w-full"
                           placeholder="Describir causa..."
                         />
                       ) : <span className="text-xs text-muted-foreground">—</span>}
