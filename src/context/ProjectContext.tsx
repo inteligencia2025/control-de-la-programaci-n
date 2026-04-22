@@ -335,6 +335,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             responsible: r.responsible,
             planned: r.planned,
             completed: r.completed,
+            planned_pct: r.plannedPct ?? 0,
+            completed_pct: r.completedPct ?? 0,
             failure_cause: r.failureCause,
             failure_description: r.failureDescription || null,
           }))
