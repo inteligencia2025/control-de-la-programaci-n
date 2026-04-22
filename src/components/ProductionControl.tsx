@@ -508,12 +508,12 @@ export function ProductionControl() {
             <CardContent className={`px-1 pb-2 ${chartHeight('cumulative')}`}>
               {cumulativePAC.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={cumulativePAC} layout="vertical" margin={{ left: 60, right: 10, top: 5, bottom: 5 }}>
+                  <BarChart data={cumulativePAC} margin={{ left: 10, right: 10, top: 10, bottom: 40 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
-                    <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={55} />
+                    <XAxis type="category" dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-25} textAnchor="end" height={60} />
+                    <YAxis type="number" domain={[0, 100]} tick={{ fontSize: 11 }} />
                     <Tooltip />
-                    <Bar dataKey="pac" radius={[0, 3, 3, 0]} name="PAC %">
+                    <Bar dataKey="pac" radius={[3, 3, 0, 0]} name="PAC %">
                       {cumulativePAC.map((entry, i) => <Cell key={i} fill={getPACRating(entry.pac).color} />)}
                     </Bar>
                   </BarChart>
