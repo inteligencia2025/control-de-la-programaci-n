@@ -427,9 +427,9 @@ export function ProductionControl() {
                             const val = clampPct(parseFloat(e.target.value));
                             updatePACRecord({ ...r, plannedPct: val, planned: val > 0 });
                           }}
-                          className="h-7 text-xs text-right pr-5"
+                          className="h-8 text-sm text-right pr-6 font-medium"
                         />
-                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">%</span>
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
                       </div>
                     </TableCell>
                     <TableCell className="text-center align-top">
