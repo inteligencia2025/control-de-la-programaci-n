@@ -383,10 +383,10 @@ export function ProductionControl() {
               <TableHeader>
                 <TableRow>
                   <TableHead className="min-w-[260px] w-[34%] text-xs font-semibold">Actividad</TableHead>
-                  <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
+                  <TableHead className="min-w-[160px] w-40 text-xs font-semibold">Responsable</TableHead>
                   <TableHead className="text-center w-32 text-xs font-semibold">Programado %</TableHead>
                   <TableHead className="text-center w-32 text-xs font-semibold">Ejecutado %</TableHead>
-                  <TableHead className="min-w-[260px] w-[36%] text-xs font-semibold">Causa / Descripción</TableHead>
+                  <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Causa / Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
               </TableHeader>
@@ -449,7 +449,7 @@ export function ProductionControl() {
                         <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-muted-foreground pointer-events-none">%</span>
                       </div>
                     </TableCell>
-                    <TableCell className="min-w-[260px] w-[36%] align-top">
+                    <TableCell className="min-w-[220px] w-[28%] align-top">
                       {hasShortfall ? (
                         <div className="flex flex-col gap-1.5">
                           <Select value={r.failureCause || 'none'} onValueChange={v => updatePACRecord({ ...r, failureCause: v === 'none' ? '' : v })}>
