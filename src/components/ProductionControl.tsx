@@ -377,12 +377,12 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[280px] text-xs font-semibold">Actividad</TableHead>
+                  <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Plan.</TableHead>
                   <TableHead className="text-center w-12 text-xs font-semibold">Compl.</TableHead>
-                  <TableHead className="w-40 text-xs font-semibold">Causa</TableHead>
-                  <TableHead className="w-44 text-xs font-semibold">Descripción</TableHead>
+                  <TableHead className="w-36 text-xs font-semibold">Causa</TableHead>
+                  <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
               </TableHeader>
