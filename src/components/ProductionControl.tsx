@@ -382,20 +382,24 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[320px] w-[42%] text-xs font-semibold">Actividad</TableHead>
+                  <TableHead className="min-w-[320px] w-[40%] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
-                  <TableHead className="text-center w-12 text-xs font-semibold">Plan.</TableHead>
-                  <TableHead className="text-center w-12 text-xs font-semibold">Compl.</TableHead>
-                  <TableHead className="min-w-[280px] w-[38%] text-xs font-semibold">Causa / Descripción</TableHead>
+                  <TableHead className="text-center w-24 text-xs font-semibold">Programado %</TableHead>
+                  <TableHead className="text-center w-24 text-xs font-semibold">Ejecutado %</TableHead>
+                  <TableHead className="min-w-[260px] w-[36%] text-xs font-semibold">Causa / Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
-                ) : filtered.map(r => (
+                ) : filtered.map(r => {
+                  const compliant = isPACCompliant(r);
+                  const hasShortfall = r.plannedPct > 0 && r.completedPct < r.plannedPct;
+                  const clampPct = (v: number) => Math.max(0, Math.min(100, isFinite(v) ? v : 0));
+                  return (
                   <TableRow key={r.id}>
-                    <TableCell className="min-w-[320px] w-[42%] align-top">
+                    <TableCell className="min-w-[320px] w-[40%] align-top">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
                     <TableCell className="align-top">
@@ -412,13 +416,41 @@ export function ProductionControl() {
                       )}
                     </TableCell>
                     <TableCell className="text-center align-top">
-                      <Checkbox checked={r.planned} onCheckedChange={() => updatePACRecord({ ...r, planned: !r.planned })} />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={r.plannedPct ?? 0}
+                          onChange={e => {
+                            const val = clampPct(parseFloat(e.target.value));
+                            updatePACRecord({ ...r, plannedPct: val, planned: val > 0 });
+                          }}
+                          className="h-7 text-xs text-right pr-5"
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">%</span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-center align-top">
-                      <Checkbox checked={r.completed} onCheckedChange={() => updatePACRecord({ ...r, completed: !r.completed })} />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={r.completedPct ?? 0}
+                          onChange={e => {
+                            const val = clampPct(parseFloat(e.target.value));
+                            updatePACRecord({ ...r, completedPct: val, completed: r.plannedPct > 0 && val >= r.plannedPct });
+                          }}
+                          className={`h-7 text-xs text-right pr-5 ${compliant ? 'border-success' : hasShortfall ? 'border-destructive' : ''}`}
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">%</span>
+                      </div>
                     </TableCell>
-                    <TableCell className="min-w-[280px] w-[38%] align-top">
-                      {r.planned && !r.completed ? (
+                    <TableCell className="min-w-[260px] w-[36%] align-top">
+                      {hasShortfall ? (
                         <div className="flex flex-col gap-1.5">
                           <Select value={r.failureCause || 'none'} onValueChange={v => updatePACRecord({ ...r, failureCause: v === 'none' ? '' : v })}>
                             <SelectTrigger className="h-7 text-xs w-full"><SelectValue /></SelectTrigger>
@@ -442,7 +474,8 @@ export function ProductionControl() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </Card>
