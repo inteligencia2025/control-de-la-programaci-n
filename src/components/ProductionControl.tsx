@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProject } from '@/context/ProjectContext';
-import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity } from '@/types/project';
+import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity, isPACCompliant } from '@/types/project';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, LineChart, Line, ReferenceLine, ComposedChart } from 'recharts';
 import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
@@ -101,7 +101,8 @@ export function ProductionControl() {
     const record: PACRecord = {
       id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0],
       weekNumber: displayWeek, activityName: '', responsible: '',
-      planned: true, completed: false, failureCause: '', failureDescription: '',
+      planned: true, completed: false, plannedPct: 100, completedPct: 0,
+      failureCause: '', failureDescription: '',
     };
     addPACRecord(record);
   };
@@ -123,7 +124,8 @@ export function ProductionControl() {
       .map(a => ({
         id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0],
         weekNumber: displayWeek, activityName: a.name, responsible: '',
-        planned: true, completed: false, failureCause: '', failureDescription: '',
+        planned: true, completed: false, plannedPct: 100, completedPct: 0,
+        failureCause: '', failureDescription: '',
       }));
     if (newRecords.length > 0) setProject(p => ({ ...p, pacRecords: [...p.pacRecords, ...newRecords] }));
   };
@@ -150,9 +152,9 @@ export function ProductionControl() {
   const filtered = responsibleFilter === 'all' ? weekRecords : weekRecords.filter(r => r.responsible === responsibleFilter);
 
   const weekPAC = useMemo(() => {
-    const planned = filtered.filter(r => r.planned);
-    const completed = planned.filter(r => r.completed);
-    return planned.length > 0 ? Math.round((completed.length / planned.length) * 100) : 0;
+    const planned = filtered.filter(r => r.plannedPct > 0);
+    const compliant = planned.filter(r => isPACCompliant(r));
+    return planned.length > 0 ? Math.round((compliant.length / planned.length) * 100) : 0;
   }, [filtered]);
 
   const contractorPAC = useMemo(() => {
@@ -160,8 +162,8 @@ export function ProductionControl() {
     weekRecords.forEach(r => {
       if (!r.responsible) return;
       if (!byResp[r.responsible]) byResp[r.responsible] = { planned: 0, completed: 0 };
-      if (r.planned) byResp[r.responsible].planned++;
-      if (r.completed) byResp[r.responsible].completed++;
+      if (r.plannedPct > 0) byResp[r.responsible].planned++;
+      if (isPACCompliant(r)) byResp[r.responsible].completed++;
     });
     return Object.entries(byResp).map(([name, data]) => {
       const pac = data.planned > 0 ? Math.round((data.completed / data.planned) * 100) : 0;
@@ -174,8 +176,8 @@ export function ProductionControl() {
     project.pacRecords.forEach(r => {
       if (!r.responsible) return;
       if (!byResp[r.responsible]) byResp[r.responsible] = { planned: 0, completed: 0 };
-      if (r.planned) byResp[r.responsible].planned++;
-      if (r.completed) byResp[r.responsible].completed++;
+      if (r.plannedPct > 0) byResp[r.responsible].planned++;
+      if (isPACCompliant(r)) byResp[r.responsible].completed++;
     });
     return Object.entries(byResp).map(([name, data]) => {
       const pac = data.planned > 0 ? Math.round((data.completed / data.planned) * 100) : 0;
@@ -192,8 +194,8 @@ export function ProductionControl() {
       const { weekStart } = getProjectWeekDates(r.weekNumber, project.activities);
       if (format(weekStart, 'yyyy-MM') !== currentMonthKey) return;
       if (responsibleFilter !== 'all' && r.responsible !== responsibleFilter) return;
-      if (r.planned) planned++;
-      if (r.completed) completed++;
+      if (r.plannedPct > 0) planned++;
+      if (isPACCompliant(r)) completed++;
     });
     const pac = planned > 0 ? Math.round((completed / planned) * 100) : 0;
     return { pac, planned, completed, monthLabel: format(weekStartDate, 'MMMM yyyy') };
@@ -205,8 +207,8 @@ export function ProductionControl() {
     const byWeek: Record<number, { planned: number; completed: number }> = {};
     project.pacRecords.forEach(r => {
       if (!byWeek[r.weekNumber]) byWeek[r.weekNumber] = { planned: 0, completed: 0 };
-      if (r.planned) byWeek[r.weekNumber].planned++;
-      if (r.completed) byWeek[r.weekNumber].completed++;
+      if (r.plannedPct > 0) byWeek[r.weekNumber].planned++;
+      if (isPACCompliant(r)) byWeek[r.weekNumber].completed++;
     });
     return Object.entries(byWeek).map(([week, data]) => ({
       week: `S${week}`, weekNum: +week,
@@ -216,7 +218,7 @@ export function ProductionControl() {
 
   const paretoData = useMemo(() => {
     const causes: Record<string, number> = {};
-    project.pacRecords.filter(r => r.planned && !r.completed && r.failureCause).forEach(r => {
+    project.pacRecords.filter(r => r.plannedPct > 0 && !isPACCompliant(r) && r.failureCause).forEach(r => {
       causes[r.failureCause] = (causes[r.failureCause] || 0) + 1;
     });
     const sorted = Object.entries(causes).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
@@ -245,25 +247,25 @@ export function ProductionControl() {
     const tableData = filtered.map(r => [
       r.activityName || '-',
       r.responsible || '-',
-      r.planned ? 'Sí' : 'No',
-      r.completed ? 'Sí' : 'No',
+      `${r.plannedPct ?? 0}%`,
+      `${r.completedPct ?? 0}%`,
       r.failureCause || '-',
       r.failureDescription || '-',
     ]);
 
     autoTable(doc, {
       startY: responsibleFilter !== 'all' ? 45 : 38,
-      head: [['Actividad', 'Responsable', 'Plan.', 'Compl.', 'Causa Incumplimiento', 'Descripción']],
+      head: [['Actividad', 'Responsable', 'Programado', 'Ejecutado', 'Causa Incumplimiento', 'Descripción']],
       body: tableData,
       styles: { fontSize: 8, cellPadding: 2 },
       headStyles: { fillColor: [30, 58, 95], textColor: 255, fontStyle: 'bold' },
       columnStyles: {
         0: { cellWidth: 50 },
         1: { cellWidth: 35 },
-        2: { cellWidth: 15, halign: 'center' },
-        3: { cellWidth: 15, halign: 'center' },
-        4: { cellWidth: 60 },
-        5: { cellWidth: 60 },
+        2: { cellWidth: 22, halign: 'center' },
+        3: { cellWidth: 22, halign: 'center' },
+        4: { cellWidth: 55 },
+        5: { cellWidth: 55 },
       },
     });
 
@@ -288,8 +290,11 @@ export function ProductionControl() {
   const handleExportExcel = () => {
     const rows = weekRecords.map(r => ({
       Semana: r.weekNumber, Actividad: r.activityName,
-      Responsable: r.responsible, Planificada: r.planned ? 'Sí' : 'No',
-      Completada: r.completed ? 'Sí' : 'No', 'Causa Incumplimiento': r.failureCause || '-',
+      Responsable: r.responsible,
+      'Programado %': r.plannedPct ?? 0,
+      'Ejecutado %': r.completedPct ?? 0,
+      Cumple: isPACCompliant(r) ? 'Sí' : 'No',
+      'Causa Incumplimiento': r.failureCause || '-',
       'Descripción': r.failureDescription || '-',
     }));
     const wb = XLSX.utils.book_new();
@@ -377,20 +382,24 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="min-w-[320px] w-[42%] text-xs font-semibold">Actividad</TableHead>
+                  <TableHead className="min-w-[320px] w-[40%] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="w-28 text-xs font-semibold">Responsable</TableHead>
-                  <TableHead className="text-center w-12 text-xs font-semibold">Plan.</TableHead>
-                  <TableHead className="text-center w-12 text-xs font-semibold">Compl.</TableHead>
-                  <TableHead className="min-w-[280px] w-[38%] text-xs font-semibold">Causa / Descripción</TableHead>
+                  <TableHead className="text-center w-24 text-xs font-semibold">Programado %</TableHead>
+                  <TableHead className="text-center w-24 text-xs font-semibold">Ejecutado %</TableHead>
+                  <TableHead className="min-w-[260px] w-[36%] text-xs font-semibold">Causa / Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
-                ) : filtered.map(r => (
+                ) : filtered.map(r => {
+                  const compliant = isPACCompliant(r);
+                  const hasShortfall = r.plannedPct > 0 && r.completedPct < r.plannedPct;
+                  const clampPct = (v: number) => Math.max(0, Math.min(100, isFinite(v) ? v : 0));
+                  return (
                   <TableRow key={r.id}>
-                    <TableCell className="min-w-[320px] w-[42%] align-top">
+                    <TableCell className="min-w-[320px] w-[40%] align-top">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
                     <TableCell className="align-top">
@@ -407,13 +416,41 @@ export function ProductionControl() {
                       )}
                     </TableCell>
                     <TableCell className="text-center align-top">
-                      <Checkbox checked={r.planned} onCheckedChange={() => updatePACRecord({ ...r, planned: !r.planned })} />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={r.plannedPct ?? 0}
+                          onChange={e => {
+                            const val = clampPct(parseFloat(e.target.value));
+                            updatePACRecord({ ...r, plannedPct: val, planned: val > 0 });
+                          }}
+                          className="h-7 text-xs text-right pr-5"
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">%</span>
+                      </div>
                     </TableCell>
                     <TableCell className="text-center align-top">
-                      <Checkbox checked={r.completed} onCheckedChange={() => updatePACRecord({ ...r, completed: !r.completed })} />
+                      <div className="relative">
+                        <Input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={r.completedPct ?? 0}
+                          onChange={e => {
+                            const val = clampPct(parseFloat(e.target.value));
+                            updatePACRecord({ ...r, completedPct: val, completed: r.plannedPct > 0 && val >= r.plannedPct });
+                          }}
+                          className={`h-7 text-xs text-right pr-5 ${compliant ? 'border-success' : hasShortfall ? 'border-destructive' : ''}`}
+                        />
+                        <span className="absolute right-1.5 top-1/2 -translate-y-1/2 text-[10px] text-muted-foreground pointer-events-none">%</span>
+                      </div>
                     </TableCell>
-                    <TableCell className="min-w-[280px] w-[38%] align-top">
-                      {r.planned && !r.completed ? (
+                    <TableCell className="min-w-[260px] w-[36%] align-top">
+                      {hasShortfall ? (
                         <div className="flex flex-col gap-1.5">
                           <Select value={r.failureCause || 'none'} onValueChange={v => updatePACRecord({ ...r, failureCause: v === 'none' ? '' : v })}>
                             <SelectTrigger className="h-7 text-xs w-full"><SelectValue /></SelectTrigger>
@@ -437,7 +474,8 @@ export function ProductionControl() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
               </TableBody>
             </Table>
           </Card>

@@ -117,8 +117,17 @@ export interface PACRecord {
   responsible: string;
   planned: boolean;
   completed: boolean;
+  /** Programado (%) — porcentaje planificado para la actividad en la semana */
+  plannedPct: number;
+  /** Ejecutado (%) — porcentaje real ejecutado en la semana */
+  completedPct: number;
   failureCause: string;
   failureDescription?: string;
+}
+
+/** Una actividad cumple PAC cuando lo ejecutado ≥ lo programado y lo programado > 0 */
+export function isPACCompliant(r: Pick<PACRecord, 'plannedPct' | 'completedPct'>): boolean {
+  return r.plannedPct > 0 && r.completedPct >= r.plannedPct;
 }
 
 export const DEFAULT_FAILURE_CAUSES: string[] = [

@@ -232,6 +232,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         responsible: r.responsible,
         planned: r.planned,
         completed: r.completed,
+        plannedPct: r.planned_pct != null ? Number(r.planned_pct) : (r.planned ? 100 : 0),
+        completedPct: r.completed_pct != null ? Number(r.completed_pct) : (r.completed ? 100 : 0),
         failureCause: r.failure_cause,
         failureDescription: r.failure_description || undefined,
       })),
@@ -333,6 +335,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             responsible: r.responsible,
             planned: r.planned,
             completed: r.completed,
+            planned_pct: r.plannedPct ?? 0,
+            completed_pct: r.completedPct ?? 0,
             failure_cause: r.failureCause,
             failure_description: r.failureDescription || null,
           }))
