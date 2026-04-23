@@ -275,20 +275,64 @@ export function LOBPanel() {
             </div>
           </div>
           {project.projectType === 'edificio' && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px]">Pisos</Label>
-                <Input type="number" min={1} value={project.buildingConfig.floors}
-                  onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, floors: +e.target.value || 1 } }))}
-                  className="h-7 text-xs" />
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px]">Pisos</Label>
+                  <Input type="number" min={1} value={project.buildingConfig.floors}
+                    onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, floors: +e.target.value || 1 } }))}
+                    className="h-7 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px]">Unid/Piso</Label>
+                  <Input type="number" min={1} value={project.buildingConfig.unitsPerFloor}
+                    onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, unitsPerFloor: +e.target.value || 1 } }))}
+                    className="h-7 text-xs" />
+                </div>
               </div>
-              <div>
-                <Label className="text-[10px]">Unid/Piso</Label>
-                <Input type="number" min={1} value={project.buildingConfig.unitsPerFloor}
-                  onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, unitsPerFloor: +e.target.value || 1 } }))}
-                  className="h-7 text-xs" />
-              </div>
-            </div>
+              <label className="flex items-center gap-1.5 pt-1 text-[10px] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="h-3 w-3 accent-primary cursor-pointer"
+                  checked={!!project.buildingConfig.hasCubierta}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setProject(p => {
+                      const newConfig = { ...p.buildingConfig, hasCubierta: enabled };
+                      let newActivities = p.activities;
+                      if (enabled) {
+                        const hasCub = p.activities.some(a => a.category === 'cubierta' && a.cubiertaRow === 'cubierta');
+                        const hasMuros = p.activities.some(a => a.category === 'cubierta' && a.cubiertaRow === 'muros_cubierta');
+                        const hasAsc = p.activities.some(a => a.category === 'cubierta' && a.cubiertaRow === 'ascensores');
+                        const startD = p.projectStartDate || new Date().toISOString().split('T')[0];
+                        const toAdd: Activity[] = [];
+                        if (!hasCub) toAdd.push({
+                          id: crypto.randomUUID(), name: 'Cubierta', unitStart: 1, unitEnd: 1,
+                          startDate: startD, endDate: startD, rate: 1, color: '#16a085',
+                          category: 'cubierta', cubiertaRow: 'cubierta',
+                          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true,
+                        });
+                        if (!hasMuros) toAdd.push({
+                          id: crypto.randomUUID(), name: 'Muros Cubierta', unitStart: 2, unitEnd: 2,
+                          startDate: startD, endDate: startD, rate: 1, color: '#8e44ad',
+                          category: 'cubierta', cubiertaRow: 'muros_cubierta',
+                          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true,
+                        });
+                        if (!hasAsc) toAdd.push({
+                          id: crypto.randomUUID(), name: 'Ascensores', unitStart: 3, unitEnd: 3,
+                          startDate: startD, endDate: startD, rate: 1, color: '#c0392b',
+                          category: 'cubierta', cubiertaRow: 'ascensores',
+                          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true,
+                        });
+                        if (toAdd.length > 0) newActivities = [...p.activities, ...toAdd];
+                      }
+                      return { ...p, buildingConfig: newConfig, activities: newActivities };
+                    });
+                  }}
+                />
+                Tiene Cubierta (Cubierta · Muros · Ascensores)
+              </label>
+            </>
           )}
           <div className="grid grid-cols-2 gap-2">
             <div>
