@@ -280,13 +280,33 @@ export function LOBPanel() {
                 <div>
                   <Label className="text-[10px]">Pisos</Label>
                   <Input type="number" min={1} value={project.buildingConfig.floors}
-                    onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, floors: +e.target.value || 1 } }))}
+                    onChange={e => setProject(p => {
+                      const newFloors = +e.target.value || 1;
+                      const newConfig = { ...p.buildingConfig, floors: newFloors };
+                      const totalUnits = newFloors * newConfig.unitsPerFloor;
+                      const activities = p.activities.map(a => a.category === 'cubierta' ? a : ({
+                        ...a,
+                        unitStart: Math.min(Math.max(1, a.unitStart), totalUnits),
+                        unitEnd: Math.min(Math.max(1, a.unitEnd), totalUnits),
+                      }));
+                      return { ...p, buildingConfig: newConfig, activities };
+                    })}
                     className="h-7 text-xs" />
                 </div>
                 <div>
                   <Label className="text-[10px]">Unid/Piso</Label>
                   <Input type="number" min={1} value={project.buildingConfig.unitsPerFloor}
-                    onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, unitsPerFloor: +e.target.value || 1 } }))}
+                    onChange={e => setProject(p => {
+                      const newUpf = +e.target.value || 1;
+                      const newConfig = { ...p.buildingConfig, unitsPerFloor: newUpf };
+                      const totalUnits = newConfig.floors * newUpf;
+                      const activities = p.activities.map(a => a.category === 'cubierta' ? a : ({
+                        ...a,
+                        unitStart: Math.min(Math.max(1, a.unitStart), totalUnits),
+                        unitEnd: Math.min(Math.max(1, a.unitEnd), totalUnits),
+                      }));
+                      return { ...p, buildingConfig: newConfig, activities };
+                    })}
                     className="h-7 text-xs" />
                 </div>
               </div>
