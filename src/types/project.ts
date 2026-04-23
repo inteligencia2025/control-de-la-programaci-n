@@ -179,11 +179,11 @@ export const DEFAULT_COLORS = [
   '#7f8c8d', '#27ae60',
 ];
 
-/** When hasCubierta is enabled, two extra unit slots are appended on top of the building */
-export function getCubiertaUnits(buildingConfig: BuildingConfig): { cubierta: number; muros: number } | null {
+/** When hasCubierta is enabled, three extra unit slots are appended on top of the building */
+export function getCubiertaUnits(buildingConfig: BuildingConfig): { cubierta: number; muros: number; ascensores: number } | null {
   if (!buildingConfig.hasCubierta) return null;
   const totalReg = buildingConfig.floors * buildingConfig.unitsPerFloor;
-  return { cubierta: totalReg + 1, muros: totalReg + 2 };
+  return { cubierta: totalReg + 1, muros: totalReg + 2, ascensores: totalReg + 3 };
 }
 
 /** Generate unit label based on project type */
@@ -192,7 +192,8 @@ export function getUnitLabel(unit: number, projectType: ProjectType, buildingCon
   const cu = getCubiertaUnits(buildingConfig);
   if (cu) {
     if (unit === cu.cubierta) return 'Cubierta';
-    if (unit === cu.muros) return 'Muros Cubierta';
+    if (unit === cu.muros) return 'Muros Cub.';
+    if (unit === cu.ascensores) return 'Ascensores';
   }
   const floor = Math.ceil(unit / buildingConfig.unitsPerFloor);
   const unitOnFloor = ((unit - 1) % buildingConfig.unitsPerFloor) + 1;
