@@ -263,11 +263,10 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { maxWorkday, workdays, lines, minUnit, maxUnit, preliminaresLines } = chartData;
+    const { maxWorkday, workdays, lines, minUnit, maxUnit } = chartData;
     const unitRange = maxUnit - minUnit;
     const PAD = { top: 40, right: 30, bottom: 110, left: 80 };
-    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
-    const lobTop = PAD.top + PRELIM_H;
+    const lobTop = PAD.top;
     const W = Math.max(900, maxWorkday * 40 + PAD.left + PAD.right);
     const plotW = W - PAD.left - PAD.right;
     const plotH = unitRange * 32;
@@ -309,12 +308,11 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { lines, minUnit, maxUnit, maxWorkday, workdays, preliminaresLines } = chartData;
+    const { lines, minUnit, maxUnit, maxWorkday, workdays } = chartData;
     const UNIT_H = 32;
     const unitRange = maxUnit - minUnit;
     const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
-    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
-    const lobTop = PADDING.top + PRELIM_H;
+    const lobTop = PADDING.top;
     const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
     const plotH = unitRange * UNIT_H;
     const plotW = WIDTH - PADDING.left - PADDING.right;
@@ -388,12 +386,13 @@ export function LOBChart() {
   const GANTT_AREA_H = ganttBars.length > 0 ? ganttBars.length * 28 + 20 : 0;
   const DURATION_BOX_H = 32;
   const plotH = unitRange * UNIT_H;
-  const HEIGHT = PADDING.top + PRELIM_AREA_H + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
+  const HEIGHT = PADDING.top + plotH + PRELIM_AREA_H + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
   const plotW = WIDTH - PADDING.left - PADDING.right;
 
-  // Preliminares band sits between the top padding and the LOB plot
-  const prelimAreaY = PADDING.top;
-  const lobPlotTop = PADDING.top + PRELIM_AREA_H;
+  // LOB plot starts at top padding (no offset). Preliminares band sits below the LOB plot,
+  // visually "before" (under unit 1) — and above the X axis labels.
+  const lobPlotTop = PADDING.top;
+  const prelimAreaY = lobPlotTop + plotH + 6;
 
   const scaleX = (v: number) => PADDING.left + (v / maxWorkday) * plotW;
   const scaleY = (v: number) => lobPlotTop + plotH - ((v - minUnit) / (maxUnit - minUnit)) * plotH;
@@ -404,7 +403,9 @@ export function LOBChart() {
     else months[months.length - 1].endIdx = i;
   });
 
-  const ganttAreaY = lobPlotTop + plotH + 68;
+  // X axis labels and gantt sit BELOW the preliminares band
+  const xAxisY = lobPlotTop + plotH + PRELIM_AREA_H;
+  const ganttAreaY = xAxisY + 68;
   const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
@@ -467,30 +468,34 @@ export function LOBChart() {
             })}
             {/* Vertical cursor line for hovered day */}
             {hoverDay !== null && (
-              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={prelimAreaY} y2={lobPlotTop + plotH}
+              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={lobPlotTop} y2={xAxisY}
                 stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
             )}
-            {/* X axis — BIGGER labels */}
+            {/* X axis — placed AFTER preliminares band */}
             {workdays.map((wd, i) => (
               <g key={`x-${i}`}>
-                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                <text x={scaleX(i)} y={lobPlotTop + plotH + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                <text x={scaleX(i)} y={xAxisY + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
                   {wd.dayName.charAt(0).toUpperCase()}
                 </text>
-                <text x={scaleX(i)} y={lobPlotTop + plotH + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
+                <text x={scaleX(i)} y={xAxisY + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
                   {wd.label}
                 </text>
               </g>
             ))}
             {/* Month labels */}
             {months.map((m, i) => (
-              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={lobPlotTop + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
+              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
-            {/* Preliminares horizontal bars (linear, sequential, before LOB) */}
+            {/* Preliminares horizontal bars — BELOW unit 1 (visually before LOB lines) */}
             {preliminaresLines.length > 0 && (
               <g>
-                <text x={PADDING.left} y={prelimAreaY + 2} className="fill-foreground text-[11px] font-semibold">
+                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
+                  y1={lobPlotTop + plotH + 1} y2={lobPlotTop + plotH + 1}
+                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
+                <text x={PADDING.left - 12} y={prelimAreaY + 8} textAnchor="end"
+                  className="fill-foreground text-[11px] font-semibold">
                   Preliminares
                 </text>
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
@@ -510,10 +515,6 @@ export function LOBChart() {
                     </g>
                   );
                 })}
-                {/* Separator between preliminares band and LOB plot */}
-                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
-                  y1={lobPlotTop - 4} y2={lobPlotTop - 4}
-                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
               </g>
             )}
 
@@ -615,7 +616,7 @@ export function LOBChart() {
               className="fill-foreground text-[13px] font-semibold">
               {project.projectType === 'casas' ? 'Unidades' : 'Pisos / Apartamentos'}
             </text>
-            <text x={WIDTH / 2} y={lobPlotTop + plotH + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
+            <text x={WIDTH / 2} y={xAxisY + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
               Tiempo (Días laborales L-V)
             </text>
 
