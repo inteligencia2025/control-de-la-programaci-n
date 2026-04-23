@@ -19,6 +19,36 @@ function getNextWorkday(dateStr: string): string {
   return cur.toISOString().split('T')[0];
 }
 
+/** Compute end date by advancing (durationDays - 1) workdays from start */
+function endDateFromDuration(startDate: string, durationDays: number): string {
+  const dur = Math.max(1, Math.floor(durationDays));
+  const [y, m, d] = startDate.split('-').map(Number);
+  let cur = new Date(y, m - 1, d);
+  // If start lands on weekend, snap to next workday
+  while (isWeekend(cur)) cur = addDays(cur, 1);
+  let advanced = 0;
+  while (advanced < dur - 1) {
+    cur = addDays(cur, 1);
+    if (!isWeekend(cur)) advanced++;
+  }
+  return cur.toISOString().split('T')[0];
+}
+
+/** Count workdays between startDate and endDate inclusive */
+function workdaysBetween(startDate: string, endDate: string): number {
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const [ey, em, ed] = endDate.split('-').map(Number);
+  let cur = new Date(sy, sm - 1, sd);
+  const end = new Date(ey, em - 1, ed);
+  if (cur > end) return 1;
+  let count = 0;
+  while (cur <= end) {
+    if (!isWeekend(cur)) count++;
+    cur = addDays(cur, 1);
+  }
+  return Math.max(1, count);
+}
+
 function UnitLabelsEditor() {
   const { project, setProject } = useProject();
   const [open, setOpen] = useState(false);
@@ -106,6 +136,7 @@ export function LOBPanel() {
     bufferDays: 0,
     bufferUnits: 0,
     crews: 1,
+    durationDays: 5,
   });
 
   const resetForm = () => {
@@ -118,6 +149,7 @@ export function LOBPanel() {
       endDate: nextDate,
       rate: 1, color: DEFAULT_COLORS[project.activities.length % DEFAULT_COLORS.length],
       category: 'estructura', cubiertaRow: 'cubierta', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
+      durationDays: 5,
     });
     setEditId(null);
   };
@@ -126,16 +158,21 @@ export function LOBPanel() {
     e.preventDefault();
     if (!form.name.trim()) return;
     const isCubierta = form.category === 'cubierta';
+    const isPreliminar = form.category === 'preliminares';
     const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
+    const computedEndDate = isPreliminar
+      ? endDateFromDuration(form.startDate, form.durationDays)
+      : form.endDate;
     const activity: Activity = {
       ...form,
       id: editId || crypto.randomUUID(),
       predecessorId: form.predecessorId || undefined,
       enabled: true,
       // For cubierta: encode row in unitStart/unitEnd; endDate is real
-      unitStart: isCubierta ? rowIdx : form.unitStart,
-      unitEnd: isCubierta ? rowIdx : form.unitEnd,
-      endDate: isCubierta ? form.endDate : undefined,
+      // For preliminares: single row band, endDate computed from durationDays
+      unitStart: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitStart,
+      unitEnd: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitEnd,
+      endDate: isCubierta ? form.endDate : isPreliminar ? computedEndDate : undefined,
       cubiertaRow: isCubierta ? form.cubiertaRow : undefined,
     };
     if (editId) updateActivity(activity);
@@ -146,6 +183,9 @@ export function LOBPanel() {
   const handleEdit = (a: Activity) => {
     // Defer to avoid React DOM reconciliation crash with large SVG
     requestAnimationFrame(() => {
+      const editDuration = a.category === 'preliminares' && a.endDate
+        ? workdaysBetween(a.startDate, a.endDate)
+        : 5;
       setForm({
         name: a.name, unitStart: a.unitStart, unitEnd: a.unitEnd,
         startDate: a.startDate,
@@ -153,6 +193,7 @@ export function LOBPanel() {
         rate: a.rate, color: a.color, category: a.category,
         cubiertaRow: a.cubiertaRow || 'cubierta',
         predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits, crews: a.crews || 1,
+        durationDays: editDuration,
       });
       setEditId(a.id);
     });
@@ -463,6 +504,40 @@ export function LOBPanel() {
                   </Select>
                 </div>
               </>
+            ) : form.category === 'preliminares' ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Fecha Inicio</Label>
+                    <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Duración (días háb.)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.durationDays}
+                      onChange={e => setForm(f => ({ ...f, durationDays: Math.max(1, +e.target.value || 1) }))}
+                      className="h-7 text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="text-[9px] text-muted-foreground -mt-1">
+                  Fin estimado: <span className="font-medium text-foreground">{endDateFromDuration(form.startDate, form.durationDays)}</span>
+                </div>
+                <div>
+                  <Label className="text-[10px]">Predecesora</Label>
+                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      <SelectItem value="_none">Sin predecesora</SelectItem>
+                      {availablePredecessors.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2">
@@ -527,6 +602,7 @@ export function LOBPanel() {
                 <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v as any }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="preliminares">Preliminares</SelectItem>
                     <SelectItem value="estructura">Estructura</SelectItem>
                     <SelectItem value="acabados">Acabados</SelectItem>
                     <SelectItem value="zonas_sociales">Zonas Sociales</SelectItem>
@@ -586,7 +662,9 @@ export function LOBPanel() {
                       ? `${Math.abs(a.unitEnd - a.unitStart) + 1} días`
                       : a.category === 'cubierta'
                         ? `${a.cubiertaRow === 'cubierta' ? 'Cubierta' : a.cubiertaRow === 'muros_cubierta' ? 'Muros Cubierta' : 'Ascensores'} | ${a.startDate} → ${a.endDate || a.startDate}`
-                        : `${getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-${getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | ${a.rate} u/d${(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}${a.bufferDays > 0 ? ` | B:${a.bufferDays}d` : ''}`
+                        : a.category === 'preliminares'
+                          ? `Preliminar | ${a.startDate} → ${a.endDate || a.startDate} (${a.endDate ? workdaysBetween(a.startDate, a.endDate) : 1}d)`
+                          : `${getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-${getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | ${a.rate} u/d${(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}${a.bufferDays > 0 ? ` | B:${a.bufferDays}d` : ''}`
                     }
                     {pred && <span className="ml-1">← {pred.name}</span>}
                   </p>
