@@ -384,14 +384,14 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, orderedPrelim } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   // Wider left padding so long preliminares activity names (e.g. "INSTALACIÓN PLANTA DE CONCRETO") fit as Y-axis labels
   const PADDING = { top: 40, right: 30, bottom: 110, left: 230 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
   const allLegendItems = [
-    ...preliminaresLines.map(p => ({ activity: p.activity, duration: p.duration })),
+    ...orderedPrelim.map(p => ({ activity: p.activity, duration: p.duration })),
     ...lines.map(l => ({ activity: l.activity, duration: l.duration })),
     ...cubiertaLines.map(c => ({ activity: c.activity, duration: c.duration })),
     ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration })),
