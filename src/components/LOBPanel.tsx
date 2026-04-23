@@ -662,7 +662,9 @@ export function LOBPanel() {
                       ? `${Math.abs(a.unitEnd - a.unitStart) + 1} días`
                       : a.category === 'cubierta'
                         ? `${a.cubiertaRow === 'cubierta' ? 'Cubierta' : a.cubiertaRow === 'muros_cubierta' ? 'Muros Cubierta' : 'Ascensores'} | ${a.startDate} → ${a.endDate || a.startDate}`
-                        : `${getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-${getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | ${a.rate} u/d${(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}${a.bufferDays > 0 ? ` | B:${a.bufferDays}d` : ''}`
+                        : a.category === 'preliminares'
+                          ? `Preliminar | ${a.startDate} → ${a.endDate || a.startDate} (${a.endDate ? workdaysBetween(a.startDate, a.endDate) : 1}d)`
+                          : `${getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-${getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | ${a.rate} u/d${(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}${a.bufferDays > 0 ? ` | B:${a.bufferDays}d` : ''}`
                     }
                     {pred && <span className="ml-1">← {pred.name}</span>}
                   </p>
