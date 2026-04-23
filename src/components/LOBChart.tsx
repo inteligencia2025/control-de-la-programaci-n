@@ -329,7 +329,7 @@ export function LOBChart() {
     const { lines, minUnit, maxUnit, maxWorkday, workdays } = chartData;
     const UNIT_H = 32;
     const unitRange = maxUnit - minUnit;
-    const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PADDING = { top: 40, right: 30, bottom: 110, left: 230 };
     const lobTop = PADDING.top;
     const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
     const plotH = unitRange * UNIT_H;
