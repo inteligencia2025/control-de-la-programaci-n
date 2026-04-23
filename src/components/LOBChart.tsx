@@ -366,12 +366,13 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
   const allLegendItems = [
+    ...preliminaresLines.map(p => ({ activity: p.activity, duration: p.duration })),
     ...lines.map(l => ({ activity: l.activity, duration: l.duration })),
     ...cubiertaLines.map(c => ({ activity: c.activity, duration: c.duration })),
     ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration })),
@@ -379,14 +380,19 @@ export function LOBChart() {
   const LEGEND_ITEMS_PER_ROW = 4;
   const legendRows = Math.ceil(allLegendItems.length / LEGEND_ITEMS_PER_ROW);
   const LEGEND_H = legendRows * 22 + 10;
+  const PRELIM_AREA_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
   const GANTT_AREA_H = ganttBars.length > 0 ? ganttBars.length * 28 + 20 : 0;
   const DURATION_BOX_H = 32;
   const plotH = unitRange * UNIT_H;
-  const HEIGHT = PADDING.top + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
+  const HEIGHT = PADDING.top + PRELIM_AREA_H + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
   const plotW = WIDTH - PADDING.left - PADDING.right;
 
+  // Preliminares band sits between the top padding and the LOB plot
+  const prelimAreaY = PADDING.top;
+  const lobPlotTop = PADDING.top + PRELIM_AREA_H;
+
   const scaleX = (v: number) => PADDING.left + (v / maxWorkday) * plotW;
-  const scaleY = (v: number) => PADDING.top + plotH - ((v - minUnit) / (maxUnit - minUnit)) * plotH;
+  const scaleY = (v: number) => lobPlotTop + plotH - ((v - minUnit) / (maxUnit - minUnit)) * plotH;
 
   const months: { month: string; startIdx: number; endIdx: number }[] = [];
   workdays.forEach((wd, i) => {
@@ -394,7 +400,7 @@ export function LOBChart() {
     else months[months.length - 1].endIdx = i;
   });
 
-  const ganttAreaY = PADDING.top + plotH + 68;
+  const ganttAreaY = lobPlotTop + plotH + 68;
   const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
