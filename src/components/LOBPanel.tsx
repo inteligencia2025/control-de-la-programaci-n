@@ -19,6 +19,36 @@ function getNextWorkday(dateStr: string): string {
   return cur.toISOString().split('T')[0];
 }
 
+/** Compute end date by advancing (durationDays - 1) workdays from start */
+function endDateFromDuration(startDate: string, durationDays: number): string {
+  const dur = Math.max(1, Math.floor(durationDays));
+  const [y, m, d] = startDate.split('-').map(Number);
+  let cur = new Date(y, m - 1, d);
+  // If start lands on weekend, snap to next workday
+  while (isWeekend(cur)) cur = addDays(cur, 1);
+  let advanced = 0;
+  while (advanced < dur - 1) {
+    cur = addDays(cur, 1);
+    if (!isWeekend(cur)) advanced++;
+  }
+  return cur.toISOString().split('T')[0];
+}
+
+/** Count workdays between startDate and endDate inclusive */
+function workdaysBetween(startDate: string, endDate: string): number {
+  const [sy, sm, sd] = startDate.split('-').map(Number);
+  const [ey, em, ed] = endDate.split('-').map(Number);
+  let cur = new Date(sy, sm - 1, sd);
+  const end = new Date(ey, em - 1, ed);
+  if (cur > end) return 1;
+  let count = 0;
+  while (cur <= end) {
+    if (!isWeekend(cur)) count++;
+    cur = addDays(cur, 1);
+  }
+  return Math.max(1, count);
+}
+
 function UnitLabelsEditor() {
   const { project, setProject } = useProject();
   const [open, setOpen] = useState(false);
