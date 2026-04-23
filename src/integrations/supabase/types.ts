@@ -23,6 +23,7 @@ export type Database = {
           created_at: string
           crews: number
           enabled: boolean
+          end_date: string | null
           id: string
           name: string
           predecessor_id: string | null
@@ -41,6 +42,7 @@ export type Database = {
           created_at?: string
           crews?: number
           enabled?: boolean
+          end_date?: string | null
           id?: string
           name: string
           predecessor_id?: string | null
@@ -59,6 +61,7 @@ export type Database = {
           created_at?: string
           crews?: number
           enabled?: boolean
+          end_date?: string | null
           id?: string
           name?: string
           predecessor_id?: string | null

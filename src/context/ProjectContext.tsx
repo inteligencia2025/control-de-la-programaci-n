@@ -203,9 +203,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         unitStart: a.unit_start,
         unitEnd: a.unit_end,
         startDate: a.start_date,
+        endDate: a.end_date || undefined,
         rate: Number(a.rate),
         color: a.color,
         category: a.category,
+        cubiertaRow: a.category === 'cubierta'
+          ? (a.unit_start === 1 ? 'cubierta' : a.unit_start === 2 ? 'muros_cubierta' : 'ascensores')
+          : undefined,
         predecessorId: a.predecessor_id || undefined,
         bufferDays: Number(a.buffer_days),
         bufferUnits: Number(a.buffer_units),
@@ -289,6 +293,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             unit_start: a.unitStart,
             unit_end: a.unitEnd,
             start_date: a.startDate,
+            end_date: a.endDate || null,
             rate: a.rate,
             color: a.color,
             category: a.category,

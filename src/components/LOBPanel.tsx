@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 
 import { useProject } from '@/context/ProjectContext';
-import { Activity, DEFAULT_COLORS, getUnitLabel } from '@/types/project';
+import { Activity, DEFAULT_COLORS, getUnitLabel, CubiertaRow, getCubiertaUnits } from '@/types/project';
 import { PRELOADED_ACTIVITIES, getDefaultColor } from '@/data/preloadedActivities';
 import { addDays, isWeekend } from 'date-fns';
 
@@ -97,9 +97,11 @@ export function LOBPanel() {
     unitStart: 1,
     unitEnd: defaultUnits,
     startDate: suggestedStartDate,
+    endDate: suggestedStartDate,
     rate: 1,
     color: DEFAULT_COLORS[0],
-    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales',
+    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta',
+    cubiertaRow: 'cubierta' as CubiertaRow,
     predecessorId: '' as string,
     bufferDays: 0,
     bufferUnits: 0,
@@ -113,8 +115,9 @@ export function LOBPanel() {
     setForm({
       name: '', unitStart: 1, unitEnd: defaultUnits,
       startDate: nextDate,
+      endDate: nextDate,
       rate: 1, color: DEFAULT_COLORS[project.activities.length % DEFAULT_COLORS.length],
-      category: 'estructura', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
+      category: 'estructura', cubiertaRow: 'cubierta', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
     });
     setEditId(null);
   };
@@ -122,10 +125,18 @@ export function LOBPanel() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
+    const isCubierta = form.category === 'cubierta';
+    const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
     const activity: Activity = {
-      ...form, id: editId || crypto.randomUUID(),
+      ...form,
+      id: editId || crypto.randomUUID(),
       predecessorId: form.predecessorId || undefined,
       enabled: true,
+      // For cubierta: encode row in unitStart/unitEnd; endDate is real
+      unitStart: isCubierta ? rowIdx : form.unitStart,
+      unitEnd: isCubierta ? rowIdx : form.unitEnd,
+      endDate: isCubierta ? form.endDate : undefined,
+      cubiertaRow: isCubierta ? form.cubiertaRow : undefined,
     };
     if (editId) updateActivity(activity);
     else addActivity(activity);
@@ -137,7 +148,10 @@ export function LOBPanel() {
     requestAnimationFrame(() => {
       setForm({
         name: a.name, unitStart: a.unitStart, unitEnd: a.unitEnd,
-        startDate: a.startDate, rate: a.rate, color: a.color, category: a.category,
+        startDate: a.startDate,
+        endDate: a.endDate || a.startDate,
+        rate: a.rate, color: a.color, category: a.category,
+        cubiertaRow: a.cubiertaRow || 'cubierta',
         predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits, crews: a.crews || 1,
       });
       setEditId(a.id);
@@ -261,20 +275,64 @@ export function LOBPanel() {
             </div>
           </div>
           {project.projectType === 'edificio' && (
-            <div className="grid grid-cols-2 gap-2">
-              <div>
-                <Label className="text-[10px]">Pisos</Label>
-                <Input type="number" min={1} value={project.buildingConfig.floors}
-                  onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, floors: +e.target.value || 1 } }))}
-                  className="h-7 text-xs" />
+            <>
+              <div className="grid grid-cols-2 gap-2">
+                <div>
+                  <Label className="text-[10px]">Pisos</Label>
+                  <Input type="number" min={1} value={project.buildingConfig.floors}
+                    onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, floors: +e.target.value || 1 } }))}
+                    className="h-7 text-xs" />
+                </div>
+                <div>
+                  <Label className="text-[10px]">Unid/Piso</Label>
+                  <Input type="number" min={1} value={project.buildingConfig.unitsPerFloor}
+                    onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, unitsPerFloor: +e.target.value || 1 } }))}
+                    className="h-7 text-xs" />
+                </div>
               </div>
-              <div>
-                <Label className="text-[10px]">Unid/Piso</Label>
-                <Input type="number" min={1} value={project.buildingConfig.unitsPerFloor}
-                  onChange={e => setProject(p => ({ ...p, buildingConfig: { ...p.buildingConfig, unitsPerFloor: +e.target.value || 1 } }))}
-                  className="h-7 text-xs" />
-              </div>
-            </div>
+              <label className="flex items-center gap-1.5 pt-1 text-[10px] cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  className="h-3 w-3 accent-primary cursor-pointer"
+                  checked={!!project.buildingConfig.hasCubierta}
+                  onChange={(e) => {
+                    const enabled = e.target.checked;
+                    setProject(p => {
+                      const newConfig = { ...p.buildingConfig, hasCubierta: enabled };
+                      let newActivities = p.activities;
+                      if (enabled) {
+                        const hasCub = p.activities.some(a => a.category === 'cubierta' && a.cubiertaRow === 'cubierta');
+                        const hasMuros = p.activities.some(a => a.category === 'cubierta' && a.cubiertaRow === 'muros_cubierta');
+                        const hasAsc = p.activities.some(a => a.category === 'cubierta' && a.cubiertaRow === 'ascensores');
+                        const startD = p.projectStartDate || new Date().toISOString().split('T')[0];
+                        const toAdd: Activity[] = [];
+                        if (!hasCub) toAdd.push({
+                          id: crypto.randomUUID(), name: 'Cubierta', unitStart: 1, unitEnd: 1,
+                          startDate: startD, endDate: startD, rate: 1, color: '#16a085',
+                          category: 'cubierta', cubiertaRow: 'cubierta',
+                          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true,
+                        });
+                        if (!hasMuros) toAdd.push({
+                          id: crypto.randomUUID(), name: 'Muros Cubierta', unitStart: 2, unitEnd: 2,
+                          startDate: startD, endDate: startD, rate: 1, color: '#8e44ad',
+                          category: 'cubierta', cubiertaRow: 'muros_cubierta',
+                          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true,
+                        });
+                        if (!hasAsc) toAdd.push({
+                          id: crypto.randomUUID(), name: 'Ascensores', unitStart: 3, unitEnd: 3,
+                          startDate: startD, endDate: startD, rate: 1, color: '#c0392b',
+                          category: 'cubierta', cubiertaRow: 'ascensores',
+                          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true,
+                        });
+                        if (toAdd.length > 0) newActivities = [...p.activities, ...toAdd];
+                      }
+                      return { ...p, buildingConfig: newConfig, activities: newActivities };
+                    });
+                  }}
+                />
+                Tiene Cubierta (Cubierta · Muros · Ascensores)
+              </label>
+            </>
           )}
           <div className="grid grid-cols-2 gap-2">
             <div>
@@ -299,7 +357,31 @@ export function LOBPanel() {
               <Label className="text-[10px]">Nombre</Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Cimentación" className="h-7 text-xs" />
             </div>
-            {form.category === 'zonas_sociales' ? (
+            {form.category === 'cubierta' ? (
+              <>
+                <div>
+                  <Label className="text-[10px]">Fila</Label>
+                  <Select value={form.cubiertaRow} onValueChange={v => setForm(f => ({ ...f, cubiertaRow: v as CubiertaRow }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cubierta">Cubierta</SelectItem>
+                      <SelectItem value="muros_cubierta">Muros Cubierta</SelectItem>
+                      <SelectItem value="ascensores">Ascensores</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Fecha Inicio</Label>
+                    <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Fecha Fin</Label>
+                    <Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                </div>
+              </>
+            ) : form.category === 'zonas_sociales' ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -393,6 +475,9 @@ export function LOBPanel() {
                     <SelectItem value="estructura">Estructura</SelectItem>
                     <SelectItem value="acabados">Acabados</SelectItem>
                     <SelectItem value="zonas_sociales">Zonas Sociales</SelectItem>
+                    {project.projectType === 'edificio' && project.buildingConfig.hasCubierta && (
+                      <SelectItem value="cubierta">Cubierta</SelectItem>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
@@ -444,7 +529,9 @@ export function LOBPanel() {
                   <p className="text-[9px] text-muted-foreground">
                     {a.category === 'zonas_sociales'
                       ? `${Math.abs(a.unitEnd - a.unitStart) + 1} días`
-                      : `${getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-${getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | ${a.rate} u/d${(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}${a.bufferDays > 0 ? ` | B:${a.bufferDays}d` : ''}`
+                      : a.category === 'cubierta'
+                        ? `${a.cubiertaRow === 'cubierta' ? 'Cubierta' : a.cubiertaRow === 'muros_cubierta' ? 'Muros Cubierta' : 'Ascensores'} | ${a.startDate} → ${a.endDate || a.startDate}`
+                        : `${getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-${getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | ${a.rate} u/d${(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}${a.bufferDays > 0 ? ` | B:${a.bufferDays}d` : ''}`
                     }
                     {pred && <span className="ml-1">← {pred.name}</span>}
                   </p>
