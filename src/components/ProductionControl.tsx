@@ -370,6 +370,7 @@ export function ProductionControl() {
         </Select>
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant="outline" onClick={handleLoadFromLOB} className="gap-1 h-7 text-xs">LOB</Button>
+          <Button size="sm" variant="outline" onClick={handleCarryOverPending} className="gap-1 h-7 text-xs" title="Lleva los pendientes (ejecutado < programado) a la siguiente semana">Arrastrar pendientes →S{displayWeek + 1}</Button>
           <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-7 text-xs">Excel</Button>
           <Button size="sm" variant="outline" onClick={handleExportPDF} className="gap-1 h-7 text-xs">PDF</Button>
           <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1 h-7 text-xs"><Printer className="h-3 w-3" />Imprimir</Button>
