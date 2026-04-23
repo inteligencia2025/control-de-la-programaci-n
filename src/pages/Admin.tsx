@@ -162,7 +162,8 @@ const Admin = () => {
     setLoadingProjects(true);
     const { data } = await supabase
       .from('projects')
-      .select('id, name, user_id, created_at')
+      .select('id, name, user_id, created_at, deleted_at')
+      .is('deleted_at', null)
       .order('created_at', { ascending: false });
     setProjects((data as ProjectEntry[]) || []);
     setLoadingProjects(false);
