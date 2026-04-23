@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState, useCallback } from 'react';
 import { useProject } from '@/context/ProjectContext';
-import { Activity, getUnitLabel } from '@/types/project';
-import { addDays, isWeekend, format } from 'date-fns';
+import { Activity, getUnitLabel, getCubiertaUnits } from '@/types/project';
+import { addDays, isWeekend, format, parseISO, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Camera, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
