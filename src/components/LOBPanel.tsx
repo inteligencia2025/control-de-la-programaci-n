@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 
 import { useProject } from '@/context/ProjectContext';
-import { Activity, DEFAULT_COLORS, getUnitLabel } from '@/types/project';
+import { Activity, DEFAULT_COLORS, getUnitLabel, CubiertaRow, getCubiertaUnits } from '@/types/project';
 import { PRELOADED_ACTIVITIES, getDefaultColor } from '@/data/preloadedActivities';
 import { addDays, isWeekend } from 'date-fns';
 
@@ -97,9 +97,11 @@ export function LOBPanel() {
     unitStart: 1,
     unitEnd: defaultUnits,
     startDate: suggestedStartDate,
+    endDate: suggestedStartDate,
     rate: 1,
     color: DEFAULT_COLORS[0],
-    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales',
+    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta',
+    cubiertaRow: 'cubierta' as CubiertaRow,
     predecessorId: '' as string,
     bufferDays: 0,
     bufferUnits: 0,
@@ -113,8 +115,9 @@ export function LOBPanel() {
     setForm({
       name: '', unitStart: 1, unitEnd: defaultUnits,
       startDate: nextDate,
+      endDate: nextDate,
       rate: 1, color: DEFAULT_COLORS[project.activities.length % DEFAULT_COLORS.length],
-      category: 'estructura', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
+      category: 'estructura', cubiertaRow: 'cubierta', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
     });
     setEditId(null);
   };
@@ -122,10 +125,18 @@ export function LOBPanel() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.name.trim()) return;
+    const isCubierta = form.category === 'cubierta';
+    const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
     const activity: Activity = {
-      ...form, id: editId || crypto.randomUUID(),
+      ...form,
+      id: editId || crypto.randomUUID(),
       predecessorId: form.predecessorId || undefined,
       enabled: true,
+      // For cubierta: encode row in unitStart/unitEnd; endDate is real
+      unitStart: isCubierta ? rowIdx : form.unitStart,
+      unitEnd: isCubierta ? rowIdx : form.unitEnd,
+      endDate: isCubierta ? form.endDate : undefined,
+      cubiertaRow: isCubierta ? form.cubiertaRow : undefined,
     };
     if (editId) updateActivity(activity);
     else addActivity(activity);
@@ -137,7 +148,10 @@ export function LOBPanel() {
     requestAnimationFrame(() => {
       setForm({
         name: a.name, unitStart: a.unitStart, unitEnd: a.unitEnd,
-        startDate: a.startDate, rate: a.rate, color: a.color, category: a.category,
+        startDate: a.startDate,
+        endDate: a.endDate || a.startDate,
+        rate: a.rate, color: a.color, category: a.category,
+        cubiertaRow: a.cubiertaRow || 'cubierta',
         predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits, crews: a.crews || 1,
       });
       setEditId(a.id);
