@@ -203,15 +203,16 @@ export function LOBChart() {
     const prelimMaxIdx = preliminaresLines.reduce((m, p) => Math.max(m, p.endIdx), 0);
     // Order preliminares from bottom (closest to X axis) → up (closer to unit 1).
     // Unknown activities go on top of the known list, preserving their original order.
-    const PRELIM_ORDER_BOTTOM_UP = [
+    // Listed top → bottom as requested by the user (movimiento de tierras arriba,
+    // vaciado losa cimentación abajo). We then reverse to obtain bottom-up indices.
+    const PRELIM_ORDER_TOP_DOWN = [
       'MOVIMIENTO DE TIERRAS',
-      'PROVISIONALES DE OBRA',
-      'ADECUACIÓN CAMPAMENTOS',
-      'INSTALACIÓN TORRE GRÚA',
-      'INSTALACIÓN PLANTA DE CONCRETO',
       'LOCALIZACION Y REPLANTEO',
+      'HILADEROS',
+      'CIMENTACIÓN PROFUNDA',
       'VACIADO LOSA CIMENTACIÓN',
     ];
+    const PRELIM_ORDER_BOTTOM_UP = [...PRELIM_ORDER_TOP_DOWN].reverse();
     const norm = (s: string) => s.trim().toUpperCase();
     const orderIdx = (name: string) => {
       const i = PRELIM_ORDER_BOTTOM_UP.findIndex(n => norm(n) === norm(name));
