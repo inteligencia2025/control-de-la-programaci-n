@@ -263,11 +263,10 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { maxWorkday, workdays, lines, minUnit, maxUnit, preliminaresLines } = chartData;
+    const { maxWorkday, workdays, lines, minUnit, maxUnit } = chartData;
     const unitRange = maxUnit - minUnit;
     const PAD = { top: 40, right: 30, bottom: 110, left: 80 };
-    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
-    const lobTop = PAD.top + PRELIM_H;
+    const lobTop = PAD.top;
     const W = Math.max(900, maxWorkday * 40 + PAD.left + PAD.right);
     const plotW = W - PAD.left - PAD.right;
     const plotH = unitRange * 32;
@@ -309,12 +308,11 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { lines, minUnit, maxUnit, maxWorkday, workdays, preliminaresLines } = chartData;
+    const { lines, minUnit, maxUnit, maxWorkday, workdays } = chartData;
     const UNIT_H = 32;
     const unitRange = maxUnit - minUnit;
     const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
-    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
-    const lobTop = PADDING.top + PRELIM_H;
+    const lobTop = PADDING.top;
     const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
     const plotH = unitRange * UNIT_H;
     const plotW = WIDTH - PADDING.left - PADDING.right;
@@ -618,7 +616,7 @@ export function LOBChart() {
               className="fill-foreground text-[13px] font-semibold">
               {project.projectType === 'casas' ? 'Unidades' : 'Pisos / Apartamentos'}
             </text>
-            <text x={WIDTH / 2} y={lobPlotTop + plotH + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
+            <text x={WIDTH / 2} y={xAxisY + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
               Tiempo (Días laborales L-V)
             </text>
 
