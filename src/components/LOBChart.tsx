@@ -470,30 +470,34 @@ export function LOBChart() {
             })}
             {/* Vertical cursor line for hovered day */}
             {hoverDay !== null && (
-              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={prelimAreaY} y2={lobPlotTop + plotH}
+              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={lobPlotTop} y2={xAxisY}
                 stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
             )}
-            {/* X axis — BIGGER labels */}
+            {/* X axis — placed AFTER preliminares band */}
             {workdays.map((wd, i) => (
               <g key={`x-${i}`}>
-                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                <text x={scaleX(i)} y={lobPlotTop + plotH + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                <text x={scaleX(i)} y={xAxisY + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
                   {wd.dayName.charAt(0).toUpperCase()}
                 </text>
-                <text x={scaleX(i)} y={lobPlotTop + plotH + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
+                <text x={scaleX(i)} y={xAxisY + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
                   {wd.label}
                 </text>
               </g>
             ))}
             {/* Month labels */}
             {months.map((m, i) => (
-              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={lobPlotTop + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
+              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
-            {/* Preliminares horizontal bars (linear, sequential, before LOB) */}
+            {/* Preliminares horizontal bars — BELOW unit 1 (visually before LOB lines) */}
             {preliminaresLines.length > 0 && (
               <g>
-                <text x={PADDING.left} y={prelimAreaY + 2} className="fill-foreground text-[11px] font-semibold">
+                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
+                  y1={lobPlotTop + plotH + 1} y2={lobPlotTop + plotH + 1}
+                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
+                <text x={PADDING.left - 12} y={prelimAreaY + 8} textAnchor="end"
+                  className="fill-foreground text-[11px] font-semibold">
                   Preliminares
                 </text>
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
@@ -513,10 +517,6 @@ export function LOBChart() {
                     </g>
                   );
                 })}
-                {/* Separator between preliminares band and LOB plot */}
-                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
-                  y1={lobPlotTop - 4} y2={lobPlotTop - 4}
-                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
               </g>
             )}
 
