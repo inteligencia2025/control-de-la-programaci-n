@@ -454,6 +454,23 @@ export function LOBChart() {
 
 
 
+            {/* Cubierta horizontal lines */}
+            {cubiertaLines.map(({ activity, rowUnit, startIdx, endIdx, duration }) => {
+              const x1 = scaleX(startIdx);
+              const x2 = scaleX(Math.max(endIdx, startIdx + 0.1));
+              const y = scaleY(rowUnit);
+              return (
+                <g key={`cub-${activity.id}`}>
+                  <line x1={x1} y1={y} x2={x2} y2={y}
+                    stroke={activity.color} strokeWidth={3.5} strokeLinecap="round" />
+                  <circle cx={x1} cy={y} r={4} fill={activity.color} stroke="white" strokeWidth={1.2} />
+                  <circle cx={x2} cy={y} r={4} fill={activity.color} stroke="white" strokeWidth={1.2} />
+                  <text x={x2 + 6} y={y} className="text-[10px] font-medium" fill={activity.color} dominantBaseline="middle">
+                    {activity.name} ({duration}d)
+                  </text>
+                </g>
+              );
+            })}
             {/* Activity lines with data points */}
             {lines.map(({ activity, points, crewLines }) => {
               const crews = activity.crews || 1;
