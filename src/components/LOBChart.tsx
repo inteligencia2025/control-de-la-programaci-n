@@ -339,12 +339,16 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
-  const allLegendItems = [...lines.map(l => ({ activity: l.activity, duration: l.duration })), ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration }))];
+  const allLegendItems = [
+    ...lines.map(l => ({ activity: l.activity, duration: l.duration })),
+    ...cubiertaLines.map(c => ({ activity: c.activity, duration: c.duration })),
+    ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration })),
+  ];
   const LEGEND_ITEMS_PER_ROW = 4;
   const legendRows = Math.ceil(allLegendItems.length / LEGEND_ITEMS_PER_ROW);
   const LEGEND_H = legendRows * 22 + 10;
