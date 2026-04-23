@@ -23,8 +23,6 @@ export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
   { name: 'HILADEROS', category: 'preliminares', durationDays: 5 },
   { name: 'CIMENTACIÓN PROFUNDA', category: 'preliminares', durationDays: 20 },
   { name: 'EXCAVACIÓN VIGAS DE CIMENTACIÓN', category: 'preliminares', durationDays: 10 },
-  { name: 'SOLADOS', category: 'preliminares', durationDays: 5 },
-  { name: 'ARMADO DE ACERO VIGAS', category: 'preliminares', durationDays: 8 },
   { name: 'VACIADO LOSA CIMENTACIÓN', category: 'preliminares', durationDays: 7 },
   // ===== Estructura (apartments — LOB lines) =====
   { name: 'EXCAVACIONES PARA TUBERÍA HIDROSANITARIA', category: 'estructura' },
