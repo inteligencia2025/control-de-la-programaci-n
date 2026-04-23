@@ -15,14 +15,9 @@ export interface PreloadedActivity {
 export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
   // ===== Preliminares (linear, sequential, before apartments) =====
   { name: 'MOVIMIENTO DE TIERRAS', category: 'preliminares', durationDays: 15 },
-  { name: 'PROVISIONALES DE OBRA', category: 'preliminares', durationDays: 10 },
-  { name: 'ADECUACIÓN CAMPAMENTOS', category: 'preliminares', durationDays: 7 },
-  { name: 'INSTALACIÓN TORRE GRÚA', category: 'preliminares', durationDays: 5 },
-  { name: 'INSTALACIÓN PLANTA DE CONCRETO', category: 'preliminares', durationDays: 5 },
   { name: 'LOCALIZACION Y REPLANTEO', category: 'preliminares', durationDays: 3 },
   { name: 'HILADEROS', category: 'preliminares', durationDays: 5 },
   { name: 'CIMENTACIÓN PROFUNDA', category: 'preliminares', durationDays: 20 },
-  { name: 'EXCAVACIÓN VIGAS DE CIMENTACIÓN', category: 'preliminares', durationDays: 10 },
   { name: 'VACIADO LOSA CIMENTACIÓN', category: 'preliminares', durationDays: 7 },
   // ===== Estructura (apartments — LOB lines) =====
   { name: 'EXCAVACIONES PARA TUBERÍA HIDROSANITARIA', category: 'estructura' },
