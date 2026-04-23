@@ -399,7 +399,7 @@ export function LOBChart() {
   const LEGEND_ITEMS_PER_ROW = 4;
   const legendRows = Math.ceil(allLegendItems.length / LEGEND_ITEMS_PER_ROW);
   const LEGEND_H = legendRows * 22 + 10;
-  const PRELIM_AREA_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
+  const PRELIM_AREA_H = orderedPrelim.length > 0 ? orderedPrelim.length * 22 + 24 : 0;
   const GANTT_AREA_H = ganttBars.length > 0 ? ganttBars.length * 28 + 20 : 0;
   const DURATION_BOX_H = 32;
   const plotH = unitRange * UNIT_H;
