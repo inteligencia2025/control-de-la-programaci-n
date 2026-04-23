@@ -185,7 +185,7 @@ export function LOBChart() {
     });
     const prelimCubiertaMax = cubiertaLines.reduce((m, c) => Math.max(m, c.endIdx), 0);
     const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax) + 5;
-    const lobUnits = lobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
+    const lobUnits = clampedLobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const cu = getCubiertaUnits(project.buildingConfig);
     const cubiertaUnits = cu ? [cu.cubierta, cu.muros, cu.ascensores] : [];
     const allUnits = [...lobUnits, ...cubiertaUnits, ...cubiertaLines.map(c => c.rowUnit)];
