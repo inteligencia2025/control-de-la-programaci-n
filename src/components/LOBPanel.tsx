@@ -504,6 +504,40 @@ export function LOBPanel() {
                   </Select>
                 </div>
               </>
+            ) : form.category === 'preliminares' ? (
+              <>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Fecha Inicio</Label>
+                    <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Duración (días háb.)</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      value={form.durationDays}
+                      onChange={e => setForm(f => ({ ...f, durationDays: Math.max(1, +e.target.value || 1) }))}
+                      className="h-7 text-xs"
+                    />
+                  </div>
+                </div>
+                <div className="text-[9px] text-muted-foreground -mt-1">
+                  Fin estimado: <span className="font-medium text-foreground">{endDateFromDuration(form.startDate, form.durationDays)}</span>
+                </div>
+                <div>
+                  <Label className="text-[10px]">Predecesora</Label>
+                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      <SelectItem value="_none">Sin predecesora</SelectItem>
+                      {availablePredecessors.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </>
             ) : (
               <>
                 <div className="grid grid-cols-2 gap-2">
@@ -568,6 +602,7 @@ export function LOBPanel() {
                 <Select value={form.category} onValueChange={v => setForm(f => ({ ...f, category: v as any }))}>
                   <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="preliminares">Preliminares</SelectItem>
                     <SelectItem value="estructura">Estructura</SelectItem>
                     <SelectItem value="acabados">Acabados</SelectItem>
                     <SelectItem value="zonas_sociales">Zonas Sociales</SelectItem>
