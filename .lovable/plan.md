@@ -1,50 +1,50 @@
 
+## Por qué aparece la unidad "1304" en un edificio de 12×8
 
-# Plan: Papelera de proyectos (soft delete + restauración)
+Investigué el código y el problema **no es de la fórmula de etiquetas** — es que el sistema está generando **una unidad extra que no debería existir** en un edificio de 12 pisos × 8 apartamentos (total: 96 unidades, numeradas 1 a 96).
 
-## Objetivo
-Evitar la pérdida definitiva de proyectos al eliminarlos. En lugar de borrado físico, los proyectos se marcan como eliminados y pueden restaurarse desde el panel de administración durante 30 días.
+### Causa raíz
 
-## Cambios en la base de datos
+Hay **tres fuentes** que pueden estar creando la unidad 97 (que se etiqueta como piso 13, apto 01 → "1301"... y por extensión "1304" si hay actividad ahí):
 
-Agregar dos columnas a la tabla `projects`:
-- `deleted_at` (timestamp, nullable) — marca cuándo fue eliminado
-- `deleted_by` (uuid, nullable) — quién lo eliminó
+1. **`hasCubierta` activado**: Cuando se activa el toggle "Tiene Cubierta", el sistema añade automáticamente 3 unidades extra encima del piso 12 (97=Cubierta, 98=Muros Cub., 99=Ascensores). Si una actividad normal (no de categoría `cubierta`) tiene `unitEnd > 96`, se grafica en esas filas con la etiqueta de piso 13.
 
-Actualizar las políticas RLS:
-- `SELECT` normal de proyectos: solo devuelve los que tienen `deleted_at IS NULL` (los activos).
-- Nueva política `SELECT` para administradores: pueden ver también los eliminados (para la papelera).
-- Las políticas de `activities`, `lookahead_items`, `pac_records` se mantienen igual (siguen ligadas al proyecto, simplemente no aparecerán mientras esté en la papelera).
+2. **Actividades con `unitEnd` desactualizado**: Si el edificio se redimensionó (antes era más grande, ahora 12×8), las actividades guardadas en BD pueden conservar `unitEnd = 97` o más, y el gráfico las dibuja en filas que ya no corresponden a ningún piso real.
 
-Cambiar el comportamiento de "Eliminar":
-- En `ProjectContext.deleteProject` → en lugar de `DELETE FROM projects`, hacer `UPDATE projects SET deleted_at = now(), deleted_by = auth.uid()`.
-- Los datos asociados (actividades, lookahead, PAC) se conservan intactos.
+3. **Eje Y del LOBChart**: El eje se construye desde `1` hasta `totalUnits + (hasCubierta ? 3 : 0)`. Si `hasCubierta` está activo pero el usuario no quiere ver esas filas para actividades normales, igualmente aparecen.
 
-Borrado definitivo automático opcional (no incluido en este plan): un job que limpie proyectos con `deleted_at` mayor a 30 días. Por ahora, los administradores podrán borrar definitivamente desde la papelera.
+### Diagnóstico necesario antes de aplicar cambios
 
-## Cambios en la interfaz
+Para saber cuál de las tres causas aplica a tu caso, necesito confirmar:
 
-### Panel de administración (`src/pages/Admin.tsx`)
-Añadir nueva pestaña **"Papelera"** que muestre:
-- Tabla con: nombre del proyecto, eliminado por (nombre del admin), fecha de eliminación, días restantes hasta borrado definitivo.
-- Botón **Restaurar** por fila → vuelve a poner `deleted_at = NULL`. El proyecto reaparece en la lista.
-- Botón **Eliminar definitivamente** por fila → ejecuta `DELETE` real (con confirmación). Esto sí elimina los datos en cascada.
+- ¿Tienes activado el toggle **"Tiene Cubierta"** en la configuración del edificio?
+- La actividad que aparece en "1304", ¿es una actividad normal (estructura/acabados) o una de las tres especiales (Cubierta / Muros Cub. / Ascensores)?
 
-### Toolbar (`src/components/ProjectToolbar.tsx`)
-- Cambiar el tooltip del botón de basurero a "Mover a papelera".
-- Mostrar un toast tras eliminar: *"Proyecto movido a papelera. Puede restaurarse desde Administración → Papelera durante 30 días."*
+## Plan de corrección
 
-### Contexto (`src/context/ProjectContext.tsx`)
-- `deleteProject`: ejecuta UPDATE en lugar de DELETE.
-- `loadProjectsList`: filtra automáticamente `deleted_at IS NULL` (la RLS ya lo garantiza, pero se filtra explícito en la query también).
-- Agregar `restoreProject(id)` y `permanentlyDeleteProject(id)` para uso desde el panel admin.
+Aplicaré **dos protecciones** para que nunca aparezcan unidades fantasma:
 
-## Sobre el proyecto que ya eliminaste
-Este plan **no recupera el proyecto que ya borraste** — esos datos ya fueron eliminados de la base de datos. Lo que evita es que vuelva a pasar. Si necesitas recuperar ese proyecto específico, la única vía sería un respaldo previo de la base de datos, que actualmente no está configurado.
+### 1. Clamp de `unitEnd` en el gráfico (`src/components/LOBChart.tsx`)
+Para actividades **no-cubierta**, limitar el rango graficado a `[1, totalUnits]` (96 en tu caso). Si una actividad tiene `unitEnd = 100` por datos viejos, se recortará a 96 visualmente.
 
-## Resumen de archivos
-- Nueva migración: agregar `deleted_at`, `deleted_by` y actualizar políticas RLS.
-- `src/context/ProjectContext.tsx`: modificar `deleteProject`, agregar `restoreProject` y `permanentlyDeleteProject`.
-- `src/pages/Admin.tsx`: nueva pestaña "Papelera".
-- `src/components/ProjectToolbar.tsx`: ajustar tooltip y mensaje al eliminar.
+### 2. Auto-corrección al cambiar configuración (`src/context/ProjectContext.tsx`)
+Cuando el usuario cambie pisos/apartamentos por piso, recorrer todas las actividades **no-cubierta** y hacer:
+```ts
+unitEnd = Math.min(unitEnd, totalUnits)
+unitStart = Math.min(unitStart, totalUnits)
+```
+Esto sanea los datos persistidos y evita que vuelva a aparecer la unidad fantasma.
 
+### 3. Eje Y solo muestra cubierta si `hasCubierta` está activo
+Verificar que en `LOBChart.tsx` las 3 filas extra (Cubierta/Muros/Ascensores) **solo** se rendericen cuando `buildingConfig.hasCubierta === true`. Si no, el eje termina exactamente en el piso 12.
+
+### Archivos a modificar
+- `src/components/LOBChart.tsx` — clamp visual + render condicional de filas cubierta
+- `src/context/ProjectContext.tsx` — sanear `unitStart`/`unitEnd` al cambiar `buildingConfig`
+
+### Lo que NO se toca
+- La fórmula `getUnitLabel` (sigue mostrando `1201`, `1202`, etc. correctamente para 12 pisos)
+- Las actividades de categoría `cubierta` (siguen funcionando como hasta ahora cuando `hasCubierta` está activo)
+- La base de datos (no se requiere migración)
+
+**Confírmame si tienes "Tiene Cubierta" activado o no, y aplico el plan.**
