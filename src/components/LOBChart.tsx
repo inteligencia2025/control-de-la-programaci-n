@@ -512,9 +512,6 @@ export function LOBChart() {
                 name appears as the Y-axis label, similar to a unit row. */}
             {preliminaresLines.length > 0 && (
               <g>
-                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
-                  y1={lobPlotTop + plotH + 1} y2={lobPlotTop + plotH + 1}
-                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
                   // Bottom-up: index 0 sits at the BOTTOM of the band (closest to X axis)
                   const rowFromBottom = i;
@@ -526,9 +523,9 @@ export function LOBChart() {
                     <g key={`prelim-${activity.id}`}>
                       {/* Row background band */}
                       <rect x={PADDING.left} y={barY - 10} width={plotW} height={20}
-                        fill={activity.color} opacity={0.06} />
-                      {/* Y-axis row label: activity name */}
-                      <text x={PADDING.left - 12} y={barY} textAnchor="end" dominantBaseline="middle"
+                        fill={activity.color} opacity={0.08} />
+                      {/* Y-axis row label: activity name (left of axis, like a unit label) */}
+                      <text x={PADDING.left - 10} y={barY} textAnchor="end" dominantBaseline="middle"
                         className="fill-foreground text-[11px] font-semibold">
                         {activity.name}
                       </text>
