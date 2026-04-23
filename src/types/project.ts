@@ -3,7 +3,10 @@ export type ProjectType = 'casas' | 'edificio';
 export interface BuildingConfig {
   floors: number;
   unitsPerFloor: number;
+  hasCubierta?: boolean;
 }
+
+export type CubiertaRow = 'cubierta' | 'muros_cubierta' | 'ascensores';
 
 export interface Activity {
   id: string;
@@ -11,9 +14,11 @@ export interface Activity {
   unitStart: number;
   unitEnd: number;
   startDate: string; // YYYY-MM-DD
+  endDate?: string;  // YYYY-MM-DD (only for category='cubierta')
   rate: number; // units per day
   color: string;
-  category: 'estructura' | 'acabados' | 'zonas_sociales';
+  category: 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta';
+  cubiertaRow?: CubiertaRow; // only for category='cubierta'
   predecessorId?: string;
   bufferDays: number;
   bufferUnits: number;
@@ -174,9 +179,21 @@ export const DEFAULT_COLORS = [
   '#7f8c8d', '#27ae60',
 ];
 
+/** When hasCubierta is enabled, two extra unit slots are appended on top of the building */
+export function getCubiertaUnits(buildingConfig: BuildingConfig): { cubierta: number; muros: number } | null {
+  if (!buildingConfig.hasCubierta) return null;
+  const totalReg = buildingConfig.floors * buildingConfig.unitsPerFloor;
+  return { cubierta: totalReg + 1, muros: totalReg + 2 };
+}
+
 /** Generate unit label based on project type */
 export function getUnitLabel(unit: number, projectType: ProjectType, buildingConfig: BuildingConfig): string {
   if (projectType === 'casas') return `${unit}`;
+  const cu = getCubiertaUnits(buildingConfig);
+  if (cu) {
+    if (unit === cu.cubierta) return 'Cubierta';
+    if (unit === cu.muros) return 'Muros Cubierta';
+  }
   const floor = Math.ceil(unit / buildingConfig.unitsPerFloor);
   const unitOnFloor = ((unit - 1) % buildingConfig.unitsPerFloor) + 1;
   return `${floor}${unitOnFloor.toString().padStart(2, '0')}`;
