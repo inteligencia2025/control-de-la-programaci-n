@@ -505,15 +505,15 @@ export function LOBChart() {
               <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
-            {/* Preliminares — each activity is its own Y-axis row, ordered bottom-up
-                (MOVIMIENTO DE TIERRAS at the bottom, closest to X axis). The activity
+            {/* Preliminares — each activity is its own Y-axis row, ordered top-down
+                (MOVIMIENTO DE TIERRAS at the top, farthest from X axis). The activity
                 name appears as the Y-axis label, similar to a unit row. */}
             {preliminaresLines.length > 0 && (
               <g>
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
-                  // Bottom-up: index 0 sits at the BOTTOM of the band (closest to X axis)
-                  const rowFromBottom = i;
-                  const barY = prelimAreaY + PRELIM_AREA_H - 16 - rowFromBottom * 22;
+                  // Top-down: index 0 sits at the TOP of the band (farthest from X axis)
+                  const rowFromTop = i;
+                  const barY = prelimAreaY + 16 + rowFromTop * 22;
                   const x1 = scaleX(startIdx);
                   const rawX2 = scaleX(Math.max(endIdx, startIdx));
                   const x2 = Math.max(rawX2, x1 + 24);
