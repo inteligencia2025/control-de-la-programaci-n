@@ -124,7 +124,17 @@ export function LOBChart() {
     });
     const allStarts = [...effectiveStarts, ...cubiertaStarts];
     const projectStart = new Date(Math.min(...allStarts.map(d => d.getTime())));
-    const lines = lobActivities.map(activity => {
+    // Compute the maximum REAL unit (excluding cubierta extras) so we can clamp ghost units
+    // from outdated activity data after a building resize.
+    const maxRealUnit = project.projectType === 'edificio'
+      ? project.buildingConfig.floors * project.buildingConfig.unitsPerFloor
+      : Infinity;
+    const clampedLobActivities = lobActivities.map(a => ({
+      ...a,
+      unitStart: Math.min(Math.max(1, a.unitStart), maxRealUnit),
+      unitEnd: Math.min(Math.max(1, a.unitEnd), maxRealUnit),
+    }));
+    const lines = clampedLobActivities.map(activity => {
       const points = getActivityLine(activity, projectStart, project.activities);
       const duration = points.length > 1 ? points[points.length - 1].workdayIndex - points[0].workdayIndex : 0;
       const crewLines = getCrewLines(activity, projectStart, project.activities);
