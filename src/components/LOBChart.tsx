@@ -263,9 +263,11 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { maxWorkday, workdays, lines, minUnit, maxUnit } = chartData;
+    const { maxWorkday, workdays, lines, minUnit, maxUnit, preliminaresLines } = chartData;
     const unitRange = maxUnit - minUnit;
     const PAD = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
+    const lobTop = PAD.top + PRELIM_H;
     const W = Math.max(900, maxWorkday * 40 + PAD.left + PAD.right);
     const plotW = W - PAD.left - PAD.right;
     const plotH = unitRange * 32;
@@ -283,9 +285,9 @@ export function LOBChart() {
     for (const { activity, points } of lines) {
       for (let i = 0; i < points.length - 1; i++) {
         const x1 = PAD.left + (points[i].workdayIndex / maxWorkday) * plotW;
-        const y1 = PAD.top + plotH - ((points[i].unit - minUnit) / unitRange) * plotH;
+        const y1 = lobTop + plotH - ((points[i].unit - minUnit) / unitRange) * plotH;
         const x2 = PAD.left + (points[i + 1].workdayIndex / maxWorkday) * plotW;
-        const y2 = PAD.top + plotH - ((points[i + 1].unit - minUnit) / unitRange) * plotH;
+        const y2 = lobTop + plotH - ((points[i + 1].unit - minUnit) / unitRange) * plotH;
         const dx = x2 - x1, dy = y2 - y1;
         const len2 = dx * dx + dy * dy;
         const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((mx - x1) * dx + (my - y1) * dy) / len2));
@@ -307,10 +309,12 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { lines, minUnit, maxUnit, maxWorkday, workdays } = chartData;
+    const { lines, minUnit, maxUnit, maxWorkday, workdays, preliminaresLines } = chartData;
     const UNIT_H = 32;
     const unitRange = maxUnit - minUnit;
     const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
+    const lobTop = PADDING.top + PRELIM_H;
     const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
     const plotH = unitRange * UNIT_H;
     const plotW = WIDTH - PADDING.left - PADDING.right;
@@ -319,7 +323,7 @@ export function LOBChart() {
     for (const { activity, points } of lines) {
       for (const p of points) {
         const px = PADDING.left + (p.workdayIndex / maxWorkday) * plotW;
-        const py = PADDING.top + plotH - ((p.unit - minUnit) / (maxUnit - minUnit)) * plotH;
+        const py = lobTop + plotH - ((p.unit - minUnit) / (maxUnit - minUnit)) * plotH;
         const dist = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
         if (dist < 20 && (!best || dist < best.dist)) {
           best = { dist, activity, unit: p.unit, wdIdx: p.workdayIndex };
