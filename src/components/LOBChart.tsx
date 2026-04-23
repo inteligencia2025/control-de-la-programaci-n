@@ -511,8 +511,10 @@ export function LOBChart() {
             {preliminaresLines.length > 0 && (
               <g>
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
-                  // Top-down: index 0 sits at the TOP of the band (farthest from X axis)
-                  const rowFromTop = i;
+                  // Bottom-up: index 0 (MOVIMIENTO DE TIERRAS) sits at the BOTTOM of the band
+                  // (closest to the X axis), then ascending up: LOCALIZACION, HILADEROS, CIMENTACION, VACIADO LOSA at top.
+                  const total = preliminaresLines.length;
+                  const rowFromTop = total - 1 - i;
                   const barY = prelimAreaY + 16 + rowFromTop * 22;
                   const x1 = scaleX(startIdx);
                   const rawX2 = scaleX(Math.max(endIdx, startIdx));
