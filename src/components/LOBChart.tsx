@@ -389,7 +389,8 @@ export function LOBChart() {
   const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
-  const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
+  // Wider left padding so long preliminares activity names (e.g. "INSTALACIÓN PLANTA DE CONCRETO") fit as Y-axis labels
+  const PADDING = { top: 40, right: 30, bottom: 110, left: 230 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
   const allLegendItems = [
     ...preliminaresLines.map(p => ({ activity: p.activity, duration: p.duration })),
