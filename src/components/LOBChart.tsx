@@ -188,7 +188,20 @@ export function LOBChart() {
       return { activity, rowUnit, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
     });
     const prelimCubiertaMax = cubiertaLines.reduce((m, c) => Math.max(m, c.endIdx), 0);
-    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax) + 5;
+    // Preliminares horizontal bars (sequential, before LOB lines)
+    const preliminaresLines = preliminaresActivities.map(activity => {
+      let start: Date;
+      let end: Date;
+      try { start = parseISO(activity.startDate); } catch { start = new Date(projectStart); }
+      try { end = parseISO(activity.endDate || activity.startDate); } catch { end = start; }
+      if (end < start) end = start;
+      const startIdx = dateToWorkdayIdx(start);
+      const endIdx = dateToWorkdayIdx(end);
+      const duration = Math.max(1, differenceInCalendarDays(end, start) + 1);
+      return { activity, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
+    });
+    const prelimMaxIdx = preliminaresLines.reduce((m, p) => Math.max(m, p.endIdx), 0);
+    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx) + 5;
     const lobUnits = clampedLobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const cu = getCubiertaUnits(project.buildingConfig);
     const cubiertaUnits = cu ? [cu.cubierta, cu.muros, cu.ascensores] : [];
@@ -219,8 +232,8 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
     });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines };
-  }, [lobActivities, ganttActivities, cubiertaActivities, enabledActivities, project.activities, project.buildingConfig]);
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines };
+  }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, enabledActivities, project.activities, project.buildingConfig]);
 
   const handleExportPNG = async () => {
     if (!svgRef.current) return;
