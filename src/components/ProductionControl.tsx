@@ -107,6 +107,36 @@ export function ProductionControl() {
     addPACRecord(record);
   };
 
+  const handleCarryOverPending = () => {
+    const pending = weekRecords.filter(r => r.plannedPct > 0 && r.completedPct < r.plannedPct);
+    if (pending.length === 0) return;
+    const nextWeek = displayWeek + 1;
+    const existingNextWeek = new Set(
+      project.pacRecords.filter(r => r.weekNumber === nextWeek).map(r => r.activityName)
+    );
+    const carried: PACRecord[] = pending
+      .filter(r => !existingNextWeek.has(r.activityName))
+      .map(r => {
+        const remaining = Math.max(0, Math.min(100, r.plannedPct - r.completedPct));
+        return {
+          id: crypto.randomUUID(),
+          date: new Date().toISOString().split('T')[0],
+          weekNumber: nextWeek,
+          activityName: r.activityName,
+          responsible: r.responsible,
+          planned: remaining > 0,
+          completed: false,
+          plannedPct: remaining,
+          completedPct: 0,
+          failureCause: r.failureCause || '',
+          failureDescription: r.failureDescription || '',
+        };
+      });
+    if (carried.length > 0) {
+      setProject(p => ({ ...p, pacRecords: [...p.pacRecords, ...carried] }));
+    }
+  };
+
   const handleLoadFromLOB = () => {
     const weekStart = getProjectWeekDates(displayWeek, project.activities).weekStart;
     const weekEnd = addDays(weekStart, 6);
@@ -340,6 +370,7 @@ export function ProductionControl() {
         </Select>
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant="outline" onClick={handleLoadFromLOB} className="gap-1 h-7 text-xs">LOB</Button>
+          <Button size="sm" variant="outline" onClick={handleCarryOverPending} className="gap-1 h-7 text-xs" title="Lleva los pendientes (ejecutado < programado) a la siguiente semana">Arrastrar pendientes →S{displayWeek + 1}</Button>
           <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-7 text-xs">Excel</Button>
           <Button size="sm" variant="outline" onClick={handleExportPDF} className="gap-1 h-7 text-xs">PDF</Button>
           <Button size="sm" variant="outline" onClick={handlePrint} className="gap-1 h-7 text-xs"><Printer className="h-3 w-3" />Imprimir</Button>
