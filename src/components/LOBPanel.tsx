@@ -357,7 +357,31 @@ export function LOBPanel() {
               <Label className="text-[10px]">Nombre</Label>
               <Input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))} placeholder="Ej: Cimentación" className="h-7 text-xs" />
             </div>
-            {form.category === 'zonas_sociales' ? (
+            {form.category === 'cubierta' ? (
+              <>
+                <div>
+                  <Label className="text-[10px]">Fila</Label>
+                  <Select value={form.cubiertaRow} onValueChange={v => setForm(f => ({ ...f, cubiertaRow: v as CubiertaRow }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="cubierta">Cubierta</SelectItem>
+                      <SelectItem value="muros_cubierta">Muros Cubierta</SelectItem>
+                      <SelectItem value="ascensores">Ascensores</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label className="text-[10px]">Fecha Inicio</Label>
+                    <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                  <div>
+                    <Label className="text-[10px]">Fecha Fin</Label>
+                    <Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="h-7 text-xs" />
+                  </div>
+                </div>
+              </>
+            ) : form.category === 'zonas_sociales' ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
