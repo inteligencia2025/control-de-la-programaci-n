@@ -250,7 +250,7 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
     });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines };
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines: orderedPrelim };
   }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, enabledActivities, project.activities, project.buildingConfig]);
 
   const handleExportPNG = async () => {
