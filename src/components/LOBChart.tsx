@@ -189,8 +189,8 @@ export function LOBChart() {
     const cu = getCubiertaUnits(project.buildingConfig);
     const cubiertaUnits = cu ? [cu.cubierta, cu.muros, cu.ascensores] : [];
     const allUnits = [...lobUnits, ...cubiertaUnits, ...cubiertaLines.map(c => c.rowUnit)];
-    const minUnit = allUnits.length > 0 ? Math.min(...allUnits) - 1 : 0;
-    const maxUnit = allUnits.length > 0 ? Math.max(...allUnits) + 1 : 2;
+    const minUnit = allUnits.length > 0 ? Math.min(...allUnits) : 1;
+    const maxUnit = allUnits.length > 0 ? Math.max(...allUnits) : 2;
     const workdays: { date: Date; label: string; dayName: string; month: string; monthIdx: number }[] = [];
     let current = new Date(projectStart);
     let monthCounter = 0; let lastMonth = '';
