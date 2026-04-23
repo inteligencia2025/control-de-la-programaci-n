@@ -388,12 +388,13 @@ export function LOBChart() {
   const GANTT_AREA_H = ganttBars.length > 0 ? ganttBars.length * 28 + 20 : 0;
   const DURATION_BOX_H = 32;
   const plotH = unitRange * UNIT_H;
-  const HEIGHT = PADDING.top + PRELIM_AREA_H + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
+  const HEIGHT = PADDING.top + plotH + PRELIM_AREA_H + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
   const plotW = WIDTH - PADDING.left - PADDING.right;
 
-  // Preliminares band sits between the top padding and the LOB plot
-  const prelimAreaY = PADDING.top;
-  const lobPlotTop = PADDING.top + PRELIM_AREA_H;
+  // LOB plot starts at top padding (no offset). Preliminares band sits below the LOB plot,
+  // visually "before" (under unit 1) — and above the X axis labels.
+  const lobPlotTop = PADDING.top;
+  const prelimAreaY = lobPlotTop + plotH + 6;
 
   const scaleX = (v: number) => PADDING.left + (v / maxWorkday) * plotW;
   const scaleY = (v: number) => lobPlotTop + plotH - ((v - minUnit) / (maxUnit - minUnit)) * plotH;
@@ -404,7 +405,9 @@ export function LOBChart() {
     else months[months.length - 1].endIdx = i;
   });
 
-  const ganttAreaY = lobPlotTop + plotH + 68;
+  // X axis labels and gantt sit BELOW the preliminares band
+  const xAxisY = lobPlotTop + plotH + PRELIM_AREA_H;
+  const ganttAreaY = xAxisY + 68;
   const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
