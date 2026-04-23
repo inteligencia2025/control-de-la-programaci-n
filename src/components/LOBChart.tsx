@@ -111,13 +111,19 @@ export function LOBChart() {
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
-  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales'), [enabledActivities]);
+  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta'), [enabledActivities]);
   const ganttActivities = useMemo(() => enabledActivities.filter(a => a.category === 'zonas_sociales'), [enabledActivities]);
+  const cubiertaActivities = useMemo(() => enabledActivities.filter(a => a.category === 'cubierta'), [enabledActivities]);
 
   const chartData = useMemo(() => {
     if (enabledActivities.length === 0) return null;
     const effectiveStarts = enabledActivities.map(a => getEffectiveStartDate(a, project.activities));
-    const projectStart = new Date(Math.min(...effectiveStarts.map(d => d.getTime())));
+    // Include cubierta startDates explicitly (they may not have predecessors)
+    const cubiertaStarts = cubiertaActivities.map(a => {
+      try { return parseISO(a.startDate); } catch { return new Date(); }
+    });
+    const allStarts = [...effectiveStarts, ...cubiertaStarts];
+    const projectStart = new Date(Math.min(...allStarts.map(d => d.getTime())));
     const lines = lobActivities.map(activity => {
       const points = getActivityLine(activity, projectStart, project.activities);
       const duration = points.length > 1 ? points[points.length - 1].workdayIndex - points[0].workdayIndex : 0;
@@ -140,10 +146,41 @@ export function LOBChart() {
       while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
       return Math.max(max, startIdx + durationDays);
     }, 0);
-    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax) + 5;
+    // Helper: convert any calendar date to workday index (skipping weekends)
+    const dateToWorkdayIdx = (d: Date): number => {
+      let idx = 0;
+      let cur = new Date(projectStart);
+      while (cur < d) { if (!isWeekend(cur)) idx++; cur = addDays(cur, 1); }
+      return idx;
+    };
+    // Cubierta horizontal lines
+    const cubiertaLines = cubiertaActivities.map(activity => {
+      const cu = getCubiertaUnits(project.buildingConfig);
+      // Determine row unit from cubiertaRow (preferred) or fallback to unitStart
+      let rowUnit = activity.unitStart;
+      if (cu) {
+        if (activity.cubiertaRow === 'cubierta') rowUnit = cu.cubierta;
+        else if (activity.cubiertaRow === 'muros_cubierta') rowUnit = cu.muros;
+        else if (activity.cubiertaRow === 'ascensores') rowUnit = cu.ascensores;
+      }
+      let start: Date;
+      let end: Date;
+      try { start = parseISO(activity.startDate); } catch { start = new Date(projectStart); }
+      try { end = parseISO(activity.endDate || activity.startDate); } catch { end = start; }
+      if (end < start) end = start;
+      const startIdx = dateToWorkdayIdx(start);
+      const endIdx = dateToWorkdayIdx(end);
+      const duration = Math.max(1, differenceInCalendarDays(end, start) + 1);
+      return { activity, rowUnit, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
+    });
+    const prelimCubiertaMax = cubiertaLines.reduce((m, c) => Math.max(m, c.endIdx), 0);
+    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax) + 5;
     const lobUnits = lobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
-    const minUnit = lobUnits.length > 0 ? Math.min(...lobUnits) - 1 : 0;
-    const maxUnit = lobUnits.length > 0 ? Math.max(...lobUnits) + 1 : 2;
+    const cu = getCubiertaUnits(project.buildingConfig);
+    const cubiertaUnits = cu ? [cu.cubierta, cu.muros, cu.ascensores] : [];
+    const allUnits = [...lobUnits, ...cubiertaUnits, ...cubiertaLines.map(c => c.rowUnit)];
+    const minUnit = allUnits.length > 0 ? Math.min(...allUnits) - 1 : 0;
+    const maxUnit = allUnits.length > 0 ? Math.max(...allUnits) + 1 : 2;
     const workdays: { date: Date; label: string; dayName: string; month: string; monthIdx: number }[] = [];
     let current = new Date(projectStart);
     let monthCounter = 0; let lastMonth = '';
@@ -168,8 +205,8 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
     });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars };
-  }, [lobActivities, ganttActivities, enabledActivities, project.activities]);
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines };
+  }, [lobActivities, ganttActivities, cubiertaActivities, enabledActivities, project.activities, project.buildingConfig]);
 
   const handleExportPNG = async () => {
     if (!svgRef.current) return;
