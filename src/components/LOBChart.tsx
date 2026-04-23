@@ -432,14 +432,14 @@ export function LOBChart() {
             onClick={(e) => { e.stopPropagation(); handleClick(e); }}>
             {/* Month shading */}
             {months.map((m, i) => (
-              <rect key={`ms-${i}`} x={scaleX(m.startIdx) - 2} y={PADDING.top}
+              <rect key={`ms-${i}`} x={scaleX(m.startIdx) - 2} y={lobPlotTop}
                 width={scaleX(m.endIdx) - scaleX(m.startIdx) + 4} height={plotH}
                 fill={i % 2 === 0 ? 'hsl(var(--muted))' : 'transparent'} opacity={0.35} />
             ))}
             {/* Month separator lines */}
             {months.slice(1).map((m, i) => (
               <line key={`ml-${i}`} x1={scaleX(m.startIdx) - 2} x2={scaleX(m.startIdx) - 2}
-                y1={PADDING.top} y2={PADDING.top + plotH}
+                y1={lobPlotTop} y2={lobPlotTop + plotH}
                 stroke="hsl(var(--foreground))" strokeWidth={1} strokeDasharray="6 3" opacity={0.5} />
             ))}
             {/* Horizontal grid per unit */}
@@ -463,28 +463,55 @@ export function LOBChart() {
             })}
             {/* Vertical cursor line for hovered day */}
             {hoverDay !== null && (
-              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={PADDING.top} y2={PADDING.top + plotH}
+              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={prelimAreaY} y2={lobPlotTop + plotH}
                 stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
             )}
             {/* X axis — BIGGER labels */}
             {workdays.map((wd, i) => (
               <g key={`x-${i}`}>
-                <line x1={scaleX(i)} x2={scaleX(i)} y1={PADDING.top} y2={PADDING.top + plotH} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                <text x={scaleX(i)} y={PADDING.top + plotH + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                <text x={scaleX(i)} y={lobPlotTop + plotH + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
                   {wd.dayName.charAt(0).toUpperCase()}
                 </text>
-                <text x={scaleX(i)} y={PADDING.top + plotH + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
+                <text x={scaleX(i)} y={lobPlotTop + plotH + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
                   {wd.label}
                 </text>
               </g>
             ))}
             {/* Month labels */}
             {months.map((m, i) => (
-              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={PADDING.top + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
+              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={lobPlotTop + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
-
-
+            {/* Preliminares horizontal bars (linear, sequential, before LOB) */}
+            {preliminaresLines.length > 0 && (
+              <g>
+                <text x={PADDING.left} y={prelimAreaY + 2} className="fill-foreground text-[11px] font-semibold">
+                  Preliminares
+                </text>
+                {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
+                  const barY = prelimAreaY + 12 + i * 22;
+                  const x1 = scaleX(startIdx);
+                  const rawX2 = scaleX(Math.max(endIdx, startIdx));
+                  const x2 = Math.max(rawX2, x1 + 24);
+                  return (
+                    <g key={`prelim-${activity.id}`}>
+                      <line x1={x1} y1={barY} x2={x2} y2={barY}
+                        stroke={activity.color} strokeWidth={5} strokeLinecap="round" />
+                      <circle cx={x1} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                      <circle cx={x2} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                      <text x={x2 + 8} y={barY} className="text-[11px] font-semibold" fill={activity.color} dominantBaseline="middle">
+                        {activity.name} ({duration}d)
+                      </text>
+                    </g>
+                  );
+                })}
+                {/* Separator between preliminares band and LOB plot */}
+                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
+                  y1={lobPlotTop - 4} y2={lobPlotTop - 4}
+                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
+              </g>
+            )}
 
 
             {/* Cubierta horizontal lines */}
