@@ -635,9 +635,14 @@ export function LOBChart() {
               </g>
             )}
             {/* Axis lines */}
-            {/* Axis lines */}
-            <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
-            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lobPlotTop + plotH} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            {/* Axis lines — Y axis extends down through the preliminares band; X axis baseline sits below the band */}
+            <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={xAxisY} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            {/* Subtle separator between LOB units and preliminares band */}
+            {preliminaresLines.length > 0 && (
+              <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lobPlotTop + plotH} y2={lobPlotTop + plotH}
+                stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="4 3" opacity={0.7} />
+            )}
             {/* Axis titles */}
             <text x={PADDING.left / 2} y={lobPlotTop + plotH / 2} textAnchor="middle"
               transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${lobPlotTop + plotH / 2})`}
