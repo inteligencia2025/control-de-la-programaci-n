@@ -197,7 +197,8 @@ export function LOBChart() {
       if (end < start) end = start;
       const startIdx = dateToWorkdayIdx(start);
       const endIdx = dateToWorkdayIdx(end);
-      const duration = Math.max(1, differenceInCalendarDays(end, start) + 1);
+      // Duration in WORKDAYS (consistent with user input and X-axis "Días laborales L-V")
+      const duration = Math.max(1, Math.max(endIdx, startIdx) - startIdx + 1);
       return { activity, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
     });
     const prelimMaxIdx = preliminaresLines.reduce((m, p) => Math.max(m, p.endIdx), 0);
