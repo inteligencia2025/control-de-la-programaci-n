@@ -283,7 +283,7 @@ export function LOBChart() {
     const my = (e.clientY - rect.top) / zoom;
     const { maxWorkday, workdays, lines, minUnit, maxUnit } = chartData;
     const unitRange = maxUnit - minUnit;
-    const PAD = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PAD = { top: 40, right: 30, bottom: 110, left: 230 };
     const lobTop = PAD.top;
     const W = Math.max(900, maxWorkday * 40 + PAD.left + PAD.right);
     const plotW = W - PAD.left - PAD.right;
