@@ -149,6 +149,7 @@ export function LOBPanel() {
       endDate: nextDate,
       rate: 1, color: DEFAULT_COLORS[project.activities.length % DEFAULT_COLORS.length],
       category: 'estructura', cubiertaRow: 'cubierta', predecessorId: '', bufferDays: 0, bufferUnits: 0, crews: 1,
+      durationDays: 5,
     });
     setEditId(null);
   };
@@ -157,16 +158,21 @@ export function LOBPanel() {
     e.preventDefault();
     if (!form.name.trim()) return;
     const isCubierta = form.category === 'cubierta';
+    const isPreliminar = form.category === 'preliminares';
     const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
+    const computedEndDate = isPreliminar
+      ? endDateFromDuration(form.startDate, form.durationDays)
+      : form.endDate;
     const activity: Activity = {
       ...form,
       id: editId || crypto.randomUUID(),
       predecessorId: form.predecessorId || undefined,
       enabled: true,
       // For cubierta: encode row in unitStart/unitEnd; endDate is real
-      unitStart: isCubierta ? rowIdx : form.unitStart,
-      unitEnd: isCubierta ? rowIdx : form.unitEnd,
-      endDate: isCubierta ? form.endDate : undefined,
+      // For preliminares: single row band, endDate computed from durationDays
+      unitStart: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitStart,
+      unitEnd: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitEnd,
+      endDate: isCubierta ? form.endDate : isPreliminar ? computedEndDate : undefined,
       cubiertaRow: isCubierta ? form.cubiertaRow : undefined,
     };
     if (editId) updateActivity(activity);
@@ -177,6 +183,9 @@ export function LOBPanel() {
   const handleEdit = (a: Activity) => {
     // Defer to avoid React DOM reconciliation crash with large SVG
     requestAnimationFrame(() => {
+      const editDuration = a.category === 'preliminares' && a.endDate
+        ? workdaysBetween(a.startDate, a.endDate)
+        : 5;
       setForm({
         name: a.name, unitStart: a.unitStart, unitEnd: a.unitEnd,
         startDate: a.startDate,
@@ -184,6 +193,7 @@ export function LOBPanel() {
         rate: a.rate, color: a.color, category: a.category,
         cubiertaRow: a.cubiertaRow || 'cubierta',
         predecessorId: a.predecessorId || '', bufferDays: a.bufferDays, bufferUnits: a.bufferUnits, crews: a.crews || 1,
+        durationDays: editDuration,
       });
       setEditId(a.id);
     });
