@@ -384,7 +384,7 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, orderedPrelim } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   // Wider left padding so long preliminares activity names (e.g. "INSTALACIÓN PLANTA DE CONCRETO") fit as Y-axis labels
