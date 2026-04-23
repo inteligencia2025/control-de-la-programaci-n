@@ -602,17 +602,19 @@ export function LOBChart() {
               </g>
             )}
             {/* Axis lines */}
-            <line x1={PADDING.left} x2={PADDING.left} y1={PADDING.top} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
-            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={PADDING.top + plotH} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            {/* Axis lines */}
+            <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lobPlotTop + plotH} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
             {/* Axis titles */}
-            <text x={PADDING.left / 2} y={(PADDING.top + plotH) / 2} textAnchor="middle"
-              transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${(PADDING.top + plotH) / 2})`}
+            <text x={PADDING.left / 2} y={lobPlotTop + plotH / 2} textAnchor="middle"
+              transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${lobPlotTop + plotH / 2})`}
               className="fill-foreground text-[13px] font-semibold">
               {project.projectType === 'casas' ? 'Unidades' : 'Pisos / Apartamentos'}
             </text>
-            <text x={WIDTH / 2} y={PADDING.top + plotH + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
+            <text x={WIDTH / 2} y={lobPlotTop + plotH + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
               Tiempo (Días laborales L-V)
             </text>
+
             {/* Legend — BIGGER font */}
             {allLegendItems.map(({ activity, duration }, i) => {
               const col = i % LEGEND_ITEMS_PER_ROW;
