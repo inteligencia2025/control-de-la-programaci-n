@@ -457,15 +457,20 @@ export function LOBChart() {
             {/* Cubierta horizontal lines */}
             {cubiertaLines.map(({ activity, rowUnit, startIdx, endIdx, duration }) => {
               const x1 = scaleX(startIdx);
-              const x2 = scaleX(Math.max(endIdx, startIdx + 0.1));
+              const rawX2 = scaleX(Math.max(endIdx, startIdx));
+              // Ensure minimum visible width even if start === end
+              const x2 = Math.max(rawX2, x1 + 24);
               const y = scaleY(rowUnit);
               return (
                 <g key={`cub-${activity.id}`}>
+                  {/* Background highlight band so the row stands out */}
+                  <rect x={PADDING.left} y={y - 12} width={plotW} height={24}
+                    fill={activity.color} opacity={0.06} />
                   <line x1={x1} y1={y} x2={x2} y2={y}
-                    stroke={activity.color} strokeWidth={3.5} strokeLinecap="round" />
-                  <circle cx={x1} cy={y} r={4} fill={activity.color} stroke="white" strokeWidth={1.2} />
-                  <circle cx={x2} cy={y} r={4} fill={activity.color} stroke="white" strokeWidth={1.2} />
-                  <text x={x2 + 6} y={y} className="text-[10px] font-medium" fill={activity.color} dominantBaseline="middle">
+                    stroke={activity.color} strokeWidth={5} strokeLinecap="round" />
+                  <circle cx={x1} cy={y} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                  <circle cx={x2} cy={y} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                  <text x={x2 + 8} y={y} className="text-[11px] font-semibold" fill={activity.color} dominantBaseline="middle">
                     {activity.name} ({duration}d)
                   </text>
                 </g>
