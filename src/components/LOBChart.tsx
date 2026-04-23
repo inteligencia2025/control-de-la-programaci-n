@@ -201,6 +201,24 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
     });
     const prelimMaxIdx = preliminaresLines.reduce((m, p) => Math.max(m, p.endIdx), 0);
+    // Order preliminares from bottom (closest to X axis) → up (closer to unit 1).
+    // Unknown activities go on top of the known list, preserving their original order.
+    const PRELIM_ORDER_BOTTOM_UP = [
+      'MOVIMIENTO DE TIERRAS',
+      'PROVISIONALES DE OBRA',
+      'ADECUACIÓN CAMPAMENTOS',
+      'INSTALACIÓN TORRE GRÚA',
+      'INSTALACIÓN PLANTA DE CONCRETO',
+      'LOCALIZACION Y REPLANTEO',
+      'VACIADO LOSA CIMENTACIÓN',
+    ];
+    const norm = (s: string) => s.trim().toUpperCase();
+    const orderIdx = (name: string) => {
+      const i = PRELIM_ORDER_BOTTOM_UP.findIndex(n => norm(n) === norm(name));
+      return i === -1 ? PRELIM_ORDER_BOTTOM_UP.length + preliminaresLines.findIndex(p => p.activity.name === name) : i;
+    };
+    // Sort ascending so index 0 (bottom) = MOVIMIENTO DE TIERRAS.
+    const orderedPrelim = [...preliminaresLines].sort((a, b) => orderIdx(a.activity.name) - orderIdx(b.activity.name));
     const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx) + 5;
     const lobUnits = clampedLobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const cu = getCubiertaUnits(project.buildingConfig);
