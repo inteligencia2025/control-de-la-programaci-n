@@ -283,7 +283,7 @@ export function LOBChart() {
     const my = (e.clientY - rect.top) / zoom;
     const { maxWorkday, workdays, lines, minUnit, maxUnit } = chartData;
     const unitRange = maxUnit - minUnit;
-    const PAD = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PAD = { top: 40, right: 30, bottom: 110, left: 230 };
     const lobTop = PAD.top;
     const W = Math.max(900, maxWorkday * 40 + PAD.left + PAD.right);
     const plotW = W - PAD.left - PAD.right;
@@ -329,7 +329,7 @@ export function LOBChart() {
     const { lines, minUnit, maxUnit, maxWorkday, workdays } = chartData;
     const UNIT_H = 32;
     const unitRange = maxUnit - minUnit;
-    const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PADDING = { top: 40, right: 30, bottom: 110, left: 230 };
     const lobTop = PADDING.top;
     const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
     const plotH = unitRange * UNIT_H;
@@ -389,7 +389,8 @@ export function LOBChart() {
   const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
-  const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
+  // Wider left padding so long preliminares activity names (e.g. "INSTALACIÓN PLANTA DE CONCRETO") fit as Y-axis labels
+  const PADDING = { top: 40, right: 30, bottom: 110, left: 230 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
   const allLegendItems = [
     ...preliminaresLines.map(p => ({ activity: p.activity, duration: p.duration })),
@@ -511,9 +512,6 @@ export function LOBChart() {
                 name appears as the Y-axis label, similar to a unit row. */}
             {preliminaresLines.length > 0 && (
               <g>
-                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
-                  y1={lobPlotTop + plotH + 1} y2={lobPlotTop + plotH + 1}
-                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
                   // Bottom-up: index 0 sits at the BOTTOM of the band (closest to X axis)
                   const rowFromBottom = i;
@@ -525,9 +523,9 @@ export function LOBChart() {
                     <g key={`prelim-${activity.id}`}>
                       {/* Row background band */}
                       <rect x={PADDING.left} y={barY - 10} width={plotW} height={20}
-                        fill={activity.color} opacity={0.06} />
-                      {/* Y-axis row label: activity name */}
-                      <text x={PADDING.left - 12} y={barY} textAnchor="end" dominantBaseline="middle"
+                        fill={activity.color} opacity={0.08} />
+                      {/* Y-axis row label: activity name (left of axis, like a unit label) */}
+                      <text x={PADDING.left - 10} y={barY} textAnchor="end" dominantBaseline="middle"
                         className="fill-foreground text-[11px] font-semibold">
                         {activity.name}
                       </text>
@@ -634,9 +632,14 @@ export function LOBChart() {
               </g>
             )}
             {/* Axis lines */}
-            {/* Axis lines */}
-            <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
-            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lobPlotTop + plotH} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            {/* Axis lines — Y axis extends down through the preliminares band; X axis baseline sits below the band */}
+            <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={xAxisY} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            {/* Subtle separator between LOB units and preliminares band */}
+            {preliminaresLines.length > 0 && (
+              <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lobPlotTop + plotH} y2={lobPlotTop + plotH}
+                stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="4 3" opacity={0.7} />
+            )}
             {/* Axis titles */}
             <text x={PADDING.left / 2} y={lobPlotTop + plotH / 2} textAnchor="middle"
               transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${lobPlotTop + plotH / 2})`}
