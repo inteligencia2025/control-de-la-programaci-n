@@ -506,29 +506,38 @@ export function LOBChart() {
               <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
-            {/* Preliminares horizontal bars — BELOW unit 1 (visually before LOB lines) */}
+            {/* Preliminares — each activity is its own Y-axis row, ordered bottom-up
+                (MOVIMIENTO DE TIERRAS at the bottom, closest to X axis). The activity
+                name appears as the Y-axis label, similar to a unit row. */}
             {preliminaresLines.length > 0 && (
               <g>
                 <line x1={PADDING.left} x2={WIDTH - PADDING.right}
                   y1={lobPlotTop + plotH + 1} y2={lobPlotTop + plotH + 1}
                   stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
-                <text x={PADDING.left - 12} y={prelimAreaY + 8} textAnchor="end"
-                  className="fill-foreground text-[11px] font-semibold">
-                  Preliminares
-                </text>
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
-                  const barY = prelimAreaY + 12 + i * 22;
+                  // Bottom-up: index 0 sits at the BOTTOM of the band (closest to X axis)
+                  const rowFromBottom = i;
+                  const barY = prelimAreaY + PRELIM_AREA_H - 16 - rowFromBottom * 22;
                   const x1 = scaleX(startIdx);
                   const rawX2 = scaleX(Math.max(endIdx, startIdx));
                   const x2 = Math.max(rawX2, x1 + 24);
                   return (
                     <g key={`prelim-${activity.id}`}>
+                      {/* Row background band */}
+                      <rect x={PADDING.left} y={barY - 10} width={plotW} height={20}
+                        fill={activity.color} opacity={0.06} />
+                      {/* Y-axis row label: activity name */}
+                      <text x={PADDING.left - 12} y={barY} textAnchor="end" dominantBaseline="middle"
+                        className="fill-foreground text-[11px] font-semibold">
+                        {activity.name}
+                      </text>
+                      {/* Horizontal bar */}
                       <line x1={x1} y1={barY} x2={x2} y2={barY}
                         stroke={activity.color} strokeWidth={5} strokeLinecap="round" />
                       <circle cx={x1} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
                       <circle cx={x2} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
                       <text x={x2 + 8} y={barY} className="text-[11px] font-semibold" fill={activity.color} dominantBaseline="middle">
-                        {activity.name} ({duration}d)
+                        ({duration}d)
                       </text>
                     </g>
                   );
