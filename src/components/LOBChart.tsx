@@ -111,9 +111,10 @@ export function LOBChart() {
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
-  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta'), [enabledActivities]);
+  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares'), [enabledActivities]);
   const ganttActivities = useMemo(() => enabledActivities.filter(a => a.category === 'zonas_sociales'), [enabledActivities]);
   const cubiertaActivities = useMemo(() => enabledActivities.filter(a => a.category === 'cubierta'), [enabledActivities]);
+  const preliminaresActivities = useMemo(() => enabledActivities.filter(a => a.category === 'preliminares'), [enabledActivities]);
 
   const chartData = useMemo(() => {
     if (enabledActivities.length === 0) return null;
@@ -122,7 +123,10 @@ export function LOBChart() {
     const cubiertaStarts = cubiertaActivities.map(a => {
       try { return parseISO(a.startDate); } catch { return new Date(); }
     });
-    const allStarts = [...effectiveStarts, ...cubiertaStarts];
+    const preliminaresStarts = preliminaresActivities.map(a => {
+      try { return parseISO(a.startDate); } catch { return new Date(); }
+    });
+    const allStarts = [...effectiveStarts, ...cubiertaStarts, ...preliminaresStarts];
     const projectStart = new Date(Math.min(...allStarts.map(d => d.getTime())));
     // Compute the maximum REAL unit (excluding cubierta extras) so we can clamp ghost units
     // from outdated activity data after a building resize.
@@ -184,7 +188,20 @@ export function LOBChart() {
       return { activity, rowUnit, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
     });
     const prelimCubiertaMax = cubiertaLines.reduce((m, c) => Math.max(m, c.endIdx), 0);
-    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax) + 5;
+    // Preliminares horizontal bars (sequential, before LOB lines)
+    const preliminaresLines = preliminaresActivities.map(activity => {
+      let start: Date;
+      let end: Date;
+      try { start = parseISO(activity.startDate); } catch { start = new Date(projectStart); }
+      try { end = parseISO(activity.endDate || activity.startDate); } catch { end = start; }
+      if (end < start) end = start;
+      const startIdx = dateToWorkdayIdx(start);
+      const endIdx = dateToWorkdayIdx(end);
+      const duration = Math.max(1, differenceInCalendarDays(end, start) + 1);
+      return { activity, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
+    });
+    const prelimMaxIdx = preliminaresLines.reduce((m, p) => Math.max(m, p.endIdx), 0);
+    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx) + 5;
     const lobUnits = clampedLobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const cu = getCubiertaUnits(project.buildingConfig);
     const cubiertaUnits = cu ? [cu.cubierta, cu.muros, cu.ascensores] : [];
@@ -215,8 +232,8 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
     });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines };
-  }, [lobActivities, ganttActivities, cubiertaActivities, enabledActivities, project.activities, project.buildingConfig]);
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines };
+  }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, enabledActivities, project.activities, project.buildingConfig]);
 
   const handleExportPNG = async () => {
     if (!svgRef.current) return;
@@ -246,9 +263,11 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { maxWorkday, workdays, lines, minUnit, maxUnit } = chartData;
+    const { maxWorkday, workdays, lines, minUnit, maxUnit, preliminaresLines } = chartData;
     const unitRange = maxUnit - minUnit;
     const PAD = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
+    const lobTop = PAD.top + PRELIM_H;
     const W = Math.max(900, maxWorkday * 40 + PAD.left + PAD.right);
     const plotW = W - PAD.left - PAD.right;
     const plotH = unitRange * 32;
@@ -266,9 +285,9 @@ export function LOBChart() {
     for (const { activity, points } of lines) {
       for (let i = 0; i < points.length - 1; i++) {
         const x1 = PAD.left + (points[i].workdayIndex / maxWorkday) * plotW;
-        const y1 = PAD.top + plotH - ((points[i].unit - minUnit) / unitRange) * plotH;
+        const y1 = lobTop + plotH - ((points[i].unit - minUnit) / unitRange) * plotH;
         const x2 = PAD.left + (points[i + 1].workdayIndex / maxWorkday) * plotW;
-        const y2 = PAD.top + plotH - ((points[i + 1].unit - minUnit) / unitRange) * plotH;
+        const y2 = lobTop + plotH - ((points[i + 1].unit - minUnit) / unitRange) * plotH;
         const dx = x2 - x1, dy = y2 - y1;
         const len2 = dx * dx + dy * dy;
         const t = len2 === 0 ? 0 : Math.max(0, Math.min(1, ((mx - x1) * dx + (my - y1) * dy) / len2));
@@ -290,10 +309,12 @@ export function LOBChart() {
     const rect = svgRef.current.getBoundingClientRect();
     const mx = (e.clientX - rect.left) / zoom;
     const my = (e.clientY - rect.top) / zoom;
-    const { lines, minUnit, maxUnit, maxWorkday, workdays } = chartData;
+    const { lines, minUnit, maxUnit, maxWorkday, workdays, preliminaresLines } = chartData;
     const UNIT_H = 32;
     const unitRange = maxUnit - minUnit;
     const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
+    const PRELIM_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
+    const lobTop = PADDING.top + PRELIM_H;
     const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
     const plotH = unitRange * UNIT_H;
     const plotW = WIDTH - PADDING.left - PADDING.right;
@@ -302,7 +323,7 @@ export function LOBChart() {
     for (const { activity, points } of lines) {
       for (const p of points) {
         const px = PADDING.left + (p.workdayIndex / maxWorkday) * plotW;
-        const py = PADDING.top + plotH - ((p.unit - minUnit) / (maxUnit - minUnit)) * plotH;
+        const py = lobTop + plotH - ((p.unit - minUnit) / (maxUnit - minUnit)) * plotH;
         const dist = Math.sqrt((mx - px) ** 2 + (my - py) ** 2);
         if (dist < 20 && (!best || dist < best.dist)) {
           best = { dist, activity, unit: p.unit, wdIdx: p.workdayIndex };
@@ -349,12 +370,13 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   const PADDING = { top: 40, right: 30, bottom: 110, left: 80 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
   const allLegendItems = [
+    ...preliminaresLines.map(p => ({ activity: p.activity, duration: p.duration })),
     ...lines.map(l => ({ activity: l.activity, duration: l.duration })),
     ...cubiertaLines.map(c => ({ activity: c.activity, duration: c.duration })),
     ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration })),
@@ -362,14 +384,19 @@ export function LOBChart() {
   const LEGEND_ITEMS_PER_ROW = 4;
   const legendRows = Math.ceil(allLegendItems.length / LEGEND_ITEMS_PER_ROW);
   const LEGEND_H = legendRows * 22 + 10;
+  const PRELIM_AREA_H = preliminaresLines.length > 0 ? preliminaresLines.length * 22 + 24 : 0;
   const GANTT_AREA_H = ganttBars.length > 0 ? ganttBars.length * 28 + 20 : 0;
   const DURATION_BOX_H = 32;
   const plotH = unitRange * UNIT_H;
-  const HEIGHT = PADDING.top + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
+  const HEIGHT = PADDING.top + PRELIM_AREA_H + plotH + GANTT_AREA_H + PADDING.bottom + LEGEND_H + DURATION_BOX_H + 10;
   const plotW = WIDTH - PADDING.left - PADDING.right;
 
+  // Preliminares band sits between the top padding and the LOB plot
+  const prelimAreaY = PADDING.top;
+  const lobPlotTop = PADDING.top + PRELIM_AREA_H;
+
   const scaleX = (v: number) => PADDING.left + (v / maxWorkday) * plotW;
-  const scaleY = (v: number) => PADDING.top + plotH - ((v - minUnit) / (maxUnit - minUnit)) * plotH;
+  const scaleY = (v: number) => lobPlotTop + plotH - ((v - minUnit) / (maxUnit - minUnit)) * plotH;
 
   const months: { month: string; startIdx: number; endIdx: number }[] = [];
   workdays.forEach((wd, i) => {
@@ -377,7 +404,7 @@ export function LOBChart() {
     else months[months.length - 1].endIdx = i;
   });
 
-  const ganttAreaY = PADDING.top + plotH + 68;
+  const ganttAreaY = lobPlotTop + plotH + 68;
   const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
@@ -409,14 +436,14 @@ export function LOBChart() {
             onClick={(e) => { e.stopPropagation(); handleClick(e); }}>
             {/* Month shading */}
             {months.map((m, i) => (
-              <rect key={`ms-${i}`} x={scaleX(m.startIdx) - 2} y={PADDING.top}
+              <rect key={`ms-${i}`} x={scaleX(m.startIdx) - 2} y={lobPlotTop}
                 width={scaleX(m.endIdx) - scaleX(m.startIdx) + 4} height={plotH}
                 fill={i % 2 === 0 ? 'hsl(var(--muted))' : 'transparent'} opacity={0.35} />
             ))}
             {/* Month separator lines */}
             {months.slice(1).map((m, i) => (
               <line key={`ml-${i}`} x1={scaleX(m.startIdx) - 2} x2={scaleX(m.startIdx) - 2}
-                y1={PADDING.top} y2={PADDING.top + plotH}
+                y1={lobPlotTop} y2={lobPlotTop + plotH}
                 stroke="hsl(var(--foreground))" strokeWidth={1} strokeDasharray="6 3" opacity={0.5} />
             ))}
             {/* Horizontal grid per unit */}
@@ -440,28 +467,55 @@ export function LOBChart() {
             })}
             {/* Vertical cursor line for hovered day */}
             {hoverDay !== null && (
-              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={PADDING.top} y2={PADDING.top + plotH}
+              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={prelimAreaY} y2={lobPlotTop + plotH}
                 stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
             )}
             {/* X axis — BIGGER labels */}
             {workdays.map((wd, i) => (
               <g key={`x-${i}`}>
-                <line x1={scaleX(i)} x2={scaleX(i)} y1={PADDING.top} y2={PADDING.top + plotH} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                <text x={scaleX(i)} y={PADDING.top + plotH + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                <text x={scaleX(i)} y={lobPlotTop + plotH + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
                   {wd.dayName.charAt(0).toUpperCase()}
                 </text>
-                <text x={scaleX(i)} y={PADDING.top + plotH + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
+                <text x={scaleX(i)} y={lobPlotTop + plotH + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
                   {wd.label}
                 </text>
               </g>
             ))}
             {/* Month labels */}
             {months.map((m, i) => (
-              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={PADDING.top + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
+              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={lobPlotTop + plotH + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
-
-
+            {/* Preliminares horizontal bars (linear, sequential, before LOB) */}
+            {preliminaresLines.length > 0 && (
+              <g>
+                <text x={PADDING.left} y={prelimAreaY + 2} className="fill-foreground text-[11px] font-semibold">
+                  Preliminares
+                </text>
+                {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
+                  const barY = prelimAreaY + 12 + i * 22;
+                  const x1 = scaleX(startIdx);
+                  const rawX2 = scaleX(Math.max(endIdx, startIdx));
+                  const x2 = Math.max(rawX2, x1 + 24);
+                  return (
+                    <g key={`prelim-${activity.id}`}>
+                      <line x1={x1} y1={barY} x2={x2} y2={barY}
+                        stroke={activity.color} strokeWidth={5} strokeLinecap="round" />
+                      <circle cx={x1} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                      <circle cx={x2} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                      <text x={x2 + 8} y={barY} className="text-[11px] font-semibold" fill={activity.color} dominantBaseline="middle">
+                        {activity.name} ({duration}d)
+                      </text>
+                    </g>
+                  );
+                })}
+                {/* Separator between preliminares band and LOB plot */}
+                <line x1={PADDING.left} x2={WIDTH - PADDING.right}
+                  y1={lobPlotTop - 4} y2={lobPlotTop - 4}
+                  stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
+              </g>
+            )}
 
 
             {/* Cubierta horizontal lines */}
@@ -552,17 +606,19 @@ export function LOBChart() {
               </g>
             )}
             {/* Axis lines */}
-            <line x1={PADDING.left} x2={PADDING.left} y1={PADDING.top} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
-            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={PADDING.top + plotH} y2={PADDING.top + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            {/* Axis lines */}
+            <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
+            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lobPlotTop + plotH} y2={lobPlotTop + plotH} stroke="hsl(var(--foreground))" strokeWidth={1} />
             {/* Axis titles */}
-            <text x={PADDING.left / 2} y={(PADDING.top + plotH) / 2} textAnchor="middle"
-              transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${(PADDING.top + plotH) / 2})`}
+            <text x={PADDING.left / 2} y={lobPlotTop + plotH / 2} textAnchor="middle"
+              transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${lobPlotTop + plotH / 2})`}
               className="fill-foreground text-[13px] font-semibold">
               {project.projectType === 'casas' ? 'Unidades' : 'Pisos / Apartamentos'}
             </text>
-            <text x={WIDTH / 2} y={PADDING.top + plotH + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
+            <text x={WIDTH / 2} y={lobPlotTop + plotH + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
               Tiempo (Días laborales L-V)
             </text>
+
             {/* Legend — BIGGER font */}
             {allLegendItems.map(({ activity, duration }, i) => {
               const col = i % LEGEND_ITEMS_PER_ROW;

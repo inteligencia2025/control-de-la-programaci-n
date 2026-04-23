@@ -2,26 +2,34 @@ import { DEFAULT_COLORS } from '@/types/project';
 
 export interface PreloadedActivity {
   name: string;
-  category: 'estructura' | 'acabados';
+  category: 'estructura' | 'acabados' | 'preliminares';
+  /** Estimated duration in working days — only used for category='preliminares' */
+  durationDays?: number;
 }
 
+/**
+ * The first block of activities (category 'preliminares') runs sequentially BEFORE
+ * any apartment work. They are drawn as horizontal lines (start date → end date)
+ * in their own band above the main LOB plot, similar to cubierta rows.
+ */
 export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
-  // Estructura
-  { name: 'MOVIMIENTO DE TIERRAS', category: 'estructura' },
-  { name: 'PROVISIONALES DE OBRA', category: 'estructura' },
-  { name: 'ADECUACIÓN CAMPAMENTOS', category: 'estructura' },
-  { name: 'INSTALACIÓN TORRE GRÚA', category: 'estructura' },
-  { name: 'INSTALACIÓN PLANTA DE CONCRETO', category: 'estructura' },
-  { name: 'LOCALIZACION Y REPLANTEO', category: 'estructura' },
-  { name: 'HILADEROS', category: 'estructura' },
-  { name: 'CIMENTACIÓN PROFUNDA', category: 'estructura' },
+  // ===== Preliminares (linear, sequential, before apartments) =====
+  { name: 'MOVIMIENTO DE TIERRAS', category: 'preliminares', durationDays: 15 },
+  { name: 'PROVISIONALES DE OBRA', category: 'preliminares', durationDays: 10 },
+  { name: 'ADECUACIÓN CAMPAMENTOS', category: 'preliminares', durationDays: 7 },
+  { name: 'INSTALACIÓN TORRE GRÚA', category: 'preliminares', durationDays: 5 },
+  { name: 'INSTALACIÓN PLANTA DE CONCRETO', category: 'preliminares', durationDays: 5 },
+  { name: 'LOCALIZACION Y REPLANTEO', category: 'preliminares', durationDays: 3 },
+  { name: 'HILADEROS', category: 'preliminares', durationDays: 5 },
+  { name: 'CIMENTACIÓN PROFUNDA', category: 'preliminares', durationDays: 20 },
+  { name: 'EXCAVACIÓN VIGAS DE CIMENTACIÓN', category: 'preliminares', durationDays: 10 },
+  { name: 'SOLADOS', category: 'preliminares', durationDays: 5 },
+  { name: 'ARMADO DE ACERO VIGAS', category: 'preliminares', durationDays: 8 },
+  { name: 'VACIADO LOSA CIMENTACIÓN', category: 'preliminares', durationDays: 7 },
+  // ===== Estructura (apartments — LOB lines) =====
   { name: 'EXCAVACIONES PARA TUBERÍA HIDROSANITARIA', category: 'estructura' },
   { name: 'INSTALACIÓN TUBERÍA HIDROSANITARIA', category: 'estructura' },
-  { name: 'EXCAVACIÓN VIGAS DE CIMENTACIÓN', category: 'estructura' },
-  { name: 'SOLADOS', category: 'estructura' },
-  { name: 'ARMADO DE ACERO VIGAS', category: 'estructura' },
   { name: 'INSTALACIÓN TUBERÍA HIDROSANITARIA Y ELÉCTRICA', category: 'estructura' },
-  { name: 'VACIADO LOSA CIMENTACIÓN', category: 'estructura' },
   { name: 'CIMBRADO MUROS', category: 'estructura' },
   { name: 'ARMADO ACERO', category: 'estructura' },
   { name: 'INSTALACIÓN TUBERÍA HIDROSANITARIA Y ELÉCTRICA MUROS', category: 'estructura' },

@@ -100,7 +100,7 @@ export function LOBPanel() {
     endDate: suggestedStartDate,
     rate: 1,
     color: DEFAULT_COLORS[0],
-    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta',
+    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta' | 'preliminares',
     cubiertaRow: 'cubierta' as CubiertaRow,
     predecessorId: '' as string,
     bufferDays: 0,
@@ -172,19 +172,54 @@ export function LOBPanel() {
     let lastId: string | undefined = project.activities.length > 0
       ? project.activities[project.activities.length - 1].id
       : undefined;
+    // Track the date AFTER all preliminares finish — apartment activities start here
+    let postPreliminaresDate: string | null = null;
 
     for (let i = 0; i < toAdd.length; i++) {
       const p = toAdd[i];
-      const startDate = i === 0 && project.activities.length === 0 ? projectStartDate : getNextWorkday(lastDate);
       const id = crypto.randomUUID();
-      const activity: Activity = {
-        id, name: p.name, unitStart: 1, unitEnd: totalUnits, startDate, rate: 1,
-        color: getDefaultColor(project.activities.length + i), category: p.category,
-        bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
-      };
-      newActivities.push(activity);
-      lastDate = startDate;
-      lastId = id;
+      const isPreliminar = p.category === 'preliminares';
+
+      if (isPreliminar) {
+        // Sequential linear bars: each starts the workday after the previous ends
+        const startDate = i === 0 && project.activities.length === 0
+          ? projectStartDate
+          : (postPreliminaresDate ?? getNextWorkday(lastDate));
+        const dur = Math.max(1, p.durationDays || 5);
+        // Compute endDate by advancing (dur - 1) workdays from start
+        let endParts = startDate.split('-').map(Number);
+        let endCur = new Date(endParts[0], endParts[1] - 1, endParts[2]);
+        let advanced = 0;
+        while (advanced < dur - 1) {
+          endCur = addDays(endCur, 1);
+          if (!isWeekend(endCur)) advanced++;
+        }
+        const endDate = endCur.toISOString().split('T')[0];
+        const activity: Activity = {
+          id, name: p.name, unitStart: 1, unitEnd: 1, startDate, endDate, rate: 1,
+          color: getDefaultColor(project.activities.length + i), category: 'preliminares',
+          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
+        };
+        newActivities.push(activity);
+        lastDate = endDate;
+        postPreliminaresDate = getNextWorkday(endDate);
+        lastId = id;
+      } else {
+        // Apartment activity (LOB line). Starts after preliminares (if any added) or chained.
+        const startDate = postPreliminaresDate
+          ? (newActivities.filter(a => a.category !== 'preliminares').length === 0
+              ? postPreliminaresDate
+              : getNextWorkday(lastDate))
+          : (i === 0 && project.activities.length === 0 ? projectStartDate : getNextWorkday(lastDate));
+        const activity: Activity = {
+          id, name: p.name, unitStart: 1, unitEnd: totalUnits, startDate, rate: 1,
+          color: getDefaultColor(project.activities.length + i), category: p.category,
+          bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
+        };
+        newActivities.push(activity);
+        lastDate = startDate;
+        lastId = id;
+      }
     }
 
     if (newActivities.length > 0) {
