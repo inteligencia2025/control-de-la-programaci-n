@@ -201,6 +201,24 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
     });
     const prelimMaxIdx = preliminaresLines.reduce((m, p) => Math.max(m, p.endIdx), 0);
+    // Order preliminares from bottom (closest to X axis) → up (closer to unit 1).
+    // Unknown activities go on top of the known list, preserving their original order.
+    const PRELIM_ORDER_BOTTOM_UP = [
+      'MOVIMIENTO DE TIERRAS',
+      'PROVISIONALES DE OBRA',
+      'ADECUACIÓN CAMPAMENTOS',
+      'INSTALACIÓN TORRE GRÚA',
+      'INSTALACIÓN PLANTA DE CONCRETO',
+      'LOCALIZACION Y REPLANTEO',
+      'VACIADO LOSA CIMENTACIÓN',
+    ];
+    const norm = (s: string) => s.trim().toUpperCase();
+    const orderIdx = (name: string) => {
+      const i = PRELIM_ORDER_BOTTOM_UP.findIndex(n => norm(n) === norm(name));
+      return i === -1 ? PRELIM_ORDER_BOTTOM_UP.length + preliminaresLines.findIndex(p => p.activity.name === name) : i;
+    };
+    // Sort ascending so index 0 (bottom) = MOVIMIENTO DE TIERRAS.
+    const orderedPrelim = [...preliminaresLines].sort((a, b) => orderIdx(a.activity.name) - orderIdx(b.activity.name));
     const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx) + 5;
     const lobUnits = clampedLobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const cu = getCubiertaUnits(project.buildingConfig);
@@ -232,7 +250,7 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
     });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines };
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines: orderedPrelim };
   }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, enabledActivities, project.activities, project.buildingConfig]);
 
   const handleExportPNG = async () => {
@@ -488,29 +506,38 @@ export function LOBChart() {
               <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
-            {/* Preliminares horizontal bars — BELOW unit 1 (visually before LOB lines) */}
+            {/* Preliminares — each activity is its own Y-axis row, ordered bottom-up
+                (MOVIMIENTO DE TIERRAS at the bottom, closest to X axis). The activity
+                name appears as the Y-axis label, similar to a unit row. */}
             {preliminaresLines.length > 0 && (
               <g>
                 <line x1={PADDING.left} x2={WIDTH - PADDING.right}
                   y1={lobPlotTop + plotH + 1} y2={lobPlotTop + plotH + 1}
                   stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="3 3" />
-                <text x={PADDING.left - 12} y={prelimAreaY + 8} textAnchor="end"
-                  className="fill-foreground text-[11px] font-semibold">
-                  Preliminares
-                </text>
                 {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
-                  const barY = prelimAreaY + 12 + i * 22;
+                  // Bottom-up: index 0 sits at the BOTTOM of the band (closest to X axis)
+                  const rowFromBottom = i;
+                  const barY = prelimAreaY + PRELIM_AREA_H - 16 - rowFromBottom * 22;
                   const x1 = scaleX(startIdx);
                   const rawX2 = scaleX(Math.max(endIdx, startIdx));
                   const x2 = Math.max(rawX2, x1 + 24);
                   return (
                     <g key={`prelim-${activity.id}`}>
+                      {/* Row background band */}
+                      <rect x={PADDING.left} y={barY - 10} width={plotW} height={20}
+                        fill={activity.color} opacity={0.06} />
+                      {/* Y-axis row label: activity name */}
+                      <text x={PADDING.left - 12} y={barY} textAnchor="end" dominantBaseline="middle"
+                        className="fill-foreground text-[11px] font-semibold">
+                        {activity.name}
+                      </text>
+                      {/* Horizontal bar */}
                       <line x1={x1} y1={barY} x2={x2} y2={barY}
                         stroke={activity.color} strokeWidth={5} strokeLinecap="round" />
                       <circle cx={x1} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
                       <circle cx={x2} cy={barY} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
                       <text x={x2 + 8} y={barY} className="text-[11px] font-semibold" fill={activity.color} dominantBaseline="middle">
-                        {activity.name} ({duration}d)
+                        ({duration}d)
                       </text>
                     </g>
                   );
