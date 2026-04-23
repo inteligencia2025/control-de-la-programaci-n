@@ -106,6 +106,7 @@ export function LOBPanel() {
     bufferDays: 0,
     bufferUnits: 0,
     crews: 1,
+    durationDays: 5,
   });
 
   const resetForm = () => {
