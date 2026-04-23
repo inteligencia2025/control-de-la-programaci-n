@@ -160,6 +160,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const { data: projects } = await supabase
         .from('projects')
         .select('id, name')
+        .is('deleted_at', null)
         .order('created_at', { ascending: true });
 
       if (!projects || projects.length === 0) {
