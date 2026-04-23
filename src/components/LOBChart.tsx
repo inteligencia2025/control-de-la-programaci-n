@@ -508,9 +508,9 @@ export function LOBChart() {
             {/* Preliminares — each activity is its own Y-axis row, ordered top-down
                 (MOVIMIENTO DE TIERRAS at the top, farthest from X axis). The activity
                 name appears as the Y-axis label, similar to a unit row. */}
-            {preliminaresLines.length > 0 && (
+            {orderedPrelim.length > 0 && (
               <g>
-                {preliminaresLines.map(({ activity, startIdx, endIdx, duration }, i) => {
+                {orderedPrelim.map(({ activity, startIdx, endIdx, duration }, i) => {
                   // Top-down: index 0 sits at the TOP of the band (farthest from X axis)
                   const rowFromTop = i;
                   const barY = prelimAreaY + 16 + rowFromTop * 22;
