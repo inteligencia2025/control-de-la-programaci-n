@@ -21,6 +21,8 @@ const defaultProject: ProjectData = {
   defaultUnits: 10,
 };
 
+const getActiveProjectStorageKey = (userId: string) => `lob-active-project:${userId}`;
+
 interface ProjectIndexEntry {
   id: string;
   name: string;
@@ -170,9 +172,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setProjectInternal(defaultProject);
         loadedFromDbRef.current = true;
       } else {
-        setProjectsList(projects.map(p => ({ id: p.id, name: p.name })));
-        setActiveProjectId(projects[0].id);
-        await loadProject(projects[0].id);
+        const projectEntries = projects.map(p => ({ id: p.id, name: p.name }));
+        const storedProjectId = localStorage.getItem(getActiveProjectStorageKey(user.id));
+        const selectedProjectId = projectEntries.some(p => p.id === storedProjectId)
+          ? storedProjectId!
+          : projectEntries[0].id;
+
+        setProjectsList(projectEntries);
+        setActiveProjectId(selectedProjectId);
+        await loadProject(selectedProjectId);
       }
       setLoaded(true);
     };
@@ -380,6 +388,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (newP) {
       setProjectsList(prev => [...prev, { id: newP.id, name: newP.name }]);
       setActiveProjectId(newP.id);
+      localStorage.setItem(getActiveProjectStorageKey(user.id), newP.id);
       skipHistory.current = true;
       setProjectInternal({ ...defaultProject, name: newP.name });
       undoStack.current = [];
@@ -391,8 +400,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const switchProject = useCallback(async (id: string) => {
     setActiveProjectId(id);
+    if (user) localStorage.setItem(getActiveProjectStorageKey(user.id), id);
     await loadProject(id);
-  }, []);
+  }, [user]);
 
   const deleteProject = useCallback(async (id: string) => {
     if (projectsList.length <= 1) return;
@@ -413,6 +423,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const updated = prev.filter(p => p.id !== id);
       if (id === activeProjectId && updated.length > 0) {
         setActiveProjectId(updated[0].id);
+        if (user) localStorage.setItem(getActiveProjectStorageKey(user.id), updated[0].id);
         loadProject(updated[0].id);
       }
       return updated;
