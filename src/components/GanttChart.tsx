@@ -192,7 +192,7 @@ export function GanttChart() {
               return (
                 <g key={g.key}>
                   <rect x={0} y={groupY} width={WIDTH} height={ROW_H}
-                    fill={g.key === 'estructura' ? 'hsl(var(--primary) / 0.15)' : 'hsl(40 90% 50% / 0.15)'} />
+                    fill={g.bgFill || (g.key === 'estructura' ? 'hsl(var(--primary) / 0.15)' : 'hsl(40 90% 50% / 0.15)')} />
                   <g onClick={() => toggle(g.key)} className="cursor-pointer">
                     <text x={12} y={groupY + ROW_H / 2 + 4} className="fill-foreground text-[11px] font-semibold">
                       {isCollapsed ? '▸' : '▾'} {g.label} ({g.items.length})
