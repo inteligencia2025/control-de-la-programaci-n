@@ -246,7 +246,7 @@ export function ProductionControl() {
     let planned = 0;
     let completed = 0;
     project.pacRecords.forEach(r => {
-      const { weekStart } = getProjectWeekDates(r.weekNumber, project.activities);
+      const { weekStart } = getPACWeekDates(r.weekNumber, project.activities, project.pacRecords);
       if (format(weekStart, 'yyyy-MM') !== currentMonthKey) return;
       if (responsibleFilter !== 'all' && r.responsible !== responsibleFilter) return;
       if (r.plannedPct > 0) planned++;
