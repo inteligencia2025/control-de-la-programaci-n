@@ -44,7 +44,7 @@ export function GanttChart() {
 
     // Compute project dates
     let projectEndDate = new Date(projectStart);
-    let endWorkdays = maxDay - 3;
+    const endWorkdays = maxDay - 3;
     let cur2 = new Date(projectStart);
     let countWd = 0;
     while (countWd < endWorkdays) { cur2 = addDays(cur2, 1); if (!isWeekend(cur2)) countWd++; }
