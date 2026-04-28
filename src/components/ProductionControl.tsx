@@ -87,6 +87,7 @@ export function ProductionControl() {
   const [showAddCause, setShowAddCause] = useState(false);
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   const [historyWeek, setHistoryWeek] = useState<string>('current');
+  const [weekDateOverrides, setWeekDateOverrides] = useState<Record<number, string>>({});
 
   // Calculate total project weeks
   const totalProjectWeeks = useMemo(() => {
@@ -108,7 +109,10 @@ export function ProductionControl() {
   }, [project.activities]);
 
   const displayWeek = historyWeek !== 'current' ? parseInt(historyWeek) : weekView;
-  const { weekStart: weekStartDate, weekEnd: weekEndDate } = getPACWeekDates(displayWeek, project.activities, project.pacRecords);
+  const storedWeekDates = getPACWeekDates(displayWeek, project.activities, project.pacRecords);
+  const overrideWeekStart = weekDateOverrides[displayWeek] ? parseLocalDate(weekDateOverrides[displayWeek]) : null;
+  const weekStartDate = overrideWeekStart && !Number.isNaN(overrideWeekStart.getTime()) ? overrideWeekStart : storedWeekDates.weekStart;
+  const weekEndDate = addDays(weekStartDate, 4);
 
   // Get all weeks that have records
   const recordedWeeks = useMemo(() => {
@@ -117,6 +121,15 @@ export function ProductionControl() {
   }, [project.pacRecords]);
 
   const allCauses = useMemo(() => [...DEFAULT_FAILURE_CAUSES, ...(project.customFailureCauses || [])], [project.customFailureCauses]);
+
+  const handleWeekDateChange = (date: string) => {
+    if (!date) return;
+    setWeekDateOverrides(prev => ({ ...prev, [displayWeek]: date }));
+    setProject(p => ({
+      ...p,
+      pacRecords: p.pacRecords.map(r => r.weekNumber === displayWeek ? { ...r, date } : r),
+    }));
+  };
 
   const handleAdd = () => {
     const record: PACRecord = {
@@ -427,6 +440,13 @@ export function ProductionControl() {
             <span className="text-sm text-muted-foreground font-medium">
               Semana {displayWeek}: {format(weekStartDate, 'dd/MM/yyyy')} — {format(weekEndDate, 'dd/MM/yyyy')}
             </span>
+            <Input
+              type="date"
+              value={format(weekStartDate, 'yyyy-MM-dd')}
+              onChange={e => handleWeekDateChange(e.target.value)}
+              className="h-8 w-36 text-xs"
+              title="Fecha de inicio de la semana"
+            />
             <div className="ml-auto flex gap-2">
               <Badge className="bg-destructive text-destructive-foreground text-sm px-3 py-1">M.M &lt;80%</Badge>
               <Badge className="bg-warning text-warning-foreground text-sm px-3 py-1">M.SA 80-90%</Badge>
