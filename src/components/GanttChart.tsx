@@ -2,19 +2,28 @@ import { useMemo, useRef, useState } from 'react';
 import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
-import { Activity } from '@/types/project';
 import { addDays, isWeekend, format } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getEffectiveStartDateSimple as getEffectiveStartDate, smartCeil, getEffectiveRate, calcActivityWorkdays } from '@/utils/schedulingUtils';
+import { getEffectiveStartDateSimple as getEffectiveStartDate, calcActivityWorkdays, safeParse } from '@/utils/schedulingUtils';
 
 
 const ESTRUCTURA_COLOR = 'hsl(var(--primary))';
 const ACABADOS_COLOR = '#e69500';
 
+const countWorkdaysInclusive = (start: Date, end: Date): number => {
+  let current = new Date(start);
+  let count = 0;
+  while (current <= end) {
+    if (!isWeekend(current)) count++;
+    current = addDays(current, 1);
+  }
+  return Math.max(1, count);
+};
+
 export function GanttChart() {
   const { project } = useProject();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ estructura: false, acabados: false });
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ preliminares: false, estructura: false, acabados: false, cubierta: false });
   const toggle = (cat: string) => setCollapsed(c => ({ ...c, [cat]: !c[cat] }));
 
   const chartData = useMemo(() => {
@@ -23,7 +32,9 @@ export function GanttChart() {
     const projectStart = new Date(Math.min(...enabled.map(a => getEffectiveStartDate(a, project.activities).getTime())));
     const activities = enabled.map(activity => {
       const start = getEffectiveStartDate(activity, project.activities);
-      const totalWorkdays = calcActivityWorkdays(activity);
+      const totalWorkdays = activity.endDate && (activity.category === 'preliminares' || activity.category === 'cubierta')
+        ? countWorkdaysInclusive(start, safeParse(activity.endDate))
+        : calcActivityWorkdays(activity);
       let startIdx = 0;
       let cur = new Date(projectStart);
       while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
@@ -46,8 +57,10 @@ export function GanttChart() {
       current = addDays(current, 1);
     }
     return {
+      preliminares: activities.filter(a => a.activity.category === 'preliminares'),
       estructura: activities.filter(a => a.activity.category === 'estructura'),
       acabados: activities.filter(a => a.activity.category === 'acabados'),
+      cubierta: activities.filter(a => a.activity.category === 'cubierta'),
       workdays, maxDay, projectStart, projectEndDate, totalWorkdays: endWorkdays,
     };
   }, [project.activities]);
@@ -82,7 +95,7 @@ export function GanttChart() {
       projectStart: format(chartData.projectStart, 'yyyy-MM-dd'),
       projectEnd: format(chartData.projectEndDate, 'yyyy-MM-dd'),
       totalWorkdays: chartData.totalWorkdays,
-      activities: [...chartData.estructura, ...chartData.acabados].map(({ activity, startIdx, duration }) => ({
+      activities: [...chartData.preliminares, ...chartData.estructura, ...chartData.acabados, ...chartData.cubierta].map(({ activity, startIdx, duration }) => ({
         id: activity.id,
         name: activity.name,
         category: activity.category,
@@ -117,11 +130,13 @@ export function GanttChart() {
     );
   }
 
-  const { estructura, acabados, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
+  const { preliminares, estructura, acabados, cubierta, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
   const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const HEADER_H = 44;
   const groups = [
+    { key: 'preliminares', label: 'Preliminares', items: preliminares, color: 'hsl(var(--muted-foreground))', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)' },
     { key: 'estructura', label: 'Estructura', items: estructura, color: ESTRUCTURA_COLOR, barColor: '#1e3a5f' },
     { key: 'acabados', label: 'Acabados', items: acabados, color: ACABADOS_COLOR, barColor: '#e69500' },
+    { key: 'cubierta', label: 'Cubierta / Ascensores', items: cubierta, color: 'hsl(var(--accent-foreground))', barColor: '#2d8a56', bgFill: 'hsl(var(--accent) / 0.35)' },
   ];
 
   const groupSummary: Record<string, { minStart: number; maxEnd: number }> = {};
@@ -177,7 +192,7 @@ export function GanttChart() {
               return (
                 <g key={g.key}>
                   <rect x={0} y={groupY} width={WIDTH} height={ROW_H}
-                    fill={g.key === 'estructura' ? 'hsl(var(--primary) / 0.15)' : 'hsl(40 90% 50% / 0.15)'} />
+                    fill={g.bgFill || (g.key === 'estructura' ? 'hsl(var(--primary) / 0.15)' : 'hsl(40 90% 50% / 0.15)')} />
                   <g onClick={() => toggle(g.key)} className="cursor-pointer">
                     <text x={12} y={groupY + ROW_H / 2 + 4} className="fill-foreground text-[11px] font-semibold">
                       {isCollapsed ? '▸' : '▾'} {g.label} ({g.items.length})
