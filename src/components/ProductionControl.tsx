@@ -56,6 +56,27 @@ function getProjectWeekDates(weekNum: number, activities: Activity[]) {
   return { weekStart, weekEnd };
 }
 
+function parseLocalDate(dateStr: string): Date {
+  const [year, month, day] = dateStr.split('-').map(Number);
+  if (year && month && day) return new Date(year, month - 1, day);
+  return new Date(dateStr);
+}
+
+function getPACWeekDates(weekNum: number, activities: Activity[], pacRecords: PACRecord[]) {
+  const storedDates = pacRecords
+    .filter(r => r.weekNumber === weekNum && r.date)
+    .map(r => parseLocalDate(r.date))
+    .filter(d => !Number.isNaN(d.getTime()))
+    .sort((a, b) => a.getTime() - b.getTime());
+
+  if (storedDates.length > 0) {
+    const weekStart = storedDates[0];
+    return { weekStart, weekEnd: addDays(weekStart, 4) };
+  }
+
+  return getProjectWeekDates(weekNum, activities);
+}
+
 export function ProductionControl() {
   const { project, setProject, addPACRecord, updatePACRecord, removePACRecord } = useProject();
   const [weekView, setWeekView] = useState<number>(1);
@@ -87,7 +108,7 @@ export function ProductionControl() {
   }, [project.activities]);
 
   const displayWeek = historyWeek !== 'current' ? parseInt(historyWeek) : weekView;
-  const { weekStart: weekStartDate, weekEnd: weekEndDate } = getProjectWeekDates(displayWeek, project.activities);
+  const { weekStart: weekStartDate, weekEnd: weekEndDate } = getPACWeekDates(displayWeek, project.activities, project.pacRecords);
 
   // Get all weeks that have records
   const recordedWeeks = useMemo(() => {
@@ -99,7 +120,7 @@ export function ProductionControl() {
 
   const handleAdd = () => {
     const record: PACRecord = {
-      id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0],
+      id: crypto.randomUUID(), date: format(weekStartDate, 'yyyy-MM-dd'),
       weekNumber: displayWeek, activityName: '', responsible: '',
       planned: true, completed: false, plannedPct: 100, completedPct: 0,
       failureCause: '', failureDescription: '',
@@ -111,6 +132,9 @@ export function ProductionControl() {
     const pending = weekRecords.filter(r => r.plannedPct > 0 && r.completedPct < r.plannedPct);
     if (pending.length === 0) return;
     const nextWeek = displayWeek + 1;
+    const nextWeekStart = project.pacRecords.some(r => r.weekNumber === nextWeek && r.date)
+      ? getPACWeekDates(nextWeek, project.activities, project.pacRecords).weekStart
+      : addDays(weekStartDate, 7);
     const existingNextWeek = new Set(
       project.pacRecords.filter(r => r.weekNumber === nextWeek).map(r => r.activityName)
     );
@@ -120,7 +144,7 @@ export function ProductionControl() {
         const remaining = Math.max(0, Math.min(100, r.plannedPct - r.completedPct));
         return {
           id: crypto.randomUUID(),
-          date: new Date().toISOString().split('T')[0],
+          date: format(nextWeekStart, 'yyyy-MM-dd'),
           weekNumber: nextWeek,
           activityName: r.activityName,
           responsible: r.responsible,
@@ -138,8 +162,9 @@ export function ProductionControl() {
   };
 
   const handleLoadFromLOB = () => {
-    const weekStart = getProjectWeekDates(displayWeek, project.activities).weekStart;
+    const weekStart = getPACWeekDates(displayWeek, project.activities, project.pacRecords).weekStart;
     const weekEnd = addDays(weekStart, 6);
+    const weekDate = format(weekStart, 'yyyy-MM-dd');
     const existingNames = new Set(project.pacRecords.filter(r => r.weekNumber === displayWeek).map(r => r.activityName));
     const newRecords: PACRecord[] = project.activities
       .filter(a => a.enabled)
@@ -152,7 +177,7 @@ export function ProductionControl() {
       })
       .filter(a => !existingNames.has(a.name))
       .map(a => ({
-        id: crypto.randomUUID(), date: new Date().toISOString().split('T')[0],
+        id: crypto.randomUUID(), date: weekDate,
         weekNumber: displayWeek, activityName: a.name, responsible: '',
         planned: true, completed: false, plannedPct: 100, completedPct: 0,
         failureCause: '', failureDescription: '',
@@ -221,7 +246,7 @@ export function ProductionControl() {
     let planned = 0;
     let completed = 0;
     project.pacRecords.forEach(r => {
-      const { weekStart } = getProjectWeekDates(r.weekNumber, project.activities);
+      const { weekStart } = getPACWeekDates(r.weekNumber, project.activities, project.pacRecords);
       if (format(weekStart, 'yyyy-MM') !== currentMonthKey) return;
       if (responsibleFilter !== 'all' && r.responsible !== responsibleFilter) return;
       if (r.plannedPct > 0) planned++;
