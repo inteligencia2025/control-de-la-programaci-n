@@ -7,8 +7,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 
 
 import { useProject } from '@/context/ProjectContext';
-import { Activity, DEFAULT_COLORS, getUnitLabel, CubiertaRow, getCubiertaUnits } from '@/types/project';
-import { PRELOADED_ACTIVITIES, getDefaultColor } from '@/data/preloadedActivities';
+import { Activity, DEFAULT_COLORS, getUnitLabel, CubiertaRow, getCubiertaUnits, pickNextColor } from '@/types/project';
+import { PRELOADED_ACTIVITIES } from '@/data/preloadedActivities';
 import { addDays, isWeekend } from 'date-fns';
 
 function getNextWorkday(dateStr: string): string {
