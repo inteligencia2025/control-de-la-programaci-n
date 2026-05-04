@@ -123,6 +123,7 @@ export function LOBChart() {
   const [zoom, setZoom] = useState(1);
   const [clickTooltip, setClickTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
+  const [hoverUnit, setHoverUnit] = useState<number | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
   const [drag, setDrag] = useState<{ activityId: string; startClientX: number; pxPerWorkday: number; lastDelta: number; moved: boolean } | null>(null);
 
@@ -309,6 +310,14 @@ export function LOBChart() {
       setHoverDay(wdIdx);
     } else {
       setHoverDay(null);
+    }
+
+    // Track hovered unit (Y axis)
+    const unitVal = Math.round(maxUnit - ((my - lobTop) / plotH) * unitRange);
+    if (my >= lobTop && my <= lobTop + plotH && unitVal >= minUnit && unitVal <= maxUnit) {
+      setHoverUnit(unitVal);
+    } else {
+      setHoverUnit(null);
     }
 
     // Find closest line segment
@@ -521,7 +530,7 @@ export function LOBChart() {
         <div ref={chartRef} className="bg-card rounded-lg border border-border p-2 inline-block origin-top-left" style={{ transform: `scale(${zoom})` }}>
           <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="select-none"
             onMouseMove={handleMouseMove}
-            onMouseLeave={() => { setHoverDay(null); setHoverTooltip(null); }}
+            onMouseLeave={() => { setHoverDay(null); setHoverUnit(null); setHoverTooltip(null); }}
             onClick={(e) => { e.stopPropagation(); handleClick(e); }}>
             {/* Month shading */}
             {months.map((m, i) => (
@@ -559,6 +568,43 @@ export function LOBChart() {
               <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={lobPlotTop} y2={xAxisY}
                 stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
             )}
+            {/* X axis — placed AFTER preliminares band */}
+            {/* Vertical cursor line for hovered day */}
+            {hoverDay !== null && (
+              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={lobPlotTop} y2={xAxisY}
+                stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
+            )}
+            {/* Horizontal cursor line for hovered unit */}
+            {hoverUnit !== null && (
+              <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={scaleY(hoverUnit)} y2={scaleY(hoverUnit)}
+                stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
+            )}
+            {/* Hovered date badge on X axis */}
+            {hoverDay !== null && workdays[hoverDay] && (
+              <g>
+                <rect x={scaleX(hoverDay) - 44} y={xAxisY + 32} width={88} height={18} rx={3}
+                  fill="hsl(var(--primary))" />
+                <text x={scaleX(hoverDay)} y={xAxisY + 44} textAnchor="middle"
+                  className="fill-primary-foreground text-[11px] font-semibold">
+                  {format(workdays[hoverDay].date, 'dd/MM/yyyy', { locale: es })}
+                </text>
+              </g>
+            )}
+            {/* Hovered unit badge on Y axis */}
+            {hoverUnit !== null && (() => {
+              const customLabel = project.unitLabels?.[String(hoverUnit)];
+              const lbl = customLabel || getUnitLabel(hoverUnit, project.projectType, project.buildingConfig);
+              return (
+                <g>
+                  <rect x={PADDING.left - 78} y={scaleY(hoverUnit) - 9} width={66} height={18} rx={3}
+                    fill="hsl(var(--primary))" />
+                  <text x={PADDING.left - 45} y={scaleY(hoverUnit) + 1} textAnchor="middle" dominantBaseline="middle"
+                    className="fill-primary-foreground text-[11px] font-semibold">
+                    {lbl}
+                  </text>
+                </g>
+              );
+            })()}
             {/* X axis — placed AFTER preliminares band */}
             {workdays.map((wd, i) => (
               <g key={`x-${i}`}>
