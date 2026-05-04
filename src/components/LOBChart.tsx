@@ -471,9 +471,19 @@ export function LOBChart() {
         if (curr && curr.lastDelta !== 0) {
           const a = project.activities.find(x => x.id === curr.activityId);
           if (a) {
-            const updated: Activity = { ...a, startDate: shiftWorkdays(a.startDate, curr.lastDelta) };
-            if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, curr.lastDelta);
-            updateActivity(updated);
+            const anchor = safeParse(a.startDate).getTime();
+            // Shift the dragged activity AND every activity that starts on/after it
+            // by the same workday delta, so "following" activities move together.
+            const toShift = project.activities.filter(x => {
+              if (x.id === a.id) return true;
+              const xs = safeParse(x.startDate).getTime();
+              return xs >= anchor;
+            });
+            for (const x of toShift) {
+              const updated: Activity = { ...x, startDate: shiftWorkdays(x.startDate, curr.lastDelta) };
+              if (x.endDate) updated.endDate = shiftWorkdays(x.endDate, curr.lastDelta);
+              updateActivity(updated);
+            }
           }
         }
         return null;
