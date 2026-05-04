@@ -616,7 +616,7 @@ export function LOBChart() {
               const x2 = Math.max(rawX2, x1 + 24);
               const y = scaleY(rowUnit);
               return (
-                <g key={`cub-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
+                <g key={`cub-${activity.id}`} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
                   {/* Background highlight band so the row stands out */}
                   <rect x={PADDING.left} y={y - 12} width={plotW} height={24}
                     fill={activity.color} opacity={0.06} />
