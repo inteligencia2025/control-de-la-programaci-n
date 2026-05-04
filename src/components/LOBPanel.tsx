@@ -252,7 +252,7 @@ export function LOBPanel() {
         const endDate = endCur.toISOString().split('T')[0];
         const activity: Activity = {
           id, name: p.name, unitStart: 1, unitEnd: 1, startDate, endDate, rate: 1,
-          color: getDefaultColor(project.activities.length + i), category: 'preliminares',
+          color: pickNextColor([...project.activities.map(a => a.color), ...newActivities.map(a => a.color)]), category: 'preliminares',
           bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
         };
         newActivities.push(activity);
