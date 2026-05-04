@@ -469,14 +469,21 @@ export function LOBChart() {
       rafRef.current = null;
       const yEl = yAxisRef.current;
       const xEl = xAxisRef.current;
-      if (!yEl && !xEl) return;
-      const sx = el.scrollLeft / zoom;
-      const sy = el.scrollTop / zoom;
-      const vh = el.clientHeight / zoom;
+      const svgEl = svgRef.current;
+      if ((!yEl && !xEl) || !svgEl) return;
+      // Use bounding rects to get exact SVG-space offset of the visible viewport,
+      // accounting for container padding and zoom scaling. This avoids jitter and
+      // misalignment when the user scrolls vertically/horizontally.
+      const scrollRect = el.getBoundingClientRect();
+      const svgRect = svgEl.getBoundingClientRect();
+      // Top-left of the visible area, expressed in SVG coordinates:
+      const visibleLeftSvg = Math.max(0, (scrollRect.left - svgRect.left) / zoom);
+      const visibleTopSvg = Math.max(0, (scrollRect.top - svgRect.top) / zoom);
+      const visibleHeightSvg = scrollRect.height / zoom;
       const { xAxisY: ax, HEIGHT: H } = layoutRef.current;
-      if (yEl) yEl.setAttribute('transform', `translate(${sx},0)`);
+      if (yEl) yEl.setAttribute('transform', `translate(${visibleLeftSvg},0)`);
       if (xEl) {
-        const desiredY = sy + vh - 56;
+        const desiredY = visibleTopSvg + visibleHeightSvg - 56;
         const offset = desiredY - ax;
         const clamped = Math.max(0, Math.min(offset, H - ax - 56));
         xEl.setAttribute('transform', `translate(0,${clamped})`);
