@@ -445,8 +445,49 @@ export function LOBChart() {
 
   const requestEdit = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (drag && drag.moved) return; // suppress edit after a drag
     window.dispatchEvent(new CustomEvent('lob-edit-activity', { detail: { id } }));
   };
+
+  const pxPerWorkday = plotW / Math.max(maxWorkday, 1);
+
+  const startDrag = (activityId: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDrag({ activityId, startClientX: e.clientX, pxPerWorkday, lastDelta: 0, moved: false });
+  };
+
+  useEffect(() => {
+    if (!drag) return;
+    const onMove = (ev: MouseEvent) => {
+      const dxPx = (ev.clientX - drag.startClientX) / zoom;
+      const delta = Math.round(dxPx / drag.pxPerWorkday);
+      if (delta !== drag.lastDelta) {
+        setDrag(d => d ? { ...d, lastDelta: delta, moved: d.moved || delta !== 0 } : d);
+      }
+    };
+    const onUp = () => {
+      setDrag(curr => {
+        if (curr && curr.lastDelta !== 0) {
+          const a = project.activities.find(x => x.id === curr.activityId);
+          if (a) {
+            const updated: Activity = { ...a, startDate: shiftWorkdays(a.startDate, curr.lastDelta) };
+            if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, curr.lastDelta);
+            updateActivity(updated);
+          }
+        }
+        return null;
+      });
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [drag, project.activities, updateActivity, zoom]);
+
+  const dragOffsetPx = (id: string) => (drag && drag.activityId === id ? drag.lastDelta * pxPerWorkday : 0);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
