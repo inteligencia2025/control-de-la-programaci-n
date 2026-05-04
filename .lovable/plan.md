@@ -1,40 +1,33 @@
+# Corregir falsa interferencia en el último piso del gráfico LOB
+
 ## Problema
-
-Al arrastrar una actividad (ej. mortero) en el gráfico LOB ocurren dos cosas indeseadas:
-
-1. **La actividad "desaparece"**: aunque guardamos un nuevo `startDate`, la función `getEffectiveStartDate` recalcula su posición a partir de su **predecesora** (la empuja fuera del rango visible o la regresa a su lugar original).
-2. **Arrastra a las demás**: el código actual también desplaza todas las actividades posteriores (cascada), cuando el usuario quiere mover **solo una**.
+En `getActivityLine` (`src/components/LOBChart.tsx`, líneas 31‑50) el bucle usa `totalWorkdays = smartCeil(totalUnits / effectiveRate)` y luego clampa con `Math.min/Math.max`. Cuando los pisos son divisibles exactamente (ej. 12 pisos a 1 u/día) o cuando el redondeo agrega un día extra, se inserta un punto adicional en `(startIndex + totalWorkdays, unitEnd)` que ya está en el tope. Esto crea un **segmento horizontal fantasma** en el último piso que cruza la línea de la actividad sucesora y dispara una "interferencia" falsa.
 
 ## Solución
+Reemplazar el bucle de dibujo para que la línea termine exactamente cuando se alcanza `unitEnd`, sin colas horizontales.
 
-En `src/components/LOBChart.tsx`, dentro del handler `onUp` del drag:
+### Cambio en `src/components/LOBChart.tsx` (líneas 43‑48)
 
-1. **Mover únicamente la actividad arrastrada** (eliminar el filtro/loop que recorre todas las actividades posteriores).
-2. **Romper el vínculo de predecesora** de esa actividad al moverla manualmente: poner `predecessorId: undefined` y `bufferDays: 0`, `bufferUnits: 0`. Así su posición manual queda fija y no es recalculada por el motor LOB. Las demás actividades conservan su posición.
-3. Mantener el shift en `startDate` (y `endDate` si existe, para cubierta) usando `shiftWorkdays` con el delta del drag.
-
-### Cambio puntual
-
-```ts
-// onUp – reemplazar el bloque del for...toShift por:
-const updated: Activity = {
-  ...a,
-  startDate: shiftWorkdays(a.startDate, curr.lastDelta),
-  predecessorId: undefined,
-  bufferDays: 0,
-  bufferUnits: 0,
-};
-if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, curr.lastDelta);
-updateActivity(updated);
+```tsx
+points.push({ workdayIndex: startIndex, unit: actualUnitStart });
+const dir = activity.unitEnd > actualUnitStart ? 1 : -1;
+// Workdays fraccionarios exactos para cubrir todas las unidades (sin smartCeil al final).
+const exactWorkdays = totalUnits / effectiveRate;
+for (let i = 1; i <= Math.floor(exactWorkdays); i++) {
+  const unit = actualUnitStart + dir * effectiveRate * i;
+  const clampedUnit = dir > 0 ? Math.min(unit, activity.unitEnd) : Math.max(unit, activity.unitEnd);
+  points.push({ workdayIndex: startIndex + i, unit: clampedUnit });
+  if (clampedUnit === activity.unitEnd) break; // detener al llegar al tope
+}
+// Si quedó remanente fraccionario, cerrar exactamente en (workday fraccionario, unitEnd).
+const last = points[points.length - 1];
+if (last.unit !== activity.unitEnd) {
+  points.push({ workdayIndex: startIndex + exactWorkdays, unit: activity.unitEnd });
+}
 ```
 
-## Resultado
-
-- Mover una actividad la deja exactamente donde el usuario la suelta.
-- Su predecesora se desvincula automáticamente (queda como actividad independiente con la nueva fecha de inicio).
-- Las demás actividades no se desplazan.
-- La edición sigue disponible vía clic (el flag `moved` ya impide el clic accidental al final del drag).
-
-## Nota
-
-Si en el futuro el usuario quiere reasignar otra predecesora, lo puede hacer desde el formulario de edición del panel LOB.
+## Resultado esperado
+- La línea de cada actividad termina precisamente en su último piso, sin tramo horizontal residual.
+- Desaparecen las marcas de "Interferencia" falsas en el piso 12 (o el último piso de cualquier configuración) entre actividades consecutivas.
+- Las interferencias reales (cruces verdaderos por diferencia de ritmos) se siguen detectando normalmente.
+- No se modifica la lógica de fechas ni `schedulingUtils` — el cambio es puramente visual/geométrico en la generación de puntos de la línea.
