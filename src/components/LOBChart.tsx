@@ -132,7 +132,7 @@ export function LOBChart() {
   const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
   const [viewport, setViewport] = useState({ w: 0, h: 0 });
   const rafRef = useRef<number | null>(null);
-  const lastScrollRef = useRef({ x: 0, y: 0, w: 0, h: 0 });
+  const layoutRef = useRef({ xAxisY: 0, HEIGHT: 0 });
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
   const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares'), [enabledActivities]);
