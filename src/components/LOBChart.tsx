@@ -1,7 +1,22 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { Activity, getUnitLabel, getCubiertaUnits } from '@/types/project';
 import { addDays, isWeekend, format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { safeParse } from '@/utils/schedulingUtils';
+
+/** Shift a YYYY-MM-DD date by N workdays (positive or negative), landing on a workday. */
+function shiftWorkdays(dateStr: string, n: number): string {
+  let cur = safeParse(dateStr);
+  if (n > 0) {
+    let count = 0;
+    while (count < n) { cur = addDays(cur, 1); if (!isWeekend(cur)) count++; }
+  } else if (n < 0) {
+    let count = 0;
+    while (count < -n) { cur = addDays(cur, -1); if (!isWeekend(cur)) count++; }
+  }
+  while (isWeekend(cur)) cur = addDays(cur, 1);
+  return format(cur, 'yyyy-MM-dd');
+}
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Camera, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
