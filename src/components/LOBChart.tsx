@@ -625,13 +625,7 @@ export function LOBChart() {
               );
             })()}
             {/* X axis — sticky to bottom of viewport on vertical scroll */}
-            <g ref={xAxisRef} transform={`translate(0, ${(() => {
-              if (!viewport.h) return 0;
-              const desiredY = scrollOffset.y + viewport.h - 56;
-              const offset = desiredY - xAxisY;
-              // Don't push above original position or below chart bottom
-              return Math.max(0, Math.min(offset, HEIGHT - xAxisY - 56));
-            })()})`}>
+            <g ref={xAxisRef}>
               <rect x={0} y={xAxisY - 2} width={WIDTH} height={56} fill="hsl(var(--card))" opacity={0.95} />
               <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={xAxisY} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
               {workdays.map((wd, i) => (
