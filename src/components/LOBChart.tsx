@@ -554,7 +554,7 @@ export function LOBChart() {
               <line key={`h-${u}`} x1={PADDING.left} x2={WIDTH - PADDING.right} y1={scaleY(u)} y2={scaleY(u)} stroke="hsl(var(--border))" strokeWidth={0.5} />
             ))}
             {/* Y axis labels — sticky horizontally */}
-            <g ref={yAxisRef} transform={`translate(${scrollOffset.x},0)`}>
+            <g ref={yAxisRef}>
               <rect x={0} y={0} width={PADDING.left - 4} height={HEIGHT} fill="hsl(var(--card))" />
               {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => {
                 const customLabel = project.unitLabels?.[String(u)];
