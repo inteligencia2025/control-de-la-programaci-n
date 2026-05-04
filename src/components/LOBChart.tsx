@@ -41,10 +41,19 @@ function getActivityLine(activity: Activity, projectStart: Date, activities: Act
   while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
   while (isWeekend(start)) { start = addDays(start, 1); startIndex++; }
   points.push({ workdayIndex: startIndex, unit: actualUnitStart });
-  for (let i = 1; i <= totalWorkdays; i++) {
-    const unit = actualUnitStart + (activity.unitEnd > actualUnitStart ? 1 : -1) * effectiveRate * i;
-    const clampedUnit = activity.unitEnd > actualUnitStart ? Math.min(unit, activity.unitEnd) : Math.max(unit, activity.unitEnd);
+  const dir = activity.unitEnd > actualUnitStart ? 1 : -1;
+  // Workdays fraccionarios exactos para cubrir todas las unidades (sin smartCeil al final).
+  // Evita el segmento horizontal fantasma en el último piso que generaba falsas interferencias.
+  const exactWorkdays = totalUnits / effectiveRate;
+  for (let i = 1; i <= Math.floor(exactWorkdays); i++) {
+    const unit = actualUnitStart + dir * effectiveRate * i;
+    const clampedUnit = dir > 0 ? Math.min(unit, activity.unitEnd) : Math.max(unit, activity.unitEnd);
     points.push({ workdayIndex: startIndex + i, unit: clampedUnit });
+    if (clampedUnit === activity.unitEnd) break;
+  }
+  const last = points[points.length - 1];
+  if (last.unit !== activity.unitEnd) {
+    points.push({ workdayIndex: startIndex + exactWorkdays, unit: activity.unitEnd });
   }
   return points;
 }
