@@ -120,6 +120,9 @@ export function LOBChart() {
   const { project, updateActivity } = useProject();
   const chartRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const yAxisRef = useRef<SVGGElement>(null);
+  const xAxisRef = useRef<SVGGElement>(null);
   const [zoom, setZoom] = useState(1);
   const [clickTooltip, setClickTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
