@@ -129,22 +129,8 @@ export function LOBChart() {
   const [hoverUnit, setHoverUnit] = useState<number | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
   const [drag, setDrag] = useState<{ activityId: string; startClientX: number; pxPerWorkday: number; lastDelta: number; moved: boolean } | null>(null);
-  const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
-  const [viewport, setViewport] = useState({ w: 0, h: 0 });
-
-  useEffect(() => {
-    const el = scrollRef.current;
-    if (!el) return;
-    const onScroll = () => {
-      setScrollOffset({ x: el.scrollLeft / zoom, y: el.scrollTop / zoom });
-      setViewport({ w: el.clientWidth / zoom, h: el.clientHeight / zoom });
-    };
-    el.addEventListener('scroll', onScroll, { passive: true });
-    const ro = new ResizeObserver(onScroll);
-    ro.observe(el);
-    onScroll();
-    return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
-  }, [zoom]);
+  const layoutRef = useRef({ xAxisY: 0, HEIGHT: 0 });
+  const rafRef = useRef<number | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
   const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares'), [enabledActivities]);
@@ -471,6 +457,47 @@ export function LOBChart() {
   const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
+  // Keep layout values in a ref so the scroll handler reads fresh values without re-binding.
+  layoutRef.current = { xAxisY, HEIGHT };
+
+  // Smoothly reposition sticky axes on scroll/resize using rAF + direct DOM writes
+  // (no React re-renders -> no jitter while scrolling).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const apply = () => {
+      rafRef.current = null;
+      const yEl = yAxisRef.current;
+      const xEl = xAxisRef.current;
+      if (!yEl && !xEl) return;
+      const sx = el.scrollLeft / zoom;
+      const sy = el.scrollTop / zoom;
+      const vh = el.clientHeight / zoom;
+      const { xAxisY: ax, HEIGHT: H } = layoutRef.current;
+      if (yEl) yEl.setAttribute('transform', `translate(${sx},0)`);
+      if (xEl) {
+        const desiredY = sy + vh - 56;
+        const offset = desiredY - ax;
+        const clamped = Math.max(0, Math.min(offset, H - ax - 56));
+        xEl.setAttribute('transform', `translate(0,${clamped})`);
+      }
+    };
+    const schedule = () => {
+      if (rafRef.current != null) return;
+      rafRef.current = requestAnimationFrame(apply);
+    };
+    el.addEventListener('scroll', schedule, { passive: true });
+    const ro = new ResizeObserver(schedule);
+    ro.observe(el);
+    apply();
+    return () => {
+      el.removeEventListener('scroll', schedule);
+      ro.disconnect();
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [zoom, xAxisY, HEIGHT]);
+
   const requestEdit = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     if (drag && drag.moved) return; // suppress edit after a drag
@@ -568,7 +595,7 @@ export function LOBChart() {
               <line key={`h-${u}`} x1={PADDING.left} x2={WIDTH - PADDING.right} y1={scaleY(u)} y2={scaleY(u)} stroke="hsl(var(--border))" strokeWidth={0.5} />
             ))}
             {/* Y axis labels — sticky horizontally */}
-            <g ref={yAxisRef} transform={`translate(${scrollOffset.x},0)`}>
+            <g ref={yAxisRef}>
               <rect x={0} y={0} width={PADDING.left - 4} height={HEIGHT} fill="hsl(var(--card))" />
               {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => {
                 const customLabel = project.unitLabels?.[String(u)];
@@ -639,13 +666,7 @@ export function LOBChart() {
               );
             })()}
             {/* X axis — sticky to bottom of viewport on vertical scroll */}
-            <g ref={xAxisRef} transform={`translate(0, ${(() => {
-              if (!viewport.h) return 0;
-              const desiredY = scrollOffset.y + viewport.h - 56;
-              const offset = desiredY - xAxisY;
-              // Don't push above original position or below chart bottom
-              return Math.max(0, Math.min(offset, HEIGHT - xAxisY - 56));
-            })()})`}>
+            <g ref={xAxisRef}>
               <rect x={0} y={xAxisY - 2} width={WIDTH} height={56} fill="hsl(var(--card))" opacity={0.95} />
               <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={xAxisY} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
               {workdays.map((wd, i) => (
