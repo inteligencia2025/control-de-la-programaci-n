@@ -457,6 +457,47 @@ export function LOBChart() {
   const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
+  // Keep layout values in a ref so the scroll handler reads fresh values without re-binding.
+  layoutRef.current = { xAxisY, HEIGHT };
+
+  // Smoothly reposition sticky axes on scroll/resize using rAF + direct DOM writes
+  // (no React re-renders -> no jitter while scrolling).
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const apply = () => {
+      rafRef.current = null;
+      const yEl = yAxisRef.current;
+      const xEl = xAxisRef.current;
+      if (!yEl && !xEl) return;
+      const sx = el.scrollLeft / zoom;
+      const sy = el.scrollTop / zoom;
+      const vh = el.clientHeight / zoom;
+      const { xAxisY: ax, HEIGHT: H } = layoutRef.current;
+      if (yEl) yEl.setAttribute('transform', `translate(${sx},0)`);
+      if (xEl) {
+        const desiredY = sy + vh - 56;
+        const offset = desiredY - ax;
+        const clamped = Math.max(0, Math.min(offset, H - ax - 56));
+        xEl.setAttribute('transform', `translate(0,${clamped})`);
+      }
+    };
+    const schedule = () => {
+      if (rafRef.current != null) return;
+      rafRef.current = requestAnimationFrame(apply);
+    };
+    el.addEventListener('scroll', schedule, { passive: true });
+    const ro = new ResizeObserver(schedule);
+    ro.observe(el);
+    apply();
+    return () => {
+      el.removeEventListener('scroll', schedule);
+      ro.disconnect();
+      if (rafRef.current != null) cancelAnimationFrame(rafRef.current);
+      rafRef.current = null;
+    };
+  }, [zoom, xAxisY, HEIGHT]);
+
   const requestEdit = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
     if (drag && drag.moved) return; // suppress edit after a drag
