@@ -427,6 +427,11 @@ export function LOBChart() {
   const legendY = ganttAreaY + GANTT_AREA_H + 10;
   const legendItemW = (WIDTH - PADDING.left - PADDING.right) / LEGEND_ITEMS_PER_ROW;
 
+  const requestEdit = (id: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    window.dispatchEvent(new CustomEvent('lob-edit-activity', { detail: { id } }));
+  };
+
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border gap-2">
@@ -506,6 +511,7 @@ export function LOBChart() {
               <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
+            {/* Helper: dispatch edit event on activity click */}
             {/* Preliminares — each activity is its own Y-axis row, ordered top-down
                 (MOVIMIENTO DE TIERRAS at the top, farthest from X axis). The activity
                 name appears as the Y-axis label, similar to a unit row. */}
@@ -521,7 +527,7 @@ export function LOBChart() {
                   const rawX2 = scaleX(Math.max(endIdx, startIdx));
                   const x2 = Math.max(rawX2, x1 + 24);
                   return (
-                    <g key={`prelim-${activity.id}`}>
+                    <g key={`prelim-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
                       {/* Row background band */}
                       <rect x={PADDING.left} y={barY - 10} width={plotW} height={20}
                         fill={activity.color} opacity={0.08} />
@@ -553,7 +559,7 @@ export function LOBChart() {
               const x2 = Math.max(rawX2, x1 + 24);
               const y = scaleY(rowUnit);
               return (
-                <g key={`cub-${activity.id}`}>
+                <g key={`cub-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
                   {/* Background highlight band so the row stands out */}
                   <rect x={PADDING.left} y={y - 12} width={plotW} height={24}
                     fill={activity.color} opacity={0.06} />
@@ -576,7 +582,7 @@ export function LOBChart() {
               const direction = activity.unitEnd > actualUnitStart ? 1 : -1;
               const startWd = points.length > 0 ? points[0].workdayIndex : 0;
               return (
-              <g key={activity.id}>
+              <g key={activity.id} onClick={requestEdit(activity.id)} className="cursor-pointer">
                 <polyline points={points.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
                   fill="none" stroke={activity.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                 {points.map((p, i) => (
@@ -621,7 +627,7 @@ export function LOBChart() {
                   const barX = scaleX(startIdx);
                   const barW = scaleX(endIdx) - scaleX(startIdx);
                   return (
-                    <g key={`gantt-${activity.id}`}>
+                    <g key={`gantt-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
                       <rect x={barX} y={barY} width={Math.max(barW, 4)} height={20} rx={4}
                         fill={activity.color} opacity={0.85} />
                       <text x={barX + 5} y={barY + 14} className="text-[10px] font-medium" fill="white" dominantBaseline="middle">

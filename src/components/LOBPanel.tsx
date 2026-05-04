@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback } from 'react';
+import { useState, useMemo, useRef, useCallback, useEffect } from 'react';
 import { Plus, Trash2, Edit2, Home, Building2, GripVertical, Tag, ChevronDown, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -198,6 +198,20 @@ export function LOBPanel() {
       setEditId(a.id);
     });
   };
+
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (!id) return;
+      const a = project.activities.find(x => x.id === id);
+      if (a) {
+        handleEdit(a);
+        setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      }
+    };
+    window.addEventListener('lob-edit-activity', handler);
+    return () => window.removeEventListener('lob-edit-activity', handler);
+  }, [project.activities]);
 
   const handleLoadPreloaded = () => {
     const existingNames = new Set(project.activities.map(a => a.name));
