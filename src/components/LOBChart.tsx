@@ -312,6 +312,14 @@ export function LOBChart() {
       setHoverDay(null);
     }
 
+    // Track hovered unit (Y axis)
+    const unitVal = Math.round(maxUnit - ((my - lobTop) / plotH) * unitRange);
+    if (my >= lobTop && my <= lobTop + plotH && unitVal >= minUnit && unitVal <= maxUnit) {
+      setHoverUnit(unitVal);
+    } else {
+      setHoverUnit(null);
+    }
+
     // Find closest line segment
     let bestDist = Infinity;
     let bestName = '';
