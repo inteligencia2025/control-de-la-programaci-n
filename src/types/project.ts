@@ -176,8 +176,26 @@ export interface ProjectData {
 export const DEFAULT_COLORS = [
   '#1e3a5f', '#e69500', '#2d8a56', '#c0392b',
   '#2980b9', '#8e44ad', '#16a085', '#d35400',
-  '#7f8c8d', '#27ae60',
+  '#7f8c8d', '#27ae60', '#34495e', '#f39c12',
+  '#1abc9c', '#9b59b6', '#e74c3c', '#3498db',
+  '#f1c40f', '#2ecc71', '#e67e22', '#95a5a6',
+  '#0e6655', '#6c3483', '#922b21', '#1f618d',
+  '#9a7d0a', '#117a65', '#5b2c6f', '#a04000',
+  '#566573', '#196f3d', '#7d6608', '#4a235a',
+  '#0b5345', '#7b241c', '#1b4f72', '#6e2c00',
+  '#212f3c', '#145a32', '#78281f', '#4a1d4d',
+  '#1d3557', '#f4a261', '#2a9d8f', '#e76f51',
+  '#264653', '#bc6c25', '#dda15e', '#606c38',
+  '#283618', '#fefae0', '#a98467', '#6f1d1b',
 ];
+
+/** Pick the next color avoiding ones already used by existing activities */
+export function pickNextColor(usedColors: string[]): string {
+  for (const c of DEFAULT_COLORS) {
+    if (!usedColors.includes(c)) return c;
+  }
+  return DEFAULT_COLORS[usedColors.length % DEFAULT_COLORS.length];
+}
 
 /** When hasCubierta is enabled, three extra unit slots are appended on top of the building */
 export function getCubiertaUnits(buildingConfig: BuildingConfig): { cubierta: number; muros: number; ascensores: number } | null {
