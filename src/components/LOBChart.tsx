@@ -117,13 +117,14 @@ function findIntersections(lines: { activity: Activity; points: LinePoint[] }[])
 }
 
 export function LOBChart() {
-  const { project } = useProject();
+  const { project, updateActivity } = useProject();
   const chartRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [zoom, setZoom] = useState(1);
   const [clickTooltip, setClickTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
+  const [drag, setDrag] = useState<{ activityId: string; startClientX: number; pxPerWorkday: number; lastDelta: number; moved: boolean } | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
   const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares'), [enabledActivities]);
