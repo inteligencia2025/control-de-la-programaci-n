@@ -199,6 +199,20 @@ export function LOBPanel() {
     });
   };
 
+  useEffect(() => {
+    const handler = (e: Event) => {
+      const id = (e as CustomEvent<{ id: string }>).detail?.id;
+      if (!id) return;
+      const a = project.activities.find(x => x.id === id);
+      if (a) {
+        handleEdit(a);
+        setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 50);
+      }
+    };
+    window.addEventListener('lob-edit-activity', handler);
+    return () => window.removeEventListener('lob-edit-activity', handler);
+  }, [project.activities]);
+
   const handleLoadPreloaded = () => {
     const existingNames = new Set(project.activities.map(a => a.name));
     const totalUnits = project.projectType === 'edificio'
