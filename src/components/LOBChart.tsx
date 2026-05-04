@@ -638,22 +638,31 @@ export function LOBChart() {
                 </g>
               );
             })()}
-            {/* X axis — placed AFTER preliminares band */}
-            {workdays.map((wd, i) => (
-              <g key={`x-${i}`}>
-                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                <text x={scaleX(i)} y={xAxisY + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-                  {wd.dayName.charAt(0).toUpperCase()}
-                </text>
-                <text x={scaleX(i)} y={xAxisY + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
-                  {wd.label}
-                </text>
-              </g>
-            ))}
-            {/* Month labels */}
-            {months.map((m, i) => (
-              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
-            ))}
+            {/* X axis — sticky to bottom of viewport on vertical scroll */}
+            <g ref={xAxisRef} transform={`translate(0, ${(() => {
+              if (!viewport.h) return 0;
+              const desiredY = scrollOffset.y + viewport.h - 56;
+              const offset = desiredY - xAxisY;
+              // Don't push above original position or below chart bottom
+              return Math.max(0, Math.min(offset, HEIGHT - xAxisY - 56));
+            })()})`}>
+              <rect x={0} y={xAxisY - 2} width={WIDTH} height={56} fill="hsl(var(--card))" opacity={0.95} />
+              <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={xAxisY} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
+              {workdays.map((wd, i) => (
+                <g key={`x-${i}`}>
+                  <line x1={scaleX(i)} x2={scaleX(i)} y1={xAxisY - 4} y2={xAxisY} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                  <text x={scaleX(i)} y={xAxisY + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                    {wd.dayName.charAt(0).toUpperCase()}
+                  </text>
+                  <text x={scaleX(i)} y={xAxisY + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
+                    {wd.label}
+                  </text>
+                </g>
+              ))}
+              {months.map((m, i) => (
+                <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
+              ))}
+            </g>
 
             {/* Helper: dispatch edit event on activity click */}
             {/* Preliminares — each activity is its own Y-axis row, ordered top-down
