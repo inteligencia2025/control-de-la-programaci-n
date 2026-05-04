@@ -529,7 +529,7 @@ export function LOBChart() {
           </Button>
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-4 relative" onClick={() => setClickTooltip(null)}>
+      <div ref={scrollRef} className="flex-1 overflow-auto p-4 relative" onClick={() => setClickTooltip(null)}>
         <div ref={chartRef} className="bg-card rounded-lg border border-border p-2 inline-block origin-top-left" style={{ transform: `scale(${zoom})` }}>
           <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="select-none"
             onMouseMove={handleMouseMove}
