@@ -506,6 +506,7 @@ export function LOBChart() {
               <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
             ))}
 
+            {/* Helper: dispatch edit event on activity click */}
             {/* Preliminares — each activity is its own Y-axis row, ordered top-down
                 (MOVIMIENTO DE TIERRAS at the top, farthest from X axis). The activity
                 name appears as the Y-axis label, similar to a unit row. */}
