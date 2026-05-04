@@ -120,12 +120,31 @@ export function LOBChart() {
   const { project, updateActivity } = useProject();
   const chartRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const yAxisRef = useRef<SVGGElement>(null);
+  const xAxisRef = useRef<SVGGElement>(null);
   const [zoom, setZoom] = useState(1);
   const [clickTooltip, setClickTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverUnit, setHoverUnit] = useState<number | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
   const [drag, setDrag] = useState<{ activityId: string; startClientX: number; pxPerWorkday: number; lastDelta: number; moved: boolean } | null>(null);
+  const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
+  const [viewport, setViewport] = useState({ w: 0, h: 0 });
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      setScrollOffset({ x: el.scrollLeft / zoom, y: el.scrollTop / zoom });
+      setViewport({ w: el.clientWidth / zoom, h: el.clientHeight / zoom });
+    };
+    el.addEventListener('scroll', onScroll, { passive: true });
+    const ro = new ResizeObserver(onScroll);
+    ro.observe(el);
+    onScroll();
+    return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
+  }, [zoom]);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
   const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares'), [enabledActivities]);
@@ -526,7 +545,7 @@ export function LOBChart() {
           </Button>
         </div>
       </div>
-      <div className="flex-1 overflow-auto p-4 relative" onClick={() => setClickTooltip(null)}>
+      <div ref={scrollRef} className="flex-1 overflow-auto p-4 relative" onClick={() => setClickTooltip(null)}>
         <div ref={chartRef} className="bg-card rounded-lg border border-border p-2 inline-block origin-top-left" style={{ transform: `scale(${zoom})` }}>
           <svg ref={svgRef} width={WIDTH} height={HEIGHT} className="select-none"
             onMouseMove={handleMouseMove}
@@ -548,21 +567,35 @@ export function LOBChart() {
             {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => (
               <line key={`h-${u}`} x1={PADDING.left} x2={WIDTH - PADDING.right} y1={scaleY(u)} y2={scaleY(u)} stroke="hsl(var(--border))" strokeWidth={0.5} />
             ))}
-            {/* Y axis labels — BIGGER */}
-            {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => {
-              const customLabel = project.unitLabels?.[String(u)];
-              const label = customLabel || getUnitLabel(u, project.projectType, project.buildingConfig);
-              return (
-                <g key={`yl-${u}`}>
-                  <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle" className="fill-foreground text-[13px] font-semibold">
-                    {label}
-                  </text>
-                  {u % 2 === 0 && u < maxUnit && (
-                    <rect x={PADDING.left} y={scaleY(u + 1)} width={plotW} height={UNIT_H} fill="hsl(var(--muted))" opacity={0.12} />
-                  )}
-                </g>
-              );
-            })}
+            {/* Y axis labels — sticky horizontally */}
+            <g ref={yAxisRef} transform={`translate(${scrollOffset.x},0)`}>
+              <rect x={0} y={0} width={PADDING.left - 4} height={HEIGHT} fill="hsl(var(--card))" />
+              {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => {
+                const customLabel = project.unitLabels?.[String(u)];
+                const label = customLabel || getUnitLabel(u, project.projectType, project.buildingConfig);
+                return (
+                  <g key={`yl-${u}`}>
+                    <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle" className="fill-foreground text-[13px] font-semibold">
+                      {label}
+                    </text>
+                  </g>
+                );
+              })}
+              {/* Y axis line */}
+              <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
+              {/* Y axis title */}
+              <text x={PADDING.left / 2} y={lobPlotTop + plotH / 2} textAnchor="middle"
+                transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${lobPlotTop + plotH / 2})`}
+                className="fill-foreground text-[13px] font-semibold">
+                {project.projectType === 'casas' ? 'Unidades' : 'Pisos / Apartamentos'}
+              </text>
+            </g>
+            {/* Alternating row shading (stays in plot area, not sticky) */}
+            {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => (
+              u % 2 === 0 && u < maxUnit ? (
+                <rect key={`yr-${u}`} x={PADDING.left} y={scaleY(u + 1)} width={plotW} height={UNIT_H} fill="hsl(var(--muted))" opacity={0.12} />
+              ) : null
+            ))}
             {/* Vertical cursor line for hovered day */}
             {hoverDay !== null && (
               <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={lobPlotTop} y2={xAxisY}
@@ -605,22 +638,31 @@ export function LOBChart() {
                 </g>
               );
             })()}
-            {/* X axis — placed AFTER preliminares band */}
-            {workdays.map((wd, i) => (
-              <g key={`x-${i}`}>
-                <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                <text x={scaleX(i)} y={xAxisY + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
-                  {wd.dayName.charAt(0).toUpperCase()}
-                </text>
-                <text x={scaleX(i)} y={xAxisY + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
-                  {wd.label}
-                </text>
-              </g>
-            ))}
-            {/* Month labels */}
-            {months.map((m, i) => (
-              <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
-            ))}
+            {/* X axis — sticky to bottom of viewport on vertical scroll */}
+            <g ref={xAxisRef} transform={`translate(0, ${(() => {
+              if (!viewport.h) return 0;
+              const desiredY = scrollOffset.y + viewport.h - 56;
+              const offset = desiredY - xAxisY;
+              // Don't push above original position or below chart bottom
+              return Math.max(0, Math.min(offset, HEIGHT - xAxisY - 56));
+            })()})`}>
+              <rect x={0} y={xAxisY - 2} width={WIDTH} height={56} fill="hsl(var(--card))" opacity={0.95} />
+              <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={xAxisY} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
+              {workdays.map((wd, i) => (
+                <g key={`x-${i}`}>
+                  <line x1={scaleX(i)} x2={scaleX(i)} y1={xAxisY - 4} y2={xAxisY} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                  <text x={scaleX(i)} y={xAxisY + 14} textAnchor="middle" className="fill-muted-foreground text-[11px]">
+                    {wd.dayName.charAt(0).toUpperCase()}
+                  </text>
+                  <text x={scaleX(i)} y={xAxisY + 28} textAnchor="middle" className="fill-foreground text-[11px] font-medium">
+                    {wd.label}
+                  </text>
+                </g>
+              ))}
+              {months.map((m, i) => (
+                <text key={`m-${i}`} x={scaleX((m.startIdx + m.endIdx) / 2)} y={xAxisY + 46} textAnchor="middle" className="fill-foreground text-[12px] font-semibold">{m.month}</text>
+              ))}
+            </g>
 
             {/* Helper: dispatch edit event on activity click */}
             {/* Preliminares — each activity is its own Y-axis row, ordered top-down
@@ -749,21 +791,11 @@ export function LOBChart() {
                 })}
               </g>
             )}
-            {/* Axis lines */}
-            {/* Axis lines — Y axis extends down through the preliminares band; X axis baseline sits below the band */}
-            <line x1={PADDING.left} x2={PADDING.left} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
-            <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={xAxisY} y2={xAxisY} stroke="hsl(var(--foreground))" strokeWidth={1} />
             {/* Subtle separator between LOB units and preliminares band */}
             {preliminaresLines.length > 0 && (
               <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={lobPlotTop + plotH} y2={lobPlotTop + plotH}
                 stroke="hsl(var(--border))" strokeWidth={1} strokeDasharray="4 3" opacity={0.7} />
             )}
-            {/* Axis titles */}
-            <text x={PADDING.left / 2} y={lobPlotTop + plotH / 2} textAnchor="middle"
-              transform={`rotate(-90, ${PADDING.left / 2 - 10}, ${lobPlotTop + plotH / 2})`}
-              className="fill-foreground text-[13px] font-semibold">
-              {project.projectType === 'casas' ? 'Unidades' : 'Pisos / Apartamentos'}
-            </text>
             <text x={WIDTH / 2} y={xAxisY + 62} textAnchor="middle" className="fill-foreground text-[13px] font-semibold">
               Tiempo (Días laborales L-V)
             </text>
