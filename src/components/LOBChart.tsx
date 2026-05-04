@@ -130,16 +130,20 @@ export function LOBChart() {
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
   const [drag, setDrag] = useState<{ activityId: string; startClientX: number; pxPerWorkday: number; lastDelta: number; moved: boolean } | null>(null);
   const [scrollOffset, setScrollOffset] = useState({ x: 0, y: 0 });
+  const [viewport, setViewport] = useState({ w: 0, h: 0 });
 
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
     const onScroll = () => {
       setScrollOffset({ x: el.scrollLeft / zoom, y: el.scrollTop / zoom });
+      setViewport({ w: el.clientWidth / zoom, h: el.clientHeight / zoom });
     };
     el.addEventListener('scroll', onScroll, { passive: true });
+    const ro = new ResizeObserver(onScroll);
+    ro.observe(el);
     onScroll();
-    return () => el.removeEventListener('scroll', onScroll);
+    return () => { el.removeEventListener('scroll', onScroll); ro.disconnect(); };
   }, [zoom]);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
