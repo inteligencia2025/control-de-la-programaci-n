@@ -639,7 +639,7 @@ export function LOBChart() {
               const direction = activity.unitEnd > actualUnitStart ? 1 : -1;
               const startWd = points.length > 0 ? points[0].workdayIndex : 0;
               return (
-              <g key={activity.id} onClick={requestEdit(activity.id)} className="cursor-pointer">
+              <g key={activity.id} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
                 <polyline points={points.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
                   fill="none" stroke={activity.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                 {points.map((p, i) => (
