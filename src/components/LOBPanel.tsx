@@ -268,7 +268,7 @@ export function LOBPanel() {
           : (i === 0 && project.activities.length === 0 ? projectStartDate : getNextWorkday(lastDate));
         const activity: Activity = {
           id, name: p.name, unitStart: 1, unitEnd: totalUnits, startDate, rate: 1,
-          color: getDefaultColor(project.activities.length + i), category: p.category,
+          color: pickNextColor([...project.activities.map(a => a.color), ...newActivities.map(a => a.color)]), category: p.category,
           bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
         };
         newActivities.push(activity);
