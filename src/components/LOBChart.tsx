@@ -1,7 +1,22 @@
-import { useMemo, useRef, useState, useCallback } from 'react';
+import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { Activity, getUnitLabel, getCubiertaUnits } from '@/types/project';
 import { addDays, isWeekend, format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { safeParse } from '@/utils/schedulingUtils';
+
+/** Shift a YYYY-MM-DD date by N workdays (positive or negative), landing on a workday. */
+function shiftWorkdays(dateStr: string, n: number): string {
+  let cur = safeParse(dateStr);
+  if (n > 0) {
+    let count = 0;
+    while (count < n) { cur = addDays(cur, 1); if (!isWeekend(cur)) count++; }
+  } else if (n < 0) {
+    let count = 0;
+    while (count < -n) { cur = addDays(cur, -1); if (!isWeekend(cur)) count++; }
+  }
+  while (isWeekend(cur)) cur = addDays(cur, 1);
+  return format(cur, 'yyyy-MM-dd');
+}
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
 import { Camera, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
@@ -102,13 +117,14 @@ function findIntersections(lines: { activity: Activity; points: LinePoint[] }[])
 }
 
 export function LOBChart() {
-  const { project } = useProject();
+  const { project, updateActivity } = useProject();
   const chartRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const [zoom, setZoom] = useState(1);
   const [clickTooltip, setClickTooltip] = useState<{ x: number; y: number; content: string } | null>(null);
   const [hoverDay, setHoverDay] = useState<number | null>(null);
   const [hoverTooltip, setHoverTooltip] = useState<{ x: number; y: number; name: string } | null>(null);
+  const [drag, setDrag] = useState<{ activityId: string; startClientX: number; pxPerWorkday: number; lastDelta: number; moved: boolean } | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
   const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares'), [enabledActivities]);
@@ -429,8 +445,49 @@ export function LOBChart() {
 
   const requestEdit = (id: string) => (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (drag && drag.moved) return; // suppress edit after a drag
     window.dispatchEvent(new CustomEvent('lob-edit-activity', { detail: { id } }));
   };
+
+  const pxPerWorkday = plotW / Math.max(maxWorkday, 1);
+
+  const startDrag = (activityId: string) => (e: React.MouseEvent) => {
+    e.stopPropagation();
+    e.preventDefault();
+    setDrag({ activityId, startClientX: e.clientX, pxPerWorkday, lastDelta: 0, moved: false });
+  };
+
+  useEffect(() => {
+    if (!drag) return;
+    const onMove = (ev: MouseEvent) => {
+      const dxPx = (ev.clientX - drag.startClientX) / zoom;
+      const delta = Math.round(dxPx / drag.pxPerWorkday);
+      if (delta !== drag.lastDelta) {
+        setDrag(d => d ? { ...d, lastDelta: delta, moved: d.moved || delta !== 0 } : d);
+      }
+    };
+    const onUp = () => {
+      setDrag(curr => {
+        if (curr && curr.lastDelta !== 0) {
+          const a = project.activities.find(x => x.id === curr.activityId);
+          if (a) {
+            const updated: Activity = { ...a, startDate: shiftWorkdays(a.startDate, curr.lastDelta) };
+            if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, curr.lastDelta);
+            updateActivity(updated);
+          }
+        }
+        return null;
+      });
+    };
+    window.addEventListener('mousemove', onMove);
+    window.addEventListener('mouseup', onUp);
+    return () => {
+      window.removeEventListener('mousemove', onMove);
+      window.removeEventListener('mouseup', onUp);
+    };
+  }, [drag, project.activities, updateActivity, zoom]);
+
+  const dragOffsetPx = (id: string) => (drag && drag.activityId === id ? drag.lastDelta * pxPerWorkday : 0);
 
   return (
     <div className="flex-1 flex flex-col overflow-hidden">
@@ -527,7 +584,7 @@ export function LOBChart() {
                   const rawX2 = scaleX(Math.max(endIdx, startIdx));
                   const x2 = Math.max(rawX2, x1 + 24);
                   return (
-                    <g key={`prelim-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
+                    <g key={`prelim-${activity.id}`} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
                       {/* Row background band */}
                       <rect x={PADDING.left} y={barY - 10} width={plotW} height={20}
                         fill={activity.color} opacity={0.08} />
@@ -559,7 +616,7 @@ export function LOBChart() {
               const x2 = Math.max(rawX2, x1 + 24);
               const y = scaleY(rowUnit);
               return (
-                <g key={`cub-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
+                <g key={`cub-${activity.id}`} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
                   {/* Background highlight band so the row stands out */}
                   <rect x={PADDING.left} y={y - 12} width={plotW} height={24}
                     fill={activity.color} opacity={0.06} />
@@ -582,7 +639,7 @@ export function LOBChart() {
               const direction = activity.unitEnd > actualUnitStart ? 1 : -1;
               const startWd = points.length > 0 ? points[0].workdayIndex : 0;
               return (
-              <g key={activity.id} onClick={requestEdit(activity.id)} className="cursor-pointer">
+              <g key={activity.id} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
                 <polyline points={points.map(p => `${scaleX(p.workdayIndex)},${scaleY(p.unit)}`).join(' ')}
                   fill="none" stroke={activity.color} strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" />
                 {points.map((p, i) => (
@@ -627,7 +684,7 @@ export function LOBChart() {
                   const barX = scaleX(startIdx);
                   const barW = scaleX(endIdx) - scaleX(startIdx);
                   return (
-                    <g key={`gantt-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
+                    <g key={`gantt-${activity.id}`} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
                       <rect x={barX} y={barY} width={Math.max(barW, 4)} height={20} rx={4}
                         fill={activity.color} opacity={0.85} />
                       <text x={barX + 5} y={barY + 14} className="text-[10px] font-medium" fill="white" dominantBaseline="middle">
