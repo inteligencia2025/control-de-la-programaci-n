@@ -471,19 +471,17 @@ export function LOBChart() {
         if (curr && curr.lastDelta !== 0) {
           const a = project.activities.find(x => x.id === curr.activityId);
           if (a) {
-            const anchor = safeParse(a.startDate).getTime();
-            // Shift the dragged activity AND every activity that starts on/after it
-            // by the same workday delta, so "following" activities move together.
-            const toShift = project.activities.filter(x => {
-              if (x.id === a.id) return true;
-              const xs = safeParse(x.startDate).getTime();
-              return xs >= anchor;
-            });
-            for (const x of toShift) {
-              const updated: Activity = { ...x, startDate: shiftWorkdays(x.startDate, curr.lastDelta) };
-              if (x.endDate) updated.endDate = shiftWorkdays(x.endDate, curr.lastDelta);
-              updateActivity(updated);
-            }
+            // Move only the dragged activity. Break its predecessor link so the
+            // LOB engine doesn't recompute its position back to the predecessor.
+            const updated: Activity = {
+              ...a,
+              startDate: shiftWorkdays(a.startDate, curr.lastDelta),
+              predecessorId: undefined,
+              bufferDays: 0,
+              bufferUnits: 0,
+            };
+            if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, curr.lastDelta);
+            updateActivity(updated);
           }
         }
         return null;
