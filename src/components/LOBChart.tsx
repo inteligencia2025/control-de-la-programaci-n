@@ -569,6 +569,43 @@ export function LOBChart() {
                 stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
             )}
             {/* X axis — placed AFTER preliminares band */}
+            {/* Vertical cursor line for hovered day */}
+            {hoverDay !== null && (
+              <line x1={scaleX(hoverDay)} x2={scaleX(hoverDay)} y1={lobPlotTop} y2={xAxisY}
+                stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
+            )}
+            {/* Horizontal cursor line for hovered unit */}
+            {hoverUnit !== null && (
+              <line x1={PADDING.left} x2={WIDTH - PADDING.right} y1={scaleY(hoverUnit)} y2={scaleY(hoverUnit)}
+                stroke="hsl(var(--primary))" strokeWidth={1.5} opacity={0.6} strokeDasharray="4 2" />
+            )}
+            {/* Hovered date badge on X axis */}
+            {hoverDay !== null && workdays[hoverDay] && (
+              <g>
+                <rect x={scaleX(hoverDay) - 44} y={xAxisY + 32} width={88} height={18} rx={3}
+                  fill="hsl(var(--primary))" />
+                <text x={scaleX(hoverDay)} y={xAxisY + 44} textAnchor="middle"
+                  className="fill-primary-foreground text-[11px] font-semibold">
+                  {format(workdays[hoverDay].date, 'dd/MM/yyyy', { locale: es })}
+                </text>
+              </g>
+            )}
+            {/* Hovered unit badge on Y axis */}
+            {hoverUnit !== null && (() => {
+              const customLabel = project.unitLabels?.[String(hoverUnit)];
+              const lbl = customLabel || getUnitLabel(hoverUnit, project.projectType, project.buildingConfig);
+              return (
+                <g>
+                  <rect x={PADDING.left - 78} y={scaleY(hoverUnit) - 9} width={66} height={18} rx={3}
+                    fill="hsl(var(--primary))" />
+                  <text x={PADDING.left - 45} y={scaleY(hoverUnit) + 1} textAnchor="middle" dominantBaseline="middle"
+                    className="fill-primary-foreground text-[11px] font-semibold">
+                    {lbl}
+                  </text>
+                </g>
+              );
+            })()}
+            {/* X axis — placed AFTER preliminares band */}
             {workdays.map((wd, i) => (
               <g key={`x-${i}`}>
                 <line x1={scaleX(i)} x2={scaleX(i)} y1={lobPlotTop} y2={xAxisY} stroke="hsl(var(--border))" strokeWidth={0.3} />
