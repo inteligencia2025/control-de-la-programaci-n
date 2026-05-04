@@ -584,7 +584,7 @@ export function LOBChart() {
                   const rawX2 = scaleX(Math.max(endIdx, startIdx));
                   const x2 = Math.max(rawX2, x1 + 24);
                   return (
-                    <g key={`prelim-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
+                    <g key={`prelim-${activity.id}`} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
                       {/* Row background band */}
                       <rect x={PADDING.left} y={barY - 10} width={plotW} height={20}
                         fill={activity.color} opacity={0.08} />
