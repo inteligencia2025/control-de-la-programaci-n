@@ -787,14 +787,33 @@ export function LOBChart() {
               </g>
               );
             })}
-            {/* Intersections */}
-            {intersections.map((inter, i) => (
-              <g key={`int-${i}`}>
-                <circle cx={scaleX(inter.x)} cy={scaleY(inter.y)} r={8} fill="hsl(var(--destructive))" opacity={0.25} />
-                <circle cx={scaleX(inter.x)} cy={scaleY(inter.y)} r={4} fill="hsl(var(--destructive))" />
-                <title>Conflicto: {inter.a1} × {inter.a2}</title>
-              </g>
-            ))}
+            {/* Intersections / Interferencias */}
+            {intersections.map((inter, i) => {
+              const cx = scaleX(inter.x);
+              const cy = scaleY(inter.y);
+              return (
+                <g key={`int-${i}`} style={{ pointerEvents: 'none' }}>
+                  {/* halo pulsante */}
+                  <circle cx={cx} cy={cy} r={14} fill="hsl(var(--destructive))" opacity={0.15}>
+                    <animate attributeName="r" values="10;16;10" dur="1.6s" repeatCount="indefinite" />
+                    <animate attributeName="opacity" values="0.35;0.1;0.35" dur="1.6s" repeatCount="indefinite" />
+                  </circle>
+                  {/* triángulo de advertencia */}
+                  <polygon
+                    points={`${cx},${cy - 9} ${cx + 9},${cy + 7} ${cx - 9},${cy + 7}`}
+                    fill="hsl(var(--destructive))"
+                    stroke="white"
+                    strokeWidth={1.2}
+                  />
+                  <text x={cx} y={cy + 5} textAnchor="middle" fontSize={10} fontWeight={700} fill="white">!</text>
+                  {/* etiqueta */}
+                  <text x={cx + 12} y={cy - 10} fontSize={10} fontWeight={600} fill="hsl(var(--destructive))">
+                    Interferencia
+                  </text>
+                  <title>Interferencia: {inter.a1} × {inter.a2}</title>
+                </g>
+              );
+            })}
             {/* Gantt bars for Zonas Sociales */}
             {ganttBars.length > 0 && (
               <g>
