@@ -627,7 +627,7 @@ export function LOBChart() {
                   const barX = scaleX(startIdx);
                   const barW = scaleX(endIdx) - scaleX(startIdx);
                   return (
-                    <g key={`gantt-${activity.id}`}>
+                    <g key={`gantt-${activity.id}`} onClick={requestEdit(activity.id)} className="cursor-pointer">
                       <rect x={barX} y={barY} width={Math.max(barW, 4)} height={20} rx={4}
                         fill={activity.color} opacity={0.85} />
                       <text x={barX + 5} y={barY + 14} className="text-[10px] font-medium" fill="white" dominantBaseline="middle">
