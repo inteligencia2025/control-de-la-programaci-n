@@ -522,7 +522,7 @@ export function LOBPanel() {
                   />
                 </div>
               </>
-            ) : form.category === 'preliminares' ? (
+            ) : form.category === 'preliminares' || form.category === 'fachada' ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
