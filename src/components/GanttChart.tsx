@@ -32,7 +32,7 @@ export function GanttChart() {
     const projectStart = new Date(Math.min(...enabled.map(a => getEffectiveStartDate(a, project.activities).getTime())));
     const activities = enabled.map(activity => {
       const start = getEffectiveStartDate(activity, project.activities);
-      const totalWorkdays = activity.endDate && (activity.category === 'preliminares' || activity.category === 'cubierta')
+      const totalWorkdays = activity.endDate && (activity.category === 'preliminares' || activity.category === 'cubierta' || activity.category === 'fachada')
         ? countWorkdaysInclusive(start, safeParse(activity.endDate))
         : calcActivityWorkdays(activity);
       let startIdx = 0;
