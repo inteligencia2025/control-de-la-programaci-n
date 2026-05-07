@@ -2,8 +2,8 @@ import { DEFAULT_COLORS } from '@/types/project';
 
 export interface PreloadedActivity {
   name: string;
-  category: 'estructura' | 'acabados' | 'preliminares';
-  /** Estimated duration in working days — only used for category='preliminares' */
+  category: 'estructura' | 'acabados' | 'preliminares' | 'fachada';
+  /** Estimated duration in working days — only used for category='preliminares' or 'fachada' */
   durationDays?: number;
 }
 
@@ -73,10 +73,10 @@ export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
   { name: 'DETALLES FINALES', category: 'acabados' },
   { name: 'ASEO', category: 'acabados' },
   { name: 'PASAMANOS PUNTO FIJO ESCALAS', category: 'acabados' },
-  { name: 'ARGAMASA / MUROS LIVIANOS FACHADAS', category: 'acabados' },
-  { name: 'PINTURA DE FACHADA', category: 'acabados' },
+  { name: 'ARGAMASA / MUROS LIVIANOS FACHADAS', category: 'fachada', durationDays: 30 },
+  { name: 'PINTURA DE FACHADA', category: 'fachada', durationDays: 20 },
   { name: 'RED CONTRAINCENDIOS', category: 'acabados' },
-  { name: 'INSTALACIÓN VENTANAS', category: 'acabados' },
+  { name: 'INSTALACIÓN VENTANAS', category: 'fachada', durationDays: 15 },
   { name: 'CTO', category: 'acabados' },
   { name: 'MEDIDORES ELÉCTRICOS', category: 'acabados' },
   { name: 'MEDIDORES DE AGUA', category: 'acabados' },

@@ -130,7 +130,7 @@ export function LOBPanel() {
     endDate: suggestedStartDate,
     rate: 1,
     color: DEFAULT_COLORS[0],
-    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta' | 'preliminares',
+    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta' | 'preliminares' | 'fachada',
     cubiertaRow: 'cubierta' as CubiertaRow,
     predecessorId: '' as string,
     bufferDays: 0,
@@ -158,9 +158,9 @@ export function LOBPanel() {
     e.preventDefault();
     if (!form.name.trim()) return;
     const isCubierta = form.category === 'cubierta';
-    const isPreliminar = form.category === 'preliminares';
+    const isLinearBand = form.category === 'preliminares' || form.category === 'fachada';
     const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
-    const computedEndDate = isPreliminar
+    const computedEndDate = isLinearBand
       ? endDateFromDuration(form.startDate, form.durationDays)
       : form.endDate;
     const activity: Activity = {
@@ -168,11 +168,9 @@ export function LOBPanel() {
       id: editId || crypto.randomUUID(),
       predecessorId: form.predecessorId || undefined,
       enabled: true,
-      // For cubierta: encode row in unitStart/unitEnd; endDate is real
-      // For preliminares: single row band, endDate computed from durationDays
-      unitStart: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitStart,
-      unitEnd: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitEnd,
-      endDate: isCubierta ? form.endDate : isPreliminar ? computedEndDate : undefined,
+      unitStart: isCubierta ? rowIdx : isLinearBand ? 1 : form.unitStart,
+      unitEnd: isCubierta ? rowIdx : isLinearBand ? 1 : form.unitEnd,
+      endDate: isCubierta ? form.endDate : isLinearBand ? computedEndDate : undefined,
       cubiertaRow: isCubierta ? form.cubiertaRow : undefined,
     };
     if (editId) updateActivity(activity);
@@ -183,7 +181,7 @@ export function LOBPanel() {
   const handleEdit = (a: Activity) => {
     // Defer to avoid React DOM reconciliation crash with large SVG
     requestAnimationFrame(() => {
-      const editDuration = a.category === 'preliminares' && a.endDate
+      const editDuration = (a.category === 'preliminares' || a.category === 'fachada') && a.endDate
         ? workdaysBetween(a.startDate, a.endDate)
         : 5;
       setForm({
@@ -233,13 +231,13 @@ export function LOBPanel() {
     for (let i = 0; i < toAdd.length; i++) {
       const p = toAdd[i];
       const id = crypto.randomUUID();
-      const isPreliminar = p.category === 'preliminares';
+      const isLinearBand = p.category === 'preliminares' || p.category === 'fachada';
 
-      if (isPreliminar) {
+      if (isLinearBand) {
         // Sequential linear bars: each starts the workday after the previous ends
         const startDate = i === 0 && project.activities.length === 0
           ? projectStartDate
-          : (postPreliminaresDate ?? getNextWorkday(lastDate));
+          : (p.category === 'preliminares' ? (postPreliminaresDate ?? getNextWorkday(lastDate)) : getNextWorkday(lastDate));
         const dur = Math.max(1, p.durationDays || 5);
         // Compute endDate by advancing (dur - 1) workdays from start
         let endParts = startDate.split('-').map(Number);
@@ -252,12 +250,12 @@ export function LOBPanel() {
         const endDate = endCur.toISOString().split('T')[0];
         const activity: Activity = {
           id, name: p.name, unitStart: 1, unitEnd: 1, startDate, endDate, rate: 1,
-          color: pickNextColor([...project.activities.map(a => a.color), ...newActivities.map(a => a.color)]), category: 'preliminares',
+          color: pickNextColor([...project.activities.map(a => a.color), ...newActivities.map(a => a.color)]), category: p.category,
           bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
         };
         newActivities.push(activity);
         lastDate = endDate;
-        postPreliminaresDate = getNextWorkday(endDate);
+        if (p.category === 'preliminares') postPreliminaresDate = getNextWorkday(endDate);
         lastId = id;
       } else {
         // Apartment activity (LOB line). Starts after preliminares (if any added) or chained.
@@ -524,7 +522,7 @@ export function LOBPanel() {
                   />
                 </div>
               </>
-            ) : form.category === 'preliminares' ? (
+            ) : form.category === 'preliminares' || form.category === 'fachada' ? (
               <>
                 <div className="grid grid-cols-2 gap-2">
                   <div>
@@ -619,6 +617,7 @@ export function LOBPanel() {
                     <SelectItem value="preliminares">Preliminares</SelectItem>
                     <SelectItem value="estructura">Estructura</SelectItem>
                     <SelectItem value="acabados">Acabados</SelectItem>
+                    <SelectItem value="fachada">Fachada</SelectItem>
                     <SelectItem value="zonas_sociales">Zonas Sociales</SelectItem>
                     {project.projectType === 'edificio' && project.buildingConfig.hasCubierta && (
                       <SelectItem value="cubierta">Cubierta</SelectItem>
@@ -676,8 +675,8 @@ export function LOBPanel() {
                       ? `${Math.abs(a.unitEnd - a.unitStart) + 1} días`
                       : a.category === 'cubierta'
                         ? `${a.cubiertaRow === 'cubierta' ? 'Cubierta' : a.cubiertaRow === 'muros_cubierta' ? 'Muros Cubierta' : 'Ascensores'} | ${a.startDate} → ${a.endDate || a.startDate}`
-                        : a.category === 'preliminares'
-                          ? `Preliminar | ${a.startDate} → ${a.endDate || a.startDate} (${a.endDate ? workdaysBetween(a.startDate, a.endDate) : 1}d)`
+                        : a.category === 'preliminares' || a.category === 'fachada'
+                          ? `${a.category === 'fachada' ? 'Fachada' : 'Preliminar'} | ${a.startDate} → ${a.endDate || a.startDate} (${a.endDate ? workdaysBetween(a.startDate, a.endDate) : 1}d)`
                           : `${getUnitLabel(a.unitStart, project.projectType, project.buildingConfig)}-${getUnitLabel(a.unitEnd, project.projectType, project.buildingConfig)} | ${a.rate} u/d${(a.crews || 1) > 1 ? ` ×${a.crews} cuad.` : ''}${a.bufferDays > 0 ? ` | B:${a.bufferDays}d` : ''}`
                     }
                     {pred && <span className="ml-1">← {pred.name}</span>}

@@ -142,10 +142,10 @@ export function LOBChart() {
   const rafRef = useRef<number | null>(null);
 
   const enabledActivities = useMemo(() => project.activities.filter(a => a.enabled), [project.activities]);
-  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares'), [enabledActivities]);
+  const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares' && a.category !== 'fachada'), [enabledActivities]);
   const ganttActivities = useMemo(() => enabledActivities.filter(a => a.category === 'zonas_sociales'), [enabledActivities]);
   const cubiertaActivities = useMemo(() => enabledActivities.filter(a => a.category === 'cubierta'), [enabledActivities]);
-  const preliminaresActivities = useMemo(() => enabledActivities.filter(a => a.category === 'preliminares'), [enabledActivities]);
+  const preliminaresActivities = useMemo(() => enabledActivities.filter(a => a.category === 'preliminares' || a.category === 'fachada'), [enabledActivities]);
 
   const chartData = useMemo(() => {
     if (enabledActivities.length === 0) return null;
