@@ -617,6 +617,7 @@ export function LOBPanel() {
                     <SelectItem value="preliminares">Preliminares</SelectItem>
                     <SelectItem value="estructura">Estructura</SelectItem>
                     <SelectItem value="acabados">Acabados</SelectItem>
+                    <SelectItem value="fachada">Fachada</SelectItem>
                     <SelectItem value="zonas_sociales">Zonas Sociales</SelectItem>
                     {project.projectType === 'edificio' && project.buildingConfig.hasCubierta && (
                       <SelectItem value="cubierta">Cubierta</SelectItem>
