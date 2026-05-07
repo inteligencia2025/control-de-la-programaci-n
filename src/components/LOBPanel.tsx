@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-
+import { SearchableActivitySelect } from '@/components/SearchableActivitySelect';
 
 import { useProject } from '@/context/ProjectContext';
 import { Activity, DEFAULT_COLORS, getUnitLabel, CubiertaRow, getCubiertaUnits, pickNextColor } from '@/types/project';
@@ -492,15 +492,12 @@ export function LOBPanel() {
                 </div>
                 <div>
                   <Label className="text-[10px]">Predecesora</Label>
-                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
-                    <SelectContent className="max-h-48">
-                      <SelectItem value="_none">Sin predecesora</SelectItem>
-                      {availablePredecessors.map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableActivitySelect
+                    activities={availablePredecessors}
+                    value={form.predecessorId}
+                    onChange={v => setForm(f => ({ ...f, predecessorId: v }))}
+                    placeholder="Sin predecesora"
+                  />
                 </div>
               </>
             ) : form.category === 'zonas_sociales' ? (
@@ -519,15 +516,12 @@ export function LOBPanel() {
                 </div>
                 <div>
                   <Label className="text-[10px]">Predecesora</Label>
-                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
-                    <SelectContent className="max-h-48">
-                      <SelectItem value="_none">Sin predecesora</SelectItem>
-                      {availablePredecessors.map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableActivitySelect
+                    activities={availablePredecessors}
+                    value={form.predecessorId}
+                    onChange={v => setForm(f => ({ ...f, predecessorId: v }))}
+                    placeholder="Sin predecesora"
+                  />
                 </div>
               </>
             ) : form.category === 'preliminares' ? (
@@ -553,15 +547,12 @@ export function LOBPanel() {
                 </div>
                 <div>
                   <Label className="text-[10px]">Predecesora</Label>
-                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
-                    <SelectContent className="max-h-48">
-                      <SelectItem value="_none">Sin predecesora</SelectItem>
-                      {availablePredecessors.map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableActivitySelect
+                    activities={availablePredecessors}
+                    value={form.predecessorId}
+                    onChange={v => setForm(f => ({ ...f, predecessorId: v }))}
+                    placeholder="Sin predecesora"
+                  />
                 </div>
               </>
             ) : (
@@ -610,15 +601,12 @@ export function LOBPanel() {
                 </div>
                 <div>
                   <Label className="text-[10px]">Predecesora</Label>
-                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
-                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
-                    <SelectContent className="max-h-48">
-                      <SelectItem value="_none">Sin predecesora</SelectItem>
-                      {availablePredecessors.map(a => (
-                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <SearchableActivitySelect
+                    activities={availablePredecessors}
+                    value={form.predecessorId}
+                    onChange={v => setForm(f => ({ ...f, predecessorId: v }))}
+                    placeholder="Sin predecesora"
+                  />
                 </div>
               </>
             )}
