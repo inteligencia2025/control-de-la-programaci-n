@@ -132,7 +132,7 @@ export function GanttChart() {
     );
   }
 
-  const { preliminares, estructura, cubierta, ascensores, acabados, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
+  const { preliminares, estructura, cubierta, ascensores, acabados, fachada, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
   const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const HEADER_H = 44;
   const groups = [
     { key: 'preliminares', label: 'Preliminares', items: preliminares, color: 'hsl(var(--muted-foreground))', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)' },
@@ -140,6 +140,7 @@ export function GanttChart() {
     { key: 'cubierta', label: 'Cubierta', items: cubierta, color: 'hsl(var(--accent-foreground))', barColor: '#2d8a56', bgFill: 'hsl(var(--accent) / 0.35)' },
     { key: 'ascensores', label: 'Ascensores', items: ascensores, color: 'hsl(var(--accent-foreground))', barColor: '#16a085', bgFill: 'hsl(var(--accent) / 0.22)' },
     { key: 'acabados', label: 'Acabados', items: acabados, color: ACABADOS_COLOR, barColor: '#e69500', bgFill: 'hsl(40 90% 50% / 0.15)' },
+    { key: 'fachada', label: 'Fachada', items: fachada, color: 'hsl(var(--accent-foreground))', barColor: '#c0392b', bgFill: 'hsl(0 70% 50% / 0.12)' },
   ];
 
   const groupSummary: Record<string, { minStart: number; maxEnd: number }> = {};
