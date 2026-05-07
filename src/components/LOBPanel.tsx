@@ -158,9 +158,9 @@ export function LOBPanel() {
     e.preventDefault();
     if (!form.name.trim()) return;
     const isCubierta = form.category === 'cubierta';
-    const isPreliminar = form.category === 'preliminares';
+    const isLinearBand = form.category === 'preliminares' || form.category === 'fachada';
     const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
-    const computedEndDate = isPreliminar
+    const computedEndDate = isLinearBand
       ? endDateFromDuration(form.startDate, form.durationDays)
       : form.endDate;
     const activity: Activity = {
@@ -168,11 +168,9 @@ export function LOBPanel() {
       id: editId || crypto.randomUUID(),
       predecessorId: form.predecessorId || undefined,
       enabled: true,
-      // For cubierta: encode row in unitStart/unitEnd; endDate is real
-      // For preliminares: single row band, endDate computed from durationDays
-      unitStart: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitStart,
-      unitEnd: isCubierta ? rowIdx : isPreliminar ? 1 : form.unitEnd,
-      endDate: isCubierta ? form.endDate : isPreliminar ? computedEndDate : undefined,
+      unitStart: isCubierta ? rowIdx : isLinearBand ? 1 : form.unitStart,
+      unitEnd: isCubierta ? rowIdx : isLinearBand ? 1 : form.unitEnd,
+      endDate: isCubierta ? form.endDate : isLinearBand ? computedEndDate : undefined,
       cubiertaRow: isCubierta ? form.cubiertaRow : undefined,
     };
     if (editId) updateActivity(activity);
