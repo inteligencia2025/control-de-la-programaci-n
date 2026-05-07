@@ -62,6 +62,7 @@ export function GanttChart() {
       acabados: activities.filter(a => a.activity.category === 'acabados'),
       cubierta: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow !== 'ascensores'),
       ascensores: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow === 'ascensores'),
+      fachada: activities.filter(a => a.activity.category === 'fachada'),
       workdays, maxDay, projectStart, projectEndDate, totalWorkdays: endWorkdays,
     };
   }, [project.activities]);
