@@ -231,13 +231,13 @@ export function LOBPanel() {
     for (let i = 0; i < toAdd.length; i++) {
       const p = toAdd[i];
       const id = crypto.randomUUID();
-      const isPreliminar = p.category === 'preliminares';
+      const isLinearBand = p.category === 'preliminares' || p.category === 'fachada';
 
-      if (isPreliminar) {
+      if (isLinearBand) {
         // Sequential linear bars: each starts the workday after the previous ends
         const startDate = i === 0 && project.activities.length === 0
           ? projectStartDate
-          : (postPreliminaresDate ?? getNextWorkday(lastDate));
+          : (p.category === 'preliminares' ? (postPreliminaresDate ?? getNextWorkday(lastDate)) : getNextWorkday(lastDate));
         const dur = Math.max(1, p.durationDays || 5);
         // Compute endDate by advancing (dur - 1) workdays from start
         let endParts = startDate.split('-').map(Number);
@@ -250,12 +250,12 @@ export function LOBPanel() {
         const endDate = endCur.toISOString().split('T')[0];
         const activity: Activity = {
           id, name: p.name, unitStart: 1, unitEnd: 1, startDate, endDate, rate: 1,
-          color: pickNextColor([...project.activities.map(a => a.color), ...newActivities.map(a => a.color)]), category: 'preliminares',
+          color: pickNextColor([...project.activities.map(a => a.color), ...newActivities.map(a => a.color)]), category: p.category,
           bufferDays: 0, bufferUnits: 0, crews: 1, enabled: true, predecessorId: lastId,
         };
         newActivities.push(activity);
         lastDate = endDate;
-        postPreliminaresDate = getNextWorkday(endDate);
+        if (p.category === 'preliminares') postPreliminaresDate = getNextWorkday(endDate);
         lastId = id;
       } else {
         // Apartment activity (LOB line). Starts after preliminares (if any added) or chained.
