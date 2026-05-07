@@ -181,7 +181,7 @@ export function LOBPanel() {
   const handleEdit = (a: Activity) => {
     // Defer to avoid React DOM reconciliation crash with large SVG
     requestAnimationFrame(() => {
-      const editDuration = a.category === 'preliminares' && a.endDate
+      const editDuration = (a.category === 'preliminares' || a.category === 'fachada') && a.endDate
         ? workdaysBetween(a.startDate, a.endDate)
         : 5;
       setForm({
