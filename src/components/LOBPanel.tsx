@@ -490,6 +490,18 @@ export function LOBPanel() {
                     <Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="h-7 text-xs" />
                   </div>
                 </div>
+                <div>
+                  <Label className="text-[10px]">Predecesora</Label>
+                  <Select value={form.predecessorId || '_none'} onValueChange={v => setForm(f => ({ ...f, predecessorId: v === '_none' ? '' : v }))}>
+                    <SelectTrigger className="h-7 text-xs"><SelectValue placeholder="Sin predecesora" /></SelectTrigger>
+                    <SelectContent className="max-h-48">
+                      <SelectItem value="_none">Sin predecesora</SelectItem>
+                      {availablePredecessors.map(a => (
+                        <SelectItem key={a.id} value={a.id}>{a.name}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </>
             ) : form.category === 'zonas_sociales' ? (
               <>
