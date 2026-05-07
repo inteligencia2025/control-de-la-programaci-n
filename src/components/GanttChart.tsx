@@ -97,7 +97,7 @@ export function GanttChart() {
       projectStart: format(chartData.projectStart, 'yyyy-MM-dd'),
       projectEnd: format(chartData.projectEndDate, 'yyyy-MM-dd'),
       totalWorkdays: chartData.totalWorkdays,
-      activities: [...chartData.preliminares, ...chartData.estructura, ...chartData.cubierta, ...chartData.ascensores, ...chartData.acabados].map(({ activity, startIdx, duration }) => ({
+      activities: [...chartData.preliminares, ...chartData.estructura, ...chartData.cubierta, ...chartData.ascensores, ...chartData.acabados, ...chartData.fachada].map(({ activity, startIdx, duration }) => ({
         id: activity.id,
         name: activity.name,
         category: activity.category,
