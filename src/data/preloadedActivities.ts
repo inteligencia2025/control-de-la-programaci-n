@@ -2,8 +2,8 @@ import { DEFAULT_COLORS } from '@/types/project';
 
 export interface PreloadedActivity {
   name: string;
-  category: 'estructura' | 'acabados' | 'preliminares';
-  /** Estimated duration in working days — only used for category='preliminares' */
+  category: 'estructura' | 'acabados' | 'preliminares' | 'fachada';
+  /** Estimated duration in working days — only used for category='preliminares' or 'fachada' */
   durationDays?: number;
 }
 
