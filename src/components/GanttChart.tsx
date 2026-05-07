@@ -23,7 +23,7 @@ const countWorkdaysInclusive = (start: Date, end: Date): number => {
 export function GanttChart() {
   const { project } = useProject();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ preliminares: false, estructura: false, cubierta: false, ascensores: false, acabados: false });
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ preliminares: false, estructura: false, cubierta: false, ascensores: false, acabados: false, fachada: false });
   const toggle = (cat: string) => setCollapsed(c => ({ ...c, [cat]: !c[cat] }));
 
   const chartData = useMemo(() => {
