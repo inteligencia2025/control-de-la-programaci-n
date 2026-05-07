@@ -130,7 +130,7 @@ export function LOBPanel() {
     endDate: suggestedStartDate,
     rate: 1,
     color: DEFAULT_COLORS[0],
-    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta' | 'preliminares',
+    category: 'estructura' as 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta' | 'preliminares' | 'fachada',
     cubiertaRow: 'cubierta' as CubiertaRow,
     predecessorId: '' as string,
     bufferDays: 0,
