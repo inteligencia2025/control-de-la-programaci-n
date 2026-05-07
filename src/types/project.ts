@@ -17,7 +17,7 @@ export interface Activity {
   endDate?: string;  // YYYY-MM-DD (only for category='cubierta')
   rate: number; // units per day
   color: string;
-  category: 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta' | 'preliminares';
+  category: 'estructura' | 'acabados' | 'zonas_sociales' | 'cubierta' | 'preliminares' | 'fachada';
   cubiertaRow?: CubiertaRow; // only for category='cubierta'
   predecessorId?: string;
   bufferDays: number;
