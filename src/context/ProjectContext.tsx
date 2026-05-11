@@ -234,7 +234,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         color: a.color,
         category: (() => {
           const n = (a.name || '').toUpperCase();
-          if (n.includes('FACHADA') || n.includes('VENTANA')) return 'fachada';
+          if (n.includes('FACHADA') || n.includes('VENTANA') || n === 'CTO' || n.includes('MEDIDOR') || n === 'RETIE') return 'fachada';
           return a.category;
         })(),
         cubiertaRow: a.category === 'cubierta'
