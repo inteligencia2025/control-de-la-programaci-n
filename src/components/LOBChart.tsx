@@ -273,6 +273,10 @@ export function LOBChart() {
       0,
     );
     const FACHADA_ORDER_TOP_DOWN = [
+      'RETIE',
+      'MEDIDORES DE AGUA',
+      'MEDIDORES ELÉCTRICOS',
+      'CTO',
       'INSTALACIÓN VENTANAS',
       'PINTURA DE FACHADA',
       'ARGAMASA / MUROS LIVIANOS FACHADAS',
