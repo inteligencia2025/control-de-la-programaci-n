@@ -285,7 +285,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     redoStack.current = [];
     skipHistory.current = false;
     updateUndoRedoState();
-    // Mark that DB data has been loaded into state
+    // Mark that DB data has been loaded into state for this specific project
+    loadedProjectIdRef.current = projectId;
     loadedFromDbRef.current = true;
   };
 
