@@ -822,7 +822,26 @@ export function LOBChart() {
                 </g>
               );
             })}
-            {/* Activity lines with data points */}
+            {/* Fachada horizontal lines (above muros cubierta) */}
+            {fachadaLines.map(({ activity, rowUnit, startIdx, endIdx, duration }) => {
+              const x1 = scaleX(startIdx);
+              const rawX2 = scaleX(Math.max(endIdx, startIdx));
+              const x2 = Math.max(rawX2, x1 + 24);
+              const y = scaleY(rowUnit);
+              return (
+                <g key={`fach-${activity.id}`} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
+                  <rect x={PADDING.left} y={y - 12} width={plotW} height={24}
+                    fill={activity.color} opacity={0.08} />
+                  <line x1={x1} y1={y} x2={x2} y2={y}
+                    stroke={activity.color} strokeWidth={5} strokeLinecap="round" />
+                  <circle cx={x1} cy={y} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                  <circle cx={x2} cy={y} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                  <text x={x2 + 8} y={y} className="text-[11px] font-semibold" fill={activity.color} dominantBaseline="middle">
+                    ({duration}d)
+                  </text>
+                </g>
+              );
+            })}
             {lines.map(({ activity, points, crewLines }) => {
               const crews = activity.crews || 1;
               const effectiveRate = activity.rate * crews;
