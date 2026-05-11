@@ -202,6 +202,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [user]);
 
   const loadProject = async (projectId: string) => {
+    debouncedSave.cancel?.();
+    loadedFromDbRef.current = false;
+    loadedProjectIdRef.current = '';
     const [
       { data: proj },
       { data: acts },
