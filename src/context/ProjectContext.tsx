@@ -89,6 +89,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const loadedFromDbRef = useRef(false); // true only after DB data is set into state
+  const loadedProjectIdRef = useRef<string>(''); // id of project whose data is currently in `project` state
 
   // Undo/Redo
   const undoStack = useRef<ProjectData[]>([]);
