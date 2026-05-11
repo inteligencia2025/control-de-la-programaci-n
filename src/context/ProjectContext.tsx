@@ -67,10 +67,17 @@ function useDebouncedCallback<T extends (...args: any[]) => any>(fn: T, delay: n
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const fnRef = useRef(fn);
   fnRef.current = fn;
-  return useCallback((...args: Parameters<T>) => {
+  const debounced = useCallback((...args: Parameters<T>) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => fnRef.current(...args), delay);
-  }, [delay]) as T;
+  }, [delay]) as T & { cancel: () => void };
+  (debounced as any).cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = undefined;
+    }
+  };
+  return debounced;
 }
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -82,6 +89,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [saving, setSaving] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const loadedFromDbRef = useRef(false); // true only after DB data is set into state
+  const loadedProjectIdRef = useRef<string>(''); // id of project whose data is currently in `project` state
 
   // Undo/Redo
   const undoStack = useRef<ProjectData[]>([]);
@@ -151,14 +159,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // ---- LOAD from Supabase ----
   useEffect(() => {
     if (!user) {
+      debouncedSave.cancel?.();
       setProjectsList([]);
       setActiveProjectId('');
       setProjectInternal(defaultProject);
       setLoaded(false);
       loadedFromDbRef.current = false;
+      loadedProjectIdRef.current = '';
       return;
     }
     const load = async () => {
+      debouncedSave.cancel?.();
+      loadedFromDbRef.current = false;
+      loadedProjectIdRef.current = '';
       const { data: projects } = await supabase
         .from('projects')
         .select('id, name')
@@ -171,6 +184,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setActiveProjectId('');
         setProjectInternal(defaultProject);
         loadedFromDbRef.current = true;
+        loadedProjectIdRef.current = '';
       } else {
         const projectEntries = projects.map(p => ({ id: p.id, name: p.name }));
         const storedProjectId = localStorage.getItem(getActiveProjectStorageKey(user.id));
@@ -188,6 +202,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [user]);
 
   const loadProject = async (projectId: string) => {
+    debouncedSave.cancel?.();
+    loadedFromDbRef.current = false;
+    loadedProjectIdRef.current = '';
     const [
       { data: proj },
       { data: acts },
@@ -268,7 +285,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     redoStack.current = [];
     skipHistory.current = false;
     updateUndoRedoState();
-    // Mark that DB data has been loaded into state
+    // Mark that DB data has been loaded into state for this specific project
+    loadedProjectIdRef.current = projectId;
     loadedFromDbRef.current = true;
   };
 
@@ -279,6 +297,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const doSave = useCallback(async (data: ProjectData, projectId: string) => {
     if (!user || !projectId) return;
+    // Defense: do not save if the loaded project no longer matches the target id
+    if (loadedProjectIdRef.current !== projectId) return;
     setSaving(true);
     try {
       // Update project metadata
@@ -370,9 +390,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     doSave(data, projectId);
   }, 1500);
 
-  // Auto-save on project changes — only after DB data has been loaded
+  // Auto-save on project changes — only when loaded data corresponds to active project
   useEffect(() => {
-    if (!loaded || !activeProjectId || !user || !loadedFromDbRef.current) return;
+    if (!loaded || !activeProjectId || !user) return;
+    if (!loadedFromDbRef.current) return;
+    if (loadedProjectIdRef.current !== activeProjectId) return;
     debouncedSave(project, activeProjectId);
   }, [project, activeProjectId, loaded, user, debouncedSave]);
 
@@ -390,6 +412,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .select('id, name')
       .single();
     if (newP) {
+      debouncedSave.cancel?.();
+      loadedFromDbRef.current = false;
+      loadedProjectIdRef.current = '';
       setProjectsList(prev => [...prev, { id: newP.id, name: newP.name }]);
       setActiveProjectId(newP.id);
       localStorage.setItem(getActiveProjectStorageKey(user.id), newP.id);
@@ -399,14 +424,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       redoStack.current = [];
       skipHistory.current = false;
       updateUndoRedoState();
+      // Mark as loaded for this new (empty) project so subsequent edits save correctly
+      loadedProjectIdRef.current = newP.id;
+      loadedFromDbRef.current = true;
     }
-  }, [user, updateUndoRedoState]);
+  }, [user, updateUndoRedoState, debouncedSave]);
 
   const switchProject = useCallback(async (id: string) => {
+    debouncedSave.cancel?.();
+    loadedFromDbRef.current = false;
+    loadedProjectIdRef.current = '';
     setActiveProjectId(id);
     if (user) localStorage.setItem(getActiveProjectStorageKey(user.id), id);
     await loadProject(id);
-  }, [user]);
+  }, [user, debouncedSave]);
 
   const deleteProject = useCallback(async (id: string) => {
     if (projectsList.length <= 1) return;
