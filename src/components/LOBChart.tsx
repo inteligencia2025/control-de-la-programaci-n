@@ -222,15 +222,23 @@ export function LOBChart() {
     // Preliminares horizontal bars (sequential, before LOB lines)
     const preliminaresLines = preliminaresActivities.map(activity => {
       let start: Date;
-      let end: Date;
       try { start = parseISO(activity.startDate); } catch { start = new Date(projectStart); }
-      try { end = parseISO(activity.endDate || activity.startDate); } catch { end = start; }
-      if (end < start) end = start;
       const startIdx = dateToWorkdayIdx(start);
-      const endIdx = dateToWorkdayIdx(end);
-      // Duration in WORKDAYS (consistent with user input and X-axis "Días laborales L-V")
-      const duration = Math.max(1, Math.max(endIdx, startIdx) - startIdx + 1);
-      return { activity, startIdx, endIdx: Math.max(endIdx, startIdx), duration };
+      let duration: number;
+      if (activity.endDate) {
+        let end: Date;
+        try { end = parseISO(activity.endDate); } catch { end = start; }
+        if (end < start) end = start;
+        const endIdx = dateToWorkdayIdx(end);
+        duration = Math.max(1, endIdx - startIdx + 1);
+      } else {
+        // Fallback: derive workday duration from units & rate (legacy LOB-style data)
+        const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+        const effectiveRate = getEffectiveRate(activity);
+        duration = Math.max(1, smartCeil(totalUnits / effectiveRate));
+      }
+      const endIdx = startIdx + duration - 1;
+      return { activity, startIdx, endIdx, duration };
     });
     const prelimMaxIdx = preliminaresLines.reduce((m, p) => Math.max(m, p.endIdx), 0);
     // Order preliminares from top (closest to X axis) → down.
