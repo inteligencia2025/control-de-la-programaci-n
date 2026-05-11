@@ -297,6 +297,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const doSave = useCallback(async (data: ProjectData, projectId: string) => {
     if (!user || !projectId) return;
+    // Defense: do not save if the loaded project no longer matches the target id
+    if (loadedProjectIdRef.current !== projectId) return;
     setSaving(true);
     try {
       // Update project metadata
