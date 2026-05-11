@@ -390,9 +390,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     doSave(data, projectId);
   }, 1500);
 
-  // Auto-save on project changes — only after DB data has been loaded
+  // Auto-save on project changes — only when loaded data corresponds to active project
   useEffect(() => {
-    if (!loaded || !activeProjectId || !user || !loadedFromDbRef.current) return;
+    if (!loaded || !activeProjectId || !user) return;
+    if (!loadedFromDbRef.current) return;
+    if (loadedProjectIdRef.current !== activeProjectId) return;
     debouncedSave(project, activeProjectId);
   }, [project, activeProjectId, loaded, user, debouncedSave]);
 
@@ -410,6 +412,9 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       .select('id, name')
       .single();
     if (newP) {
+      debouncedSave.cancel?.();
+      loadedFromDbRef.current = false;
+      loadedProjectIdRef.current = '';
       setProjectsList(prev => [...prev, { id: newP.id, name: newP.name }]);
       setActiveProjectId(newP.id);
       localStorage.setItem(getActiveProjectStorageKey(user.id), newP.id);
@@ -419,14 +424,20 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       redoStack.current = [];
       skipHistory.current = false;
       updateUndoRedoState();
+      // Mark as loaded for this new (empty) project so subsequent edits save correctly
+      loadedProjectIdRef.current = newP.id;
+      loadedFromDbRef.current = true;
     }
-  }, [user, updateUndoRedoState]);
+  }, [user, updateUndoRedoState, debouncedSave]);
 
   const switchProject = useCallback(async (id: string) => {
+    debouncedSave.cancel?.();
+    loadedFromDbRef.current = false;
+    loadedProjectIdRef.current = '';
     setActiveProjectId(id);
     if (user) localStorage.setItem(getActiveProjectStorageKey(user.id), id);
     await loadProject(id);
-  }, [user]);
+  }, [user, debouncedSave]);
 
   const deleteProject = useCallback(async (id: string) => {
     if (projectsList.length <= 1) return;
