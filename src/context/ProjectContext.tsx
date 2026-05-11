@@ -159,14 +159,19 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // ---- LOAD from Supabase ----
   useEffect(() => {
     if (!user) {
+      debouncedSave.cancel?.();
       setProjectsList([]);
       setActiveProjectId('');
       setProjectInternal(defaultProject);
       setLoaded(false);
       loadedFromDbRef.current = false;
+      loadedProjectIdRef.current = '';
       return;
     }
     const load = async () => {
+      debouncedSave.cancel?.();
+      loadedFromDbRef.current = false;
+      loadedProjectIdRef.current = '';
       const { data: projects } = await supabase
         .from('projects')
         .select('id, name')
@@ -179,6 +184,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setActiveProjectId('');
         setProjectInternal(defaultProject);
         loadedFromDbRef.current = true;
+        loadedProjectIdRef.current = '';
       } else {
         const projectEntries = projects.map(p => ({ id: p.id, name: p.name }));
         const storedProjectId = localStorage.getItem(getActiveProjectStorageKey(user.id));
