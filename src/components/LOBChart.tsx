@@ -158,7 +158,10 @@ export function LOBChart() {
     const preliminaresStarts = preliminaresActivities.map(a => {
       try { return parseISO(a.startDate); } catch { return new Date(); }
     });
-    const allStarts = [...effectiveStarts, ...cubiertaStarts, ...preliminaresStarts];
+    const fachadaStarts = fachadaActivities.map(a => {
+      try { return parseISO(a.startDate); } catch { return new Date(); }
+    });
+    const allStarts = [...effectiveStarts, ...cubiertaStarts, ...preliminaresStarts, ...fachadaStarts];
     const projectStart = new Date(Math.min(...allStarts.map(d => d.getTime())));
     // Compute the maximum REAL unit (excluding cubierta extras) so we can clamp ghost units
     // from outdated activity data after a building resize.
