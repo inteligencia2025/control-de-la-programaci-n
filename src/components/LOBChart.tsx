@@ -145,7 +145,8 @@ export function LOBChart() {
   const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares' && a.category !== 'fachada'), [enabledActivities]);
   const ganttActivities = useMemo(() => enabledActivities.filter(a => a.category === 'zonas_sociales'), [enabledActivities]);
   const cubiertaActivities = useMemo(() => enabledActivities.filter(a => a.category === 'cubierta'), [enabledActivities]);
-  const preliminaresActivities = useMemo(() => enabledActivities.filter(a => a.category === 'preliminares' || a.category === 'fachada'), [enabledActivities]);
+  const preliminaresActivities = useMemo(() => enabledActivities.filter(a => a.category === 'preliminares'), [enabledActivities]);
+  const fachadaActivities = useMemo(() => enabledActivities.filter(a => a.category === 'fachada'), [enabledActivities]);
 
   const chartData = useMemo(() => {
     if (enabledActivities.length === 0) return null;
