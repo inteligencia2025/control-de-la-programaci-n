@@ -67,10 +67,17 @@ function useDebouncedCallback<T extends (...args: any[]) => any>(fn: T, delay: n
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const fnRef = useRef(fn);
   fnRef.current = fn;
-  return useCallback((...args: Parameters<T>) => {
+  const debounced = useCallback((...args: Parameters<T>) => {
     if (timer.current) clearTimeout(timer.current);
     timer.current = setTimeout(() => fnRef.current(...args), delay);
-  }, [delay]) as T;
+  }, [delay]) as T & { cancel: () => void };
+  (debounced as any).cancel = () => {
+    if (timer.current) {
+      clearTimeout(timer.current);
+      timer.current = undefined;
+    }
+  };
+  return debounced;
 }
 
 export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
