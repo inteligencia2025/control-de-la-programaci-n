@@ -261,11 +261,52 @@ export function LOBChart() {
     };
     // Sort ascending so index 0 (top, closest to X axis) = MOVIMIENTO DE TIERRAS.
     const orderedPrelim = [...preliminaresLines].sort((a, b) => orderIdx(a.activity.name) - orderIdx(b.activity.name));
-    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx) + 5;
     const lobUnits = clampedLobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const cu = getCubiertaUnits(project.buildingConfig);
     const cubiertaUnits = cu ? [cu.cubierta, cu.muros, cu.ascensores] : [];
-    const allUnits = [...lobUnits, ...cubiertaUnits, ...cubiertaLines.map(c => c.rowUnit)];
+    // Fachada activities: rendered as horizontal bars on rows ABOVE muros cubierta.
+    // Use synthetic unit slots starting just above the highest existing unit (cubierta or LOB max).
+    const baseTop = Math.max(
+      ...lobUnits,
+      ...cubiertaUnits,
+      ...cubiertaLines.map(c => c.rowUnit),
+      0,
+    );
+    const FACHADA_ORDER_TOP_DOWN = [
+      'INSTALACIÓN VENTANAS',
+      'PINTURA DE FACHADA',
+      'ARGAMASA / MUROS LIVIANOS FACHADAS',
+    ];
+    const fachadaOrderIdx = (name: string) => {
+      const i = FACHADA_ORDER_TOP_DOWN.findIndex(n => norm(n) === norm(name));
+      return i === -1 ? FACHADA_ORDER_TOP_DOWN.length : i;
+    };
+    const sortedFachada = [...fachadaActivities].sort((a, b) => fachadaOrderIdx(a.name) - fachadaOrderIdx(b.name));
+    // Top of stack = highest unit. First item in TOP_DOWN list goes highest.
+    const fachadaLines = sortedFachada.map((activity, i) => {
+      let start: Date;
+      try { start = parseISO(activity.startDate); } catch { start = new Date(projectStart); }
+      const startIdx = dateToWorkdayIdx(start);
+      let duration: number;
+      if (activity.endDate) {
+        let end: Date;
+        try { end = parseISO(activity.endDate); } catch { end = start; }
+        if (end < start) end = start;
+        const endIdx = dateToWorkdayIdx(end);
+        duration = Math.max(1, endIdx - startIdx + 1);
+      } else {
+        const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+        const effectiveRate = getEffectiveRate(activity);
+        duration = Math.max(1, smartCeil(totalUnits / effectiveRate));
+      }
+      const endIdx = startIdx + duration - 1;
+      // Higher i = lower in list, so rowUnit decreases as i increases (top-down stack)
+      const rowUnit = baseTop + (sortedFachada.length - i);
+      return { activity, rowUnit, startIdx, endIdx, duration };
+    });
+    const fachadaMaxIdx = fachadaLines.reduce((m, f) => Math.max(m, f.endIdx), 0);
+    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx, fachadaMaxIdx) + 5;
+    const allUnits = [...lobUnits, ...cubiertaUnits, ...cubiertaLines.map(c => c.rowUnit), ...fachadaLines.map(f => f.rowUnit)];
     const minUnit = allUnits.length > 0 ? Math.min(...allUnits) : 1;
     const maxUnit = allUnits.length > 0 ? Math.max(...allUnits) : 2;
     const workdays: { date: Date; label: string; dayName: string; month: string; monthIdx: number }[] = [];
