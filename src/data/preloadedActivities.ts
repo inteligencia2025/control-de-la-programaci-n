@@ -77,9 +77,10 @@ export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
   { name: 'PINTURA DE FACHADA', category: 'fachada', durationDays: 20 },
   { name: 'RED CONTRAINCENDIOS', category: 'acabados' },
   { name: 'INSTALACIÓN VENTANAS', category: 'fachada', durationDays: 15 },
-  { name: 'CTO', category: 'acabados' },
-  { name: 'MEDIDORES ELÉCTRICOS', category: 'acabados' },
-  { name: 'MEDIDORES DE AGUA', category: 'acabados' },
+  { name: 'CTO', category: 'fachada', durationDays: 10 },
+  { name: 'MEDIDORES ELÉCTRICOS', category: 'fachada', durationDays: 10 },
+  { name: 'MEDIDORES DE AGUA', category: 'fachada', durationDays: 10 },
+  { name: 'RETIE', category: 'fachada', durationDays: 10 },
 ];
 export function getDefaultColor(index: number): string {
   return DEFAULT_COLORS[index % DEFAULT_COLORS.length];
