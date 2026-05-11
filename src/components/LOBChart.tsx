@@ -145,7 +145,8 @@ export function LOBChart() {
   const lobActivities = useMemo(() => enabledActivities.filter(a => a.category !== 'zonas_sociales' && a.category !== 'cubierta' && a.category !== 'preliminares' && a.category !== 'fachada'), [enabledActivities]);
   const ganttActivities = useMemo(() => enabledActivities.filter(a => a.category === 'zonas_sociales'), [enabledActivities]);
   const cubiertaActivities = useMemo(() => enabledActivities.filter(a => a.category === 'cubierta'), [enabledActivities]);
-  const preliminaresActivities = useMemo(() => enabledActivities.filter(a => a.category === 'preliminares' || a.category === 'fachada'), [enabledActivities]);
+  const preliminaresActivities = useMemo(() => enabledActivities.filter(a => a.category === 'preliminares'), [enabledActivities]);
+  const fachadaActivities = useMemo(() => enabledActivities.filter(a => a.category === 'fachada'), [enabledActivities]);
 
   const chartData = useMemo(() => {
     if (enabledActivities.length === 0) return null;
@@ -157,7 +158,10 @@ export function LOBChart() {
     const preliminaresStarts = preliminaresActivities.map(a => {
       try { return parseISO(a.startDate); } catch { return new Date(); }
     });
-    const allStarts = [...effectiveStarts, ...cubiertaStarts, ...preliminaresStarts];
+    const fachadaStarts = fachadaActivities.map(a => {
+      try { return parseISO(a.startDate); } catch { return new Date(); }
+    });
+    const allStarts = [...effectiveStarts, ...cubiertaStarts, ...preliminaresStarts, ...fachadaStarts];
     const projectStart = new Date(Math.min(...allStarts.map(d => d.getTime())));
     // Compute the maximum REAL unit (excluding cubierta extras) so we can clamp ghost units
     // from outdated activity data after a building resize.
@@ -257,11 +261,52 @@ export function LOBChart() {
     };
     // Sort ascending so index 0 (top, closest to X axis) = MOVIMIENTO DE TIERRAS.
     const orderedPrelim = [...preliminaresLines].sort((a, b) => orderIdx(a.activity.name) - orderIdx(b.activity.name));
-    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx) + 5;
     const lobUnits = clampedLobActivities.flatMap(a => [a.unitStart, a.unitEnd]);
     const cu = getCubiertaUnits(project.buildingConfig);
     const cubiertaUnits = cu ? [cu.cubierta, cu.muros, cu.ascensores] : [];
-    const allUnits = [...lobUnits, ...cubiertaUnits, ...cubiertaLines.map(c => c.rowUnit)];
+    // Fachada activities: rendered as horizontal bars on rows ABOVE muros cubierta.
+    // Use synthetic unit slots starting just above the highest existing unit (cubierta or LOB max).
+    const baseTop = Math.max(
+      ...lobUnits,
+      ...cubiertaUnits,
+      ...cubiertaLines.map(c => c.rowUnit),
+      0,
+    );
+    const FACHADA_ORDER_TOP_DOWN = [
+      'INSTALACIÓN VENTANAS',
+      'PINTURA DE FACHADA',
+      'ARGAMASA / MUROS LIVIANOS FACHADAS',
+    ];
+    const fachadaOrderIdx = (name: string) => {
+      const i = FACHADA_ORDER_TOP_DOWN.findIndex(n => norm(n) === norm(name));
+      return i === -1 ? FACHADA_ORDER_TOP_DOWN.length : i;
+    };
+    const sortedFachada = [...fachadaActivities].sort((a, b) => fachadaOrderIdx(a.name) - fachadaOrderIdx(b.name));
+    // Top of stack = highest unit. First item in TOP_DOWN list goes highest.
+    const fachadaLines = sortedFachada.map((activity, i) => {
+      let start: Date;
+      try { start = parseISO(activity.startDate); } catch { start = new Date(projectStart); }
+      const startIdx = dateToWorkdayIdx(start);
+      let duration: number;
+      if (activity.endDate) {
+        let end: Date;
+        try { end = parseISO(activity.endDate); } catch { end = start; }
+        if (end < start) end = start;
+        const endIdx = dateToWorkdayIdx(end);
+        duration = Math.max(1, endIdx - startIdx + 1);
+      } else {
+        const totalUnits = Math.abs(activity.unitEnd - activity.unitStart) + 1;
+        const effectiveRate = getEffectiveRate(activity);
+        duration = Math.max(1, smartCeil(totalUnits / effectiveRate));
+      }
+      const endIdx = startIdx + duration - 1;
+      // Higher i = lower in list, so rowUnit decreases as i increases (top-down stack)
+      const rowUnit = baseTop + (sortedFachada.length - i);
+      return { activity, rowUnit, startIdx, endIdx, duration };
+    });
+    const fachadaMaxIdx = fachadaLines.reduce((m, f) => Math.max(m, f.endIdx), 0);
+    const maxWorkday = Math.max(lobMaxWorkday, prelimGanttMax, prelimCubiertaMax, prelimMaxIdx, fachadaMaxIdx) + 5;
+    const allUnits = [...lobUnits, ...cubiertaUnits, ...cubiertaLines.map(c => c.rowUnit), ...fachadaLines.map(f => f.rowUnit)];
     const minUnit = allUnits.length > 0 ? Math.min(...allUnits) : 1;
     const maxUnit = allUnits.length > 0 ? Math.max(...allUnits) : 2;
     const workdays: { date: Date; label: string; dayName: string; month: string; monthIdx: number }[] = [];
@@ -288,8 +333,8 @@ export function LOBChart() {
       return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
     });
     const totalDuration = maxWorkday - 5;
-    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines: orderedPrelim };
-  }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, enabledActivities, project.activities, project.buildingConfig]);
+    return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines: orderedPrelim, fachadaLines };
+  }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, fachadaActivities, enabledActivities, project.activities, project.buildingConfig]);
 
   const handleExportPNG = async () => {
     if (!svgRef.current) return;
@@ -432,16 +477,19 @@ export function LOBChart() {
     );
   }
 
-  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines } = chartData;
+  const { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, totalDuration, ganttBars, cubiertaLines, preliminaresLines, fachadaLines } = chartData;
   const unitRange = maxUnit - minUnit;
   const UNIT_H = 32;
   // Wider left padding so long preliminares activity names (e.g. "INSTALACIÓN PLANTA DE CONCRETO") fit as Y-axis labels
   const PADDING = { top: 40, right: 30, bottom: 110, left: 230 };
   const WIDTH = Math.max(900, maxWorkday * 40 + PADDING.left + PADDING.right);
+  const fachadaRowLabels = new Map<number, { name: string; color: string }>();
+  fachadaLines.forEach(f => fachadaRowLabels.set(f.rowUnit, { name: f.activity.name, color: f.activity.color }));
   const allLegendItems = [
     ...preliminaresLines.map(p => ({ activity: p.activity, duration: p.duration })),
     ...lines.map(l => ({ activity: l.activity, duration: l.duration })),
     ...cubiertaLines.map(c => ({ activity: c.activity, duration: c.duration })),
+    ...fachadaLines.map(f => ({ activity: f.activity, duration: f.duration })),
     ...ganttBars.map(g => ({ activity: g.activity, duration: g.duration })),
   ];
   const LEGEND_ITEMS_PER_ROW = 4;
@@ -622,11 +670,14 @@ export function LOBChart() {
             <g ref={yAxisRef}>
               <rect x={0} y={0} width={PADDING.left - 4} height={HEIGHT} fill="hsl(var(--card))" />
               {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => {
+                const fach = fachadaRowLabels.get(u);
                 const customLabel = project.unitLabels?.[String(u)];
-                const label = customLabel || getUnitLabel(u, project.projectType, project.buildingConfig);
+                const label = fach?.name || customLabel || getUnitLabel(u, project.projectType, project.buildingConfig);
                 return (
                   <g key={`yl-${u}`}>
-                    <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle" className="fill-foreground text-[13px] font-semibold">
+                    <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle"
+                      className="text-[13px] font-semibold"
+                      fill={fach ? fach.color : 'hsl(var(--foreground))'}>
                       {label}
                     </text>
                   </g>
@@ -771,7 +822,26 @@ export function LOBChart() {
                 </g>
               );
             })}
-            {/* Activity lines with data points */}
+            {/* Fachada horizontal lines (above muros cubierta) */}
+            {fachadaLines.map(({ activity, rowUnit, startIdx, endIdx, duration }) => {
+              const x1 = scaleX(startIdx);
+              const rawX2 = scaleX(Math.max(endIdx, startIdx));
+              const x2 = Math.max(rawX2, x1 + 24);
+              const y = scaleY(rowUnit);
+              return (
+                <g key={`fach-${activity.id}`} onMouseDown={startDrag(activity.id)} onClick={requestEdit(activity.id)} className="cursor-grab active:cursor-grabbing" transform={`translate(${dragOffsetPx(activity.id)},0)`}>
+                  <rect x={PADDING.left} y={y - 12} width={plotW} height={24}
+                    fill={activity.color} opacity={0.08} />
+                  <line x1={x1} y1={y} x2={x2} y2={y}
+                    stroke={activity.color} strokeWidth={5} strokeLinecap="round" />
+                  <circle cx={x1} cy={y} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                  <circle cx={x2} cy={y} r={5} fill={activity.color} stroke="white" strokeWidth={1.5} />
+                  <text x={x2 + 8} y={y} className="text-[11px] font-semibold" fill={activity.color} dominantBaseline="middle">
+                    ({duration}d)
+                  </text>
+                </g>
+              );
+            })}
             {lines.map(({ activity, points, crewLines }) => {
               const crews = activity.crews || 1;
               const effectiveRate = activity.rate * crews;
