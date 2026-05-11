@@ -670,11 +670,14 @@ export function LOBChart() {
             <g ref={yAxisRef}>
               <rect x={0} y={0} width={PADDING.left - 4} height={HEIGHT} fill="hsl(var(--card))" />
               {Array.from({ length: maxUnit - minUnit + 1 }, (_, i) => minUnit + i).map(u => {
+                const fach = fachadaRowLabels.get(u);
                 const customLabel = project.unitLabels?.[String(u)];
-                const label = customLabel || getUnitLabel(u, project.projectType, project.buildingConfig);
+                const label = fach?.name || customLabel || getUnitLabel(u, project.projectType, project.buildingConfig);
                 return (
                   <g key={`yl-${u}`}>
-                    <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle" className="fill-foreground text-[13px] font-semibold">
+                    <text x={PADDING.left - 12} y={scaleY(u)} textAnchor="end" dominantBaseline="middle"
+                      className="text-[13px] font-semibold"
+                      fill={fach ? fach.color : 'hsl(var(--foreground))'}>
                       {label}
                     </text>
                   </g>
