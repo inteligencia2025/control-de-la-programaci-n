@@ -215,7 +215,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         endDate: a.end_date || undefined,
         rate: Number(a.rate),
         color: a.color,
-        category: a.category,
+        category: (() => {
+          const n = (a.name || '').toUpperCase();
+          if (n.includes('FACHADA') || n.includes('VENTANA')) return 'fachada';
+          return a.category;
+        })(),
         cubiertaRow: a.category === 'cubierta'
           ? (a.unit_start === 1 ? 'cubierta' : a.unit_start === 2 ? 'muros_cubierta' : 'ascensores')
           : undefined,
