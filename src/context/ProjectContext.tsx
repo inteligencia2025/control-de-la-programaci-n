@@ -123,6 +123,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         prev.defaultUnits !== next.defaultUnits ||
         prev.projectType !== next.projectType;
       if (structuralChange) pushUndo(prev);
+      // Mark intentional empties so the anti-wipe guard allows them through
+      if (prev.activities.length > 0 && next.activities.length === 0) intentionalEmptyRef.current.activities = true;
+      if (prev.lookahead.length > 0 && next.lookahead.length === 0) intentionalEmptyRef.current.lookahead = true;
+      if (prev.pacRecords.length > 0 && next.pacRecords.length === 0) intentionalEmptyRef.current.pac = true;
+      // Any user-driven setProject marks the project as dirty (eligible for auto-save)
+      dirtyRef.current = true;
       return next;
     });
   }, [pushUndo]);
