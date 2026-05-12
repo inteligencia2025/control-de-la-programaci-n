@@ -127,7 +127,7 @@ function findIntersections(lines: { activity: Activity; points: LinePoint[] }[])
 }
 
 export function LOBChart() {
-  const { project, updateActivity } = useProject();
+  const { project, updateActivity, setProject } = useProject();
   const chartRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -601,17 +601,28 @@ export function LOBChart() {
     const onUp = () => {
       setDrag(curr => {
         if (curr && curr.lastDelta !== 0) {
-          const a = project.activities.find(x => x.id === curr.activityId);
-          if (a) {
-            // Move only the dragged activity, preserving its predecessor link.
-            // The LOB engine will respect the later of (stored startDate, predecessor constraint).
-            const updated: Activity = {
-              ...a,
-              startDate: shiftWorkdays(a.startDate, curr.lastDelta),
-            };
-            if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, curr.lastDelta);
-            updateActivity(updated);
+          const delta = curr.lastDelta;
+          // Collect dragged activity + all transitive successors
+          const toShift = new Set<string>([curr.activityId]);
+          let added = true;
+          while (added) {
+            added = false;
+            for (const a of project.activities) {
+              if (a.predecessorId && toShift.has(a.predecessorId) && !toShift.has(a.id)) {
+                toShift.add(a.id);
+                added = true;
+              }
+            }
           }
+          setProject(p => ({
+            ...p,
+            activities: p.activities.map(a => {
+              if (!toShift.has(a.id)) return a;
+              const updated: Activity = { ...a, startDate: shiftWorkdays(a.startDate, delta) };
+              if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, delta);
+              return updated;
+            }),
+          }));
         }
         return null;
       });
@@ -622,7 +633,7 @@ export function LOBChart() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [drag, project.activities, updateActivity, zoom]);
+  }, [drag, project.activities, updateActivity, setProject, zoom]);
 
   const dragOffsetPx = (id: string) => (drag && drag.activityId === id ? drag.lastDelta * pxPerWorkday : 0);
 
