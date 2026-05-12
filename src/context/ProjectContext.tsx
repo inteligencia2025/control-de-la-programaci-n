@@ -482,13 +482,21 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     doSave(data, projectId);
   }, 1500);
 
-  // Auto-save on project changes — only when loaded data corresponds to active project
+  // Auto-save on project changes — only when loaded data corresponds to active project AND user has actually edited
   useEffect(() => {
     if (!loaded || !activeProjectId || !user) return;
     if (!loadedFromDbRef.current) return;
     if (loadedProjectIdRef.current !== activeProjectId) return;
+    if (!dirtyRef.current) return;
     debouncedSave(project, activeProjectId);
   }, [project, activeProjectId, loaded, user, debouncedSave]);
+
+  // Cancel pending debounce on unload to avoid half-saves with stale state
+  useEffect(() => {
+    const handler = () => debouncedSave.cancel?.();
+    window.addEventListener('beforeunload', handler);
+    return () => window.removeEventListener('beforeunload', handler);
+  }, [debouncedSave]);
 
   // Also update project name in list
   useEffect(() => {
