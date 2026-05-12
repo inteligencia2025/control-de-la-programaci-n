@@ -30,11 +30,15 @@ export function GanttChart() {
   const chartData = useMemo(() => {
     const enabled = project.activities.filter(a => a.enabled);
     if (enabled.length === 0) return null;
-    const projectStart = new Date(Math.min(...enabled.map(a => getEffectiveStartDate(a, project.activities).getTime())));
+    const isLinearWithDates = (a: typeof enabled[number]) =>
+      !!a.endDate && (a.category === 'preliminares' || a.category === 'cubierta' || a.category === 'fachada');
+    const getStart = (a: typeof enabled[number]) =>
+      isLinearWithDates(a) ? safeParse(a.startDate) : getEffectiveStartDate(a, project.activities);
+    const projectStart = new Date(Math.min(...enabled.map(a => getStart(a).getTime())));
     const activities = enabled.map(activity => {
-      const start = getEffectiveStartDate(activity, project.activities);
-      const totalWorkdays = activity.endDate && (activity.category === 'preliminares' || activity.category === 'cubierta' || activity.category === 'fachada')
-        ? countWorkdaysInclusive(start, safeParse(activity.endDate))
+      const start = getStart(activity);
+      const totalWorkdays = isLinearWithDates(activity)
+        ? countWorkdaysInclusive(start, safeParse(activity.endDate!))
         : calcActivityWorkdays(activity);
       let startIdx = 0;
       let cur = new Date(projectStart);
