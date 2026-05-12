@@ -127,7 +127,7 @@ function findIntersections(lines: { activity: Activity; points: LinePoint[] }[])
 }
 
 export function LOBChart() {
-  const { project, updateActivity } = useProject();
+  const { project, updateActivity, setProject } = useProject();
   const chartRef = useRef<HTMLDivElement>(null);
   const svgRef = useRef<SVGSVGElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
