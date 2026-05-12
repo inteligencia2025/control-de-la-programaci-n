@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getEffectiveStartDateSimple, getEffectiveRate, smartCeil, ensureWorkday, advanceWorkdays, safeParse } from '@/utils/schedulingUtils';
+import { addWorkdays } from '@/utils/dateUtils';
 
 const MAX_UNDO = 30;
 
@@ -290,6 +291,49 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unitLabels: (proj.unit_labels as Record<string, string>) || {},
     };
 
+    // Auto-inject newly added preloaded fachada activities (AVALUOS, ENTREGAS)
+    // for existing projects that already had other fachada activities loaded.
+    // One-time per project via localStorage flag so user-deletions are respected.
+    const injectKey = `lob-preload-fachada-v1:${projectId}`;
+    try {
+      if (!localStorage.getItem(injectKey)) {
+        const hasFachada = projectData.activities.some(a => a.category === 'fachada');
+        if (hasFachada) {
+          const existingNames = new Set(projectData.activities.map(a => a.name));
+          const toInject: Activity[] = [];
+          const lastFachada = [...projectData.activities].reverse().find(a => a.category === 'fachada');
+          const baseStart = lastFachada?.startDate || projectData.projectStartDate || new Date().toISOString().split('T')[0];
+          const newOnes = [
+            { name: 'AVALUOS', durationDays: 10 },
+            { name: 'ENTREGAS', durationDays: 10 },
+          ];
+          for (const n of newOnes) {
+            if (existingNames.has(n.name)) continue;
+            toInject.push({
+              id: crypto.randomUUID(),
+              name: n.name,
+              category: 'fachada',
+              unitStart: 1,
+              unitEnd: 1,
+              startDate: baseStart,
+              endDate: (() => { const [yy, mm, dd] = baseStart.split('-').map(Number); return addWorkdays(new Date(yy, mm - 1, dd), Math.max(1, n.durationDays - 1)).toISOString().split('T')[0]; })(),
+              rate: 1,
+              color: '#8e44ad',
+              predecessorId: undefined,
+              bufferDays: 0,
+              bufferUnits: 0,
+              crews: 1,
+              enabled: true,
+            });
+          }
+          if (toInject.length > 0) {
+            projectData.activities = [...projectData.activities, ...toInject];
+          }
+        }
+        localStorage.setItem(injectKey, '1');
+      }
+    } catch {}
+
     skipHistory.current = true;
     setProjectInternal(projectData);
     undoStack.current = [];
@@ -299,7 +343,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Mark that DB data has been loaded into state for this specific project
     loadedProjectIdRef.current = projectId;
     loadedFromDbRef.current = true;
-    dirtyRef.current = false;
+    // If we injected new activities, mark dirty so they get persisted
+    dirtyRef.current = projectData.activities.some(a => a.name === 'AVALUOS' || a.name === 'ENTREGAS')
+      && !((projectData.activities.find(a => a.name === 'AVALUOS')) && (projectData.activities.find(a => a.name === 'ENTREGAS'))
+        ? false : true) ? true : false;
+    // Simpler: just force a save check
+    dirtyRef.current = true;
     intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
   };
 
