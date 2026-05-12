@@ -63,8 +63,8 @@ export function GanttChart() {
       acabados: activities.filter(a => a.activity.category === 'acabados'),
       cubierta: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow !== 'ascensores'),
       ascensores: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow === 'ascensores'),
-      fachada: activities.filter(a => a.activity.category === 'fachada' && !['AVALUOS', 'ENTREGAS'].includes(a.activity.name?.toUpperCase?.() || '')),
-      avaluosEntregas: activities.filter(a => a.activity.category === 'fachada' && ['AVALUOS', 'ENTREGAS'].includes(a.activity.name?.toUpperCase?.() || '')),
+      fachada: activities.filter(a => a.activity.category === 'fachada' && !['AVALUOS', 'ENTREGAS', 'ESCRITURACIÓN', 'ESCRITURACION'].includes(a.activity.name?.toUpperCase?.() || '')),
+      avaluosEntregas: activities.filter(a => a.activity.category === 'fachada' && ['AVALUOS', 'ENTREGAS', 'ESCRITURACIÓN', 'ESCRITURACION'].includes(a.activity.name?.toUpperCase?.() || '')),
       workdays, maxDay, projectStart, projectEndDate, totalWorkdays: endWorkdays,
     };
   }, [project.activities]);
@@ -143,7 +143,7 @@ export function GanttChart() {
     { key: 'ascensores', label: 'Ascensores', items: ascensores, color: 'hsl(var(--accent-foreground))', barColor: '#16a085', bgFill: 'hsl(var(--accent) / 0.22)' },
     { key: 'acabados', label: 'Acabados', items: acabados, color: ACABADOS_COLOR, barColor: '#e69500', bgFill: 'hsl(40 90% 50% / 0.15)' },
     { key: 'fachada', label: 'Fachada', items: fachada, color: 'hsl(var(--accent-foreground))', barColor: '#c0392b', bgFill: 'hsl(0 70% 50% / 0.12)' },
-    { key: 'avaluosEntregas', label: 'Avalúos y Entregas', items: avaluosEntregas, color: 'hsl(var(--accent-foreground))', barColor: '#8e44ad', bgFill: 'hsl(280 60% 50% / 0.12)' },
+    { key: 'avaluosEntregas', label: 'Avalúos y Escrituración', items: avaluosEntregas, color: 'hsl(var(--accent-foreground))', barColor: '#8e44ad', bgFill: 'hsl(280 60% 50% / 0.12)' },
   ];
 
   const groupSummary: Record<string, { minStart: number; maxEnd: number }> = {};
