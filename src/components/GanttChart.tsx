@@ -24,7 +24,7 @@ const countWorkdaysInclusive = (start: Date, end: Date): number => {
 export function GanttChart() {
   const { project } = useProject();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ preliminares: false, estructura: false, cubierta: false, ascensores: false, acabados: false, fachada: false });
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ preliminares: false, estructura: false, cubierta: false, ascensores: false, acabados: false, fachada: false, avaluosEntregas: false });
   const toggle = (cat: string) => setCollapsed(c => ({ ...c, [cat]: !c[cat] }));
 
   const chartData = useMemo(() => {
@@ -63,7 +63,8 @@ export function GanttChart() {
       acabados: activities.filter(a => a.activity.category === 'acabados'),
       cubierta: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow !== 'ascensores'),
       ascensores: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow === 'ascensores'),
-      fachada: activities.filter(a => a.activity.category === 'fachada'),
+      fachada: activities.filter(a => a.activity.category === 'fachada' && !['AVALUOS', 'ENTREGAS'].includes(a.activity.name?.toUpperCase?.() || '')),
+      avaluosEntregas: activities.filter(a => a.activity.category === 'fachada' && ['AVALUOS', 'ENTREGAS'].includes(a.activity.name?.toUpperCase?.() || '')),
       workdays, maxDay, projectStart, projectEndDate, totalWorkdays: endWorkdays,
     };
   }, [project.activities]);
@@ -98,7 +99,7 @@ export function GanttChart() {
       projectStart: format(chartData.projectStart, 'yyyy-MM-dd'),
       projectEnd: format(chartData.projectEndDate, 'yyyy-MM-dd'),
       totalWorkdays: chartData.totalWorkdays,
-      activities: [...chartData.preliminares, ...chartData.estructura, ...chartData.cubierta, ...chartData.ascensores, ...chartData.acabados, ...chartData.fachada].map(({ activity, startIdx, duration }) => ({
+      activities: [...chartData.preliminares, ...chartData.estructura, ...chartData.cubierta, ...chartData.ascensores, ...chartData.acabados, ...chartData.fachada, ...chartData.avaluosEntregas].map(({ activity, startIdx, duration }) => ({
         id: activity.id,
         name: activity.name,
         category: activity.category,
@@ -133,7 +134,7 @@ export function GanttChart() {
     );
   }
 
-  const { preliminares, estructura, cubierta, ascensores, acabados, fachada, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
+  const { preliminares, estructura, cubierta, ascensores, acabados, fachada, avaluosEntregas, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
   const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const MONTHNUM_H = 22; const MONTH_H = 26; const DAY_H = 18; const HEADER_H = MONTHNUM_H + MONTH_H + DAY_H;
   const groups = [
     { key: 'preliminares', label: 'Preliminares', items: preliminares, color: 'hsl(var(--muted-foreground))', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)' },
@@ -142,6 +143,7 @@ export function GanttChart() {
     { key: 'ascensores', label: 'Ascensores', items: ascensores, color: 'hsl(var(--accent-foreground))', barColor: '#16a085', bgFill: 'hsl(var(--accent) / 0.22)' },
     { key: 'acabados', label: 'Acabados', items: acabados, color: ACABADOS_COLOR, barColor: '#e69500', bgFill: 'hsl(40 90% 50% / 0.15)' },
     { key: 'fachada', label: 'Fachada', items: fachada, color: 'hsl(var(--accent-foreground))', barColor: '#c0392b', bgFill: 'hsl(0 70% 50% / 0.12)' },
+    { key: 'avaluosEntregas', label: 'Avalúos y Entregas', items: avaluosEntregas, color: 'hsl(var(--accent-foreground))', barColor: '#8e44ad', bgFill: 'hsl(280 60% 50% / 0.12)' },
   ];
 
   const groupSummary: Record<string, { minStart: number; maxEnd: number }> = {};
