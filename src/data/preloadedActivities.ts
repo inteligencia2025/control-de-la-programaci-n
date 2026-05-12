@@ -79,6 +79,8 @@ export const PRELOADED_ACTIVITIES: PreloadedActivity[] = [
   { name: 'INSTALACIÓN VENTANAS', category: 'fachada', durationDays: 15 },
   { name: 'CTO', category: 'fachada', durationDays: 10 },
   { name: 'MEDIDORES ELÉCTRICOS', category: 'fachada', durationDays: 10 },
+  { name: 'AVALUOS', category: 'fachada', durationDays: 10 },
+  { name: 'ENTREGAS', category: 'fachada', durationDays: 10 },
   { name: 'MEDIDORES DE AGUA', category: 'fachada', durationDays: 10 },
   { name: 'RETIE', category: 'fachada', durationDays: 10 },
 ];
