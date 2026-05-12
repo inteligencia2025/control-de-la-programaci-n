@@ -162,7 +162,7 @@ export function LOBPanel() {
     const isLinearBand = form.category === 'preliminares' || form.category === 'fachada';
     const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
     const computedEndDate = isLinearBand
-      ? endDateFromDuration(form.startDate, form.durationDays)
+      ? (form.endDate && form.endDate >= form.startDate ? form.endDate : form.startDate)
       : form.endDate;
     const activity: Activity = {
       ...form,
@@ -531,18 +531,12 @@ export function LOBPanel() {
                     <Input type="date" value={form.startDate} onChange={e => setForm(f => ({ ...f, startDate: e.target.value }))} className="h-7 text-xs" />
                   </div>
                   <div>
-                    <Label className="text-[10px]">Duración (días háb.)</Label>
-                    <Input
-                      type="number"
-                      min={1}
-                      value={form.durationDays}
-                      onChange={e => setForm(f => ({ ...f, durationDays: Math.max(1, +e.target.value || 1) }))}
-                      className="h-7 text-xs"
-                    />
+                    <Label className="text-[10px]">Fecha Fin</Label>
+                    <Input type="date" value={form.endDate} onChange={e => setForm(f => ({ ...f, endDate: e.target.value }))} className="h-7 text-xs" />
                   </div>
                 </div>
                 <div className="text-[9px] text-muted-foreground -mt-1">
-                  Fin estimado: <span className="font-medium text-foreground">{endDateFromDuration(form.startDate, form.durationDays)}</span>
+                  Duración: <span className="font-medium text-foreground">{form.endDate && form.startDate && form.endDate >= form.startDate ? workdaysBetween(form.startDate, form.endDate) : 1} días háb.</span>
                 </div>
                 <div>
                   <Label className="text-[10px]">Predecesora</Label>
