@@ -536,6 +536,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     debouncedSave.cancel?.();
     loadedFromDbRef.current = false;
     loadedProjectIdRef.current = '';
+    dirtyRef.current = false;
+    intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
     setActiveProjectId(id);
     if (user) localStorage.setItem(getActiveProjectStorageKey(user.id), id);
     await loadProject(id);
