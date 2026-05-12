@@ -294,7 +294,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Auto-inject newly added preloaded fachada activities (AVALUOS, ENTREGAS)
     // for existing projects that already had other fachada activities loaded.
     // One-time per project via localStorage flag so user-deletions are respected.
-    const injectKey = `lob-preload-fachada-v1:${projectId}`;
+    const injectKey = `lob-preload-fachada-v3:${projectId}`;
     try {
       if (!localStorage.getItem(injectKey)) {
         const hasFachada = projectData.activities.some(a => a.category === 'fachada');
