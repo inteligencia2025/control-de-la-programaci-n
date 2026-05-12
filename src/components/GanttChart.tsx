@@ -134,7 +134,7 @@ export function GanttChart() {
   }
 
   const { preliminares, estructura, cubierta, ascensores, acabados, fachada, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
-  const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const HEADER_H = 44;
+  const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const MONTHNUM_H = 16; const HEADER_H = 44 + MONTHNUM_H;
   const groups = [
     { key: 'preliminares', label: 'Preliminares', items: preliminares, color: 'hsl(var(--muted-foreground))', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)' },
     { key: 'estructura', label: 'Estructura', items: estructura, color: ESTRUCTURA_COLOR, barColor: '#1e3a5f', bgFill: 'hsl(var(--primary) / 0.15)' },
