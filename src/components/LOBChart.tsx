@@ -633,7 +633,7 @@ export function LOBChart() {
       window.removeEventListener('mousemove', onMove);
       window.removeEventListener('mouseup', onUp);
     };
-  }, [drag, project.activities, updateActivity, zoom]);
+  }, [drag, project.activities, updateActivity, setProject, zoom]);
 
   const dragOffsetPx = (id: string) => (drag && drag.activityId === id ? drag.lastDelta * pxPerWorkday : 0);
 
