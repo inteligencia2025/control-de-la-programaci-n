@@ -299,6 +299,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Mark that DB data has been loaded into state for this specific project
     loadedProjectIdRef.current = projectId;
     loadedFromDbRef.current = true;
+    dirtyRef.current = false;
+    intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
   };
 
   // ---- SAVE to Supabase (debounced) ----
