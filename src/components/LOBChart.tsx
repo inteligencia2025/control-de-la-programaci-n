@@ -275,7 +275,7 @@ export function LOBChart() {
     );
     const FACHADA_ORDER_TOP_DOWN = [
       'RETIE',
-      'ENTREGAS',
+      'ESCRITURACIÓN',
       'AVALUOS',
       'MEDIDORES DE AGUA',
       'MEDIDORES ELÉCTRICOS',

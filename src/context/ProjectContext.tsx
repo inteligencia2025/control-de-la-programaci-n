@@ -291,10 +291,14 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       unitLabels: (proj.unit_labels as Record<string, string>) || {},
     };
 
-    // Auto-inject newly added preloaded fachada activities (AVALUOS, ENTREGAS)
+    // Auto-inject newly added preloaded fachada activities (AVALUOS, ESCRITURACIÓN)
     // for existing projects that already had other fachada activities loaded.
     // One-time per project via localStorage flag so user-deletions are respected.
-    const injectKey = `lob-preload-fachada-v3:${projectId}`;
+    // Also rename legacy 'ENTREGAS' -> 'ESCRITURACIÓN'.
+    projectData.activities = projectData.activities.map(a =>
+      a.name === 'ENTREGAS' ? { ...a, name: 'ESCRITURACIÓN' } : a
+    );
+    const injectKey = `lob-preload-fachada-v4:${projectId}`;
     try {
       if (!localStorage.getItem(injectKey)) {
         const hasFachada = projectData.activities.some(a => a.category === 'fachada');
@@ -305,7 +309,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           const baseStart = lastFachada?.startDate || projectData.projectStartDate || new Date().toISOString().split('T')[0];
           const newOnes = [
             { name: 'AVALUOS', durationDays: 10 },
-            { name: 'ENTREGAS', durationDays: 10 },
+            { name: 'ESCRITURACIÓN', durationDays: 10 },
           ];
           for (const n of newOnes) {
             if (existingNames.has(n.name)) continue;
@@ -343,11 +347,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Mark that DB data has been loaded into state for this specific project
     loadedProjectIdRef.current = projectId;
     loadedFromDbRef.current = true;
-    // If we injected new activities, mark dirty so they get persisted
-    dirtyRef.current = projectData.activities.some(a => a.name === 'AVALUOS' || a.name === 'ENTREGAS')
-      && !((projectData.activities.find(a => a.name === 'AVALUOS')) && (projectData.activities.find(a => a.name === 'ENTREGAS'))
-        ? false : true) ? true : false;
-    // Simpler: just force a save check
+    // Force a save check to persist any injection/rename
     dirtyRef.current = true;
     intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
   };
