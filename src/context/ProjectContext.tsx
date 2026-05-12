@@ -214,6 +214,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     debouncedSave.cancel?.();
     loadedFromDbRef.current = false;
     loadedProjectIdRef.current = '';
+    dirtyRef.current = false;
+    intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
     const [
       { data: proj },
       { data: acts },
