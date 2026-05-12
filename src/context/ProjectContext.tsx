@@ -571,7 +571,13 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const addActivity = useCallback((a: Activity) => setProject(p => ({ ...p, activities: [...p.activities, a] })), [setProject]);
   const updateActivity = useCallback((a: Activity) => setProject(p => {
+    const prev = p.activities.find(x => x.id === a.id);
     let activities = p.activities.map(x => x.id === a.id ? a : x);
+    // Only cascade when fields that affect successor scheduling changed.
+    const schedulingChanged = !prev || prev.startDate !== a.startDate
+      || prev.rate !== a.rate || (prev.crews || 1) !== (a.crews || 1)
+      || prev.unitStart !== a.unitStart || prev.unitEnd !== a.unitEnd;
+    if (!schedulingChanged) return { ...p, activities };
     // Cascade: update stored startDate of all successors based on predecessor constraint
     const cascadeSuccessors = (changedId: string) => {
       const successors = activities.filter(s => s.predecessorId === changedId);
