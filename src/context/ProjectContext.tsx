@@ -4,6 +4,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { getEffectiveStartDateSimple, getEffectiveRate, smartCeil, ensureWorkday, advanceWorkdays, safeParse } from '@/utils/schedulingUtils';
+import { addWorkdays } from '@/utils/dateUtils';
 
 const MAX_UNDO = 30;
 
