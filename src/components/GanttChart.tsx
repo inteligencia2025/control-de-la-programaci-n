@@ -63,7 +63,11 @@ export function GanttChart() {
     }
     return {
       preliminares: activities.filter(a => a.activity.category === 'preliminares'),
-      estructura: activities.filter(a => a.activity.category === 'estructura'),
+      estructura: activities.filter(a => {
+        if (a.activity.category !== 'estructura') return false;
+        const n = (a.activity.name || '').toUpperCase();
+        return n.includes('VACIADO MURO') || n.includes('VACIADO LOSA');
+      }),
       acabados: activities.filter(a => a.activity.category === 'acabados'),
       cubierta: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow !== 'ascensores'),
       ascensores: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow === 'ascensores'),
