@@ -1,4 +1,5 @@
-import { addDays, isNonWorkday, format, differenceInCalendarDays, startOfWeek, parse } from 'date-fns';
+import { addDays, format, differenceInCalendarDays, startOfWeek, parse } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 import { es } from 'date-fns/locale';
 
 export function getWorkdays(start: Date, count: number): Date[] {

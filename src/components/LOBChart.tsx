@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { Activity, getUnitLabel, getCubiertaUnits } from '@/types/project';
-import { addDays, isNonWorkday, format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { addDays, format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 import { safeParse } from '@/utils/schedulingUtils';
 
 /** Shift a YYYY-MM-DD date by N workdays (positive or negative), landing on a workday. */

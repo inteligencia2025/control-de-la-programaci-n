@@ -9,7 +9,8 @@ import { SearchableActivitySelect } from '@/components/SearchableActivitySelect'
 import { useProject } from '@/context/ProjectContext';
 import { Activity, DEFAULT_COLORS, getUnitLabel, CubiertaRow, getCubiertaUnits, pickNextColor } from '@/types/project';
 import { PRELOADED_ACTIVITIES } from '@/data/preloadedActivities';
-import { addDays, isNonWorkday } from 'date-fns';
+import { addDays } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 
 function getNextWorkday(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);

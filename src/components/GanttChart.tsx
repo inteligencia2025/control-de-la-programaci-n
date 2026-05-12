@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
-import { addDays, isNonWorkday, format } from 'date-fns';
+import { addDays, format } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 import { es } from 'date-fns/locale';
 import { getEffectiveStartDateSimple as getEffectiveStartDate, calcActivityWorkdays, safeParse } from '@/utils/schedulingUtils';
 

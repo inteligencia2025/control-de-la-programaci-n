@@ -1,4 +1,5 @@
-import { addDays, isNonWorkday, parseISO } from 'date-fns';
+import { addDays, parseISO } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 import { Activity } from '@/types/project';
 
 /**
