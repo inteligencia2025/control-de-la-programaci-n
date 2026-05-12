@@ -312,6 +312,51 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!user || !projectId) return;
     // Defense: do not save if the loaded project no longer matches the target id
     if (loadedProjectIdRef.current !== projectId) return;
+
+    const stillCurrent = () => loadedProjectIdRef.current === projectId;
+
+    // ---- ANTI-WIPE GUARD ----
+    // If our in-memory data is empty for a list, only allow that to be persisted
+    // when the user explicitly emptied it (intentionalEmptyRef). Otherwise, if
+    // the DB still has rows, abort the entire save to prevent destroying data
+    // due to a stale render or race condition.
+    try {
+      if (data.activities.length === 0 && !intentionalEmptyRef.current.activities) {
+        const { count } = await supabase
+          .from('activities')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId);
+        if ((count ?? 0) > 0) {
+          console.warn('[doSave] Aborted: in-memory activities=0 but DB has', count, 'for', projectId);
+          return;
+        }
+      }
+      if (data.lookahead.length === 0 && !intentionalEmptyRef.current.lookahead) {
+        const { count } = await supabase
+          .from('lookahead_items')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId);
+        if ((count ?? 0) > 0) {
+          console.warn('[doSave] Aborted: in-memory lookahead=0 but DB has', count, 'for', projectId);
+          return;
+        }
+      }
+      if (data.pacRecords.length === 0 && !intentionalEmptyRef.current.pac) {
+        const { count } = await supabase
+          .from('pac_records')
+          .select('id', { count: 'exact', head: true })
+          .eq('project_id', projectId);
+        if ((count ?? 0) > 0) {
+          console.warn('[doSave] Aborted: in-memory pacRecords=0 but DB has', count, 'for', projectId);
+          return;
+        }
+      }
+    } catch (err) {
+      console.error('[doSave] Anti-wipe guard query failed, aborting save:', err);
+      return;
+    }
+    if (!stillCurrent()) return;
+
     setSaving(true);
     try {
       // Update project metadata
@@ -327,11 +372,11 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
         unit_labels: (data.unitLabels || {}) as any,
         updated_at: new Date().toISOString(),
       }).eq('id', projectId);
+      if (!stillCurrent()) return;
 
-      // Sync activities: delete all then insert
-      await supabase.from('activities').delete().eq('project_id', projectId);
+      // ---- Sync activities (upsert + diff delete) ----
       if (data.activities.length > 0) {
-        await supabase.from('activities').insert(
+        await supabase.from('activities').upsert(
           data.activities.map((a, i) => ({
             id: a.id,
             project_id: projectId,
@@ -349,14 +394,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             crews: a.crews,
             enabled: a.enabled,
             sort_order: i,
-          }))
+          })),
+          { onConflict: 'id' }
         );
+        if (!stillCurrent()) return;
+        const ids = data.activities.map(a => a.id);
+        await supabase
+          .from('activities')
+          .delete()
+          .eq('project_id', projectId)
+          .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
+      } else if (intentionalEmptyRef.current.activities) {
+        await supabase.from('activities').delete().eq('project_id', projectId);
       }
+      if (!stillCurrent()) return;
 
-      // Sync lookahead
-      await supabase.from('lookahead_items').delete().eq('project_id', projectId);
+      // ---- Sync lookahead ----
       if (data.lookahead.length > 0) {
-        await supabase.from('lookahead_items').insert(
+        await supabase.from('lookahead_items').upsert(
           data.lookahead.map(l => ({
             id: l.id,
             project_id: projectId,
@@ -369,14 +424,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             commitment_date: l.commitmentDate || null,
             commitment_met: l.commitmentMet ?? null,
             commitment_cause: l.commitmentCause || null,
-          }))
+          })),
+          { onConflict: 'id' }
         );
+        if (!stillCurrent()) return;
+        const ids = data.lookahead.map(l => l.id);
+        await supabase
+          .from('lookahead_items')
+          .delete()
+          .eq('project_id', projectId)
+          .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
+      } else if (intentionalEmptyRef.current.lookahead) {
+        await supabase.from('lookahead_items').delete().eq('project_id', projectId);
       }
+      if (!stillCurrent()) return;
 
-      // Sync PAC records
-      await supabase.from('pac_records').delete().eq('project_id', projectId);
+      // ---- Sync PAC records ----
       if (data.pacRecords.length > 0) {
-        await supabase.from('pac_records').insert(
+        await supabase.from('pac_records').upsert(
           data.pacRecords.map(r => ({
             id: r.id,
             project_id: projectId,
@@ -390,9 +455,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
             completed_pct: r.completedPct ?? 0,
             failure_cause: r.failureCause,
             failure_description: r.failureDescription || null,
-          }))
+          })),
+          { onConflict: 'id' }
         );
+        if (!stillCurrent()) return;
+        const ids = data.pacRecords.map(r => r.id);
+        await supabase
+          .from('pac_records')
+          .delete()
+          .eq('project_id', projectId)
+          .not('id', 'in', `(${ids.map(id => `"${id}"`).join(',')})`);
+      } else if (intentionalEmptyRef.current.pac) {
+        await supabase.from('pac_records').delete().eq('project_id', projectId);
       }
+
+      // Reset intentional-empty flags after a successful save
+      intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
+      dirtyRef.current = false;
     } catch (err) {
       console.error('Error saving project:', err);
     }
