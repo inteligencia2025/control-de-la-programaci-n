@@ -2,7 +2,8 @@ import { useMemo, useRef, useState } from 'react';
 import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
-import { addDays, isWeekend, format } from 'date-fns';
+import { addDays, format } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 import { es } from 'date-fns/locale';
 import { getEffectiveStartDateSimple as getEffectiveStartDate, calcActivityWorkdays, safeParse } from '@/utils/schedulingUtils';
 
@@ -14,7 +15,7 @@ const countWorkdaysInclusive = (start: Date, end: Date): number => {
   let current = new Date(start);
   let count = 0;
   while (current <= end) {
-    if (!isWeekend(current)) count++;
+    if (!isNonWorkday(current)) count++;
     current = addDays(current, 1);
   }
   return Math.max(1, count);
@@ -37,7 +38,7 @@ export function GanttChart() {
         : calcActivityWorkdays(activity);
       let startIdx = 0;
       let cur = new Date(projectStart);
-      while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
+      while (cur < start) { if (!isNonWorkday(cur)) startIdx++; cur = addDays(cur, 1); }
       return { activity, startIdx, duration: totalWorkdays };
     });
     const maxDay = Math.max(...activities.map(a => a.startIdx + a.duration)) + 3;
@@ -47,13 +48,13 @@ export function GanttChart() {
     const endWorkdays = maxDay - 3;
     let cur2 = new Date(projectStart);
     let countWd = 0;
-    while (countWd < endWorkdays) { cur2 = addDays(cur2, 1); if (!isWeekend(cur2)) countWd++; }
+    while (countWd < endWorkdays) { cur2 = addDays(cur2, 1); if (!isNonWorkday(cur2)) countWd++; }
     projectEndDate = cur2;
 
     const workdays: { label: string; month: string; date: Date }[] = [];
     let current = new Date(projectStart);
     while (workdays.length <= maxDay) {
-      if (!isWeekend(current)) workdays.push({ label: format(current, 'dd', { locale: es }), month: format(current, 'MMM yy', { locale: es }), date: new Date(current) });
+      if (!isNonWorkday(current)) workdays.push({ label: format(current, 'dd', { locale: es }), month: format(current, 'MMM yy', { locale: es }), date: new Date(current) });
       current = addDays(current, 1);
     }
     return {

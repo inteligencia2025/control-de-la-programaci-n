@@ -1,11 +1,12 @@
-import { addDays, isWeekend, format, differenceInCalendarDays, startOfWeek, parse } from 'date-fns';
+import { addDays, format, differenceInCalendarDays, startOfWeek, parse } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 import { es } from 'date-fns/locale';
 
 export function getWorkdays(start: Date, count: number): Date[] {
   const days: Date[] = [];
   let current = new Date(start);
   while (days.length < count) {
-    if (!isWeekend(current)) {
+    if (!isNonWorkday(current)) {
       days.push(new Date(current));
     }
     current = addDays(current, 1);
@@ -18,7 +19,7 @@ export function addWorkdays(start: Date, workdays: number): Date {
   let added = 0;
   while (added < workdays) {
     current = addDays(current, 1);
-    if (!isWeekend(current)) added++;
+    if (!isNonWorkday(current)) added++;
   }
   return current;
 }
@@ -27,7 +28,7 @@ export function workdaysBetween(start: Date, end: Date): number {
   let count = 0;
   let current = new Date(start);
   while (current <= end) {
-    if (!isWeekend(current)) count++;
+    if (!isNonWorkday(current)) count++;
     current = addDays(current, 1);
   }
   return count;
@@ -45,7 +46,7 @@ export function getWorkdayIndex(start: Date, target: Date): number {
   let count = 0;
   let current = new Date(start);
   while (current < target) {
-    if (!isWeekend(current)) count++;
+    if (!isNonWorkday(current)) count++;
     current = addDays(current, 1);
   }
   return count;

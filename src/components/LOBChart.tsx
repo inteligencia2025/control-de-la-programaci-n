@@ -1,7 +1,8 @@
 import { useMemo, useRef, useState, useCallback, useEffect } from 'react';
 import { useProject } from '@/context/ProjectContext';
 import { Activity, getUnitLabel, getCubiertaUnits } from '@/types/project';
-import { addDays, isWeekend, format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { addDays, format, parseISO, differenceInCalendarDays } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 import { safeParse } from '@/utils/schedulingUtils';
 
 /** Shift a YYYY-MM-DD date by N workdays (positive or negative), landing on a workday. */
@@ -9,12 +10,12 @@ function shiftWorkdays(dateStr: string, n: number): string {
   let cur = safeParse(dateStr);
   if (n > 0) {
     let count = 0;
-    while (count < n) { cur = addDays(cur, 1); if (!isWeekend(cur)) count++; }
+    while (count < n) { cur = addDays(cur, 1); if (!isNonWorkday(cur)) count++; }
   } else if (n < 0) {
     let count = 0;
-    while (count < -n) { cur = addDays(cur, -1); if (!isWeekend(cur)) count++; }
+    while (count < -n) { cur = addDays(cur, -1); if (!isNonWorkday(cur)) count++; }
   }
-  while (isWeekend(cur)) cur = addDays(cur, 1);
+  while (isNonWorkday(cur)) cur = addDays(cur, 1);
   return format(cur, 'yyyy-MM-dd');
 }
 import { es } from 'date-fns/locale';
@@ -38,8 +39,8 @@ function getActivityLine(activity: Activity, projectStart: Date, activities: Act
   const totalWorkdays = smartCeil(totalUnits / effectiveRate);
   let startIndex = 0;
   let current = new Date(projectStart);
-  while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
-  while (isWeekend(start)) { start = addDays(start, 1); startIndex++; }
+  while (current < start) { if (!isNonWorkday(current)) startIndex++; current = addDays(current, 1); }
+  while (isNonWorkday(start)) { start = addDays(start, 1); startIndex++; }
   points.push({ workdayIndex: startIndex, unit: actualUnitStart });
   const dir = activity.unitEnd > actualUnitStart ? 1 : -1;
   // Workdays fraccionarios exactos para cubrir todas las unidades (sin smartCeil al final).
@@ -71,8 +72,8 @@ function getCrewLines(activity: Activity, projectStart: Date, activities: Activi
 
   let startIndex = 0;
   let current = new Date(projectStart);
-  while (current < start) { if (!isWeekend(current)) startIndex++; current = addDays(current, 1); }
-  while (isWeekend(start)) { start = addDays(start, 1); startIndex++; }
+  while (current < start) { if (!isNonWorkday(current)) startIndex++; current = addDays(current, 1); }
+  while (isNonWorkday(start)) { start = addDays(start, 1); startIndex++; }
 
   const crewLines: LinePoint[][] = [];
   for (let c = 0; c < crews; c++) {
@@ -192,14 +193,14 @@ export function LOBChart() {
       const durationDays = smartCeil(totalUnits / effectiveRate);
       let startIdx = 0;
       let cur = new Date(projectStart);
-      while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
+      while (cur < start) { if (!isNonWorkday(cur)) startIdx++; cur = addDays(cur, 1); }
       return Math.max(max, startIdx + durationDays);
     }, 0);
     // Helper: convert any calendar date to workday index (skipping weekends)
     const dateToWorkdayIdx = (d: Date): number => {
       let idx = 0;
       let cur = new Date(projectStart);
-      while (cur < d) { if (!isWeekend(cur)) idx++; cur = addDays(cur, 1); }
+      while (cur < d) { if (!isNonWorkday(cur)) idx++; cur = addDays(cur, 1); }
       return idx;
     };
     // Cubierta horizontal lines
@@ -317,7 +318,7 @@ export function LOBChart() {
     let current = new Date(projectStart);
     let monthCounter = 0; let lastMonth = '';
     while (workdays.length <= maxWorkday) {
-      if (!isWeekend(current)) {
+      if (!isNonWorkday(current)) {
         const monthStr = format(current, 'MMM yy', { locale: es });
         if (monthStr !== lastMonth) { monthCounter++; lastMonth = monthStr; }
         workdays.push({ date: new Date(current), label: format(current, 'dd', { locale: es }), dayName: format(current, 'EEE', { locale: es }), month: monthStr, monthIdx: monthCounter });
@@ -333,7 +334,7 @@ export function LOBChart() {
       const durationDays = smartCeil(totalUnits / effectiveRate);
       let startIdx = 0;
       let cur = new Date(projectStart);
-      while (cur < start) { if (!isWeekend(cur)) startIdx++; cur = addDays(cur, 1); }
+      while (cur < start) { if (!isNonWorkday(cur)) startIdx++; cur = addDays(cur, 1); }
       return { activity, startIdx, endIdx: startIdx + durationDays, duration: durationDays };
     });
     const totalDuration = maxWorkday - 5;

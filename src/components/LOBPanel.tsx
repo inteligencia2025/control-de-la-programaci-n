@@ -9,13 +9,14 @@ import { SearchableActivitySelect } from '@/components/SearchableActivitySelect'
 import { useProject } from '@/context/ProjectContext';
 import { Activity, DEFAULT_COLORS, getUnitLabel, CubiertaRow, getCubiertaUnits, pickNextColor } from '@/types/project';
 import { PRELOADED_ACTIVITIES } from '@/data/preloadedActivities';
-import { addDays, isWeekend } from 'date-fns';
+import { addDays } from 'date-fns';
+import { isNonWorkday } from '@/utils/holidays';
 
 function getNextWorkday(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   let cur = new Date(y, m - 1, d);
   cur = addDays(cur, 1);
-  while (isWeekend(cur)) cur = addDays(cur, 1);
+  while (isNonWorkday(cur)) cur = addDays(cur, 1);
   return cur.toISOString().split('T')[0];
 }
 
@@ -25,11 +26,11 @@ function endDateFromDuration(startDate: string, durationDays: number): string {
   const [y, m, d] = startDate.split('-').map(Number);
   let cur = new Date(y, m - 1, d);
   // If start lands on weekend, snap to next workday
-  while (isWeekend(cur)) cur = addDays(cur, 1);
+  while (isNonWorkday(cur)) cur = addDays(cur, 1);
   let advanced = 0;
   while (advanced < dur - 1) {
     cur = addDays(cur, 1);
-    if (!isWeekend(cur)) advanced++;
+    if (!isNonWorkday(cur)) advanced++;
   }
   return cur.toISOString().split('T')[0];
 }
@@ -43,7 +44,7 @@ function workdaysBetween(startDate: string, endDate: string): number {
   if (cur > end) return 1;
   let count = 0;
   while (cur <= end) {
-    if (!isWeekend(cur)) count++;
+    if (!isNonWorkday(cur)) count++;
     cur = addDays(cur, 1);
   }
   return Math.max(1, count);
@@ -245,7 +246,7 @@ export function LOBPanel() {
         let advanced = 0;
         while (advanced < dur - 1) {
           endCur = addDays(endCur, 1);
-          if (!isWeekend(endCur)) advanced++;
+          if (!isNonWorkday(endCur)) advanced++;
         }
         const endDate = endCur.toISOString().split('T')[0];
         const activity: Activity = {
