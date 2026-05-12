@@ -134,7 +134,7 @@ export function GanttChart() {
   }
 
   const { preliminares, estructura, cubierta, ascensores, acabados, fachada, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
-  const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const HEADER_H = 44;
+  const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const MONTHNUM_H = 16; const HEADER_H = 44 + MONTHNUM_H;
   const groups = [
     { key: 'preliminares', label: 'Preliminares', items: preliminares, color: 'hsl(var(--muted-foreground))', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)' },
     { key: 'estructura', label: 'Estructura', items: estructura, color: ESTRUCTURA_COLOR, barColor: '#1e3a5f', bgFill: 'hsl(var(--primary) / 0.15)' },
@@ -178,14 +178,20 @@ export function GanttChart() {
         <div className="bg-card rounded-lg border border-border inline-block">
           <svg ref={svgRef} width={WIDTH} height={HEIGHT}>
             {months.map((m, i) => (
+              <g key={`mn-${i}`}>
+                <rect x={LABEL_W + m.start * COL_W} y={0} width={(m.end - m.start + 1) * COL_W} height={MONTHNUM_H} fill="hsl(var(--accent))" />
+                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H - 4} textAnchor="middle" className="fill-accent-foreground text-[9px] font-semibold">Mes {i + 1}</text>
+              </g>
+            ))}
+            {months.map((m, i) => (
               <g key={`mh-${i}`}>
-                <rect x={LABEL_W + m.start * COL_W} y={0} width={(m.end - m.start + 1) * COL_W} height={20} fill="hsl(var(--primary))" />
-                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={14} textAnchor="middle" className="fill-primary-foreground text-[9px] font-medium">{m.month}</text>
+                <rect x={LABEL_W + m.start * COL_W} y={MONTHNUM_H} width={(m.end - m.start + 1) * COL_W} height={20} fill="hsl(var(--primary))" />
+                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H + 14} textAnchor="middle" className="fill-primary-foreground text-[9px] font-medium">{m.month}</text>
               </g>
             ))}
             {workdays.map((wd, i) => (
               <g key={`dh-${i}`}>
-                {i % 5 === 0 && <text x={LABEL_W + i * COL_W + COL_W / 2} y={36} textAnchor="middle" className="fill-muted-foreground text-[8px]">{wd.label}</text>}
+                {i % 5 === 0 && <text x={LABEL_W + i * COL_W + COL_W / 2} y={MONTHNUM_H + 36} textAnchor="middle" className="fill-muted-foreground text-[8px]">{wd.label}</text>}
                 <line x1={LABEL_W + i * COL_W} x2={LABEL_W + i * COL_W} y1={HEADER_H} y2={HEADER_H + totalRows * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
               </g>
             ))}
