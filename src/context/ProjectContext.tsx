@@ -316,7 +316,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
               unitStart: 1,
               unitEnd: 1,
               startDate: baseStart,
-              endDate: advanceWorkdays(baseStart, n.durationDays),
+              endDate: (() => { const [yy, mm, dd] = baseStart.split('-').map(Number); return addWorkdays(new Date(yy, mm - 1, dd), Math.max(1, n.durationDays - 1)).toISOString().split('T')[0]; })(),
               rate: 1,
               color: '#8e44ad',
               predecessorId: undefined,
