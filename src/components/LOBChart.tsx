@@ -603,14 +603,11 @@ export function LOBChart() {
         if (curr && curr.lastDelta !== 0) {
           const a = project.activities.find(x => x.id === curr.activityId);
           if (a) {
-            // Move only the dragged activity. Break its predecessor link so the
-            // LOB engine doesn't recompute its position back to the predecessor.
+            // Move only the dragged activity, preserving its predecessor link.
+            // The LOB engine will respect the later of (stored startDate, predecessor constraint).
             const updated: Activity = {
               ...a,
               startDate: shiftWorkdays(a.startDate, curr.lastDelta),
-              predecessorId: undefined,
-              bufferDays: 0,
-              bufferUnits: 0,
             };
             if (a.endDate) updated.endDate = shiftWorkdays(a.endDate, curr.lastDelta);
             updateActivity(updated);
