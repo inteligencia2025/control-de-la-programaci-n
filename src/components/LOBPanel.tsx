@@ -162,7 +162,7 @@ export function LOBPanel() {
     const isLinearBand = form.category === 'preliminares' || form.category === 'fachada';
     const rowIdx = form.cubiertaRow === 'cubierta' ? 1 : form.cubiertaRow === 'muros_cubierta' ? 2 : 3;
     const computedEndDate = isLinearBand
-      ? endDateFromDuration(form.startDate, form.durationDays)
+      ? (form.endDate && form.endDate >= form.startDate ? form.endDate : form.startDate)
       : form.endDate;
     const activity: Activity = {
       ...form,
