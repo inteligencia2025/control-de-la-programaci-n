@@ -90,6 +90,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loaded, setLoaded] = useState(false);
   const loadedFromDbRef = useRef(false); // true only after DB data is set into state
   const loadedProjectIdRef = useRef<string>(''); // id of project whose data is currently in `project` state
+  const dirtyRef = useRef(false); // true once user makes a real edit; prevents auto-save firing from a load
+  const intentionalEmptyRef = useRef<{ activities: boolean; lookahead: boolean; pac: boolean }>({ activities: false, lookahead: false, pac: false });
 
   // Undo/Redo
   const undoStack = useRef<ProjectData[]>([]);
