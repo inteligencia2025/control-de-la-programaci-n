@@ -180,18 +180,18 @@ export function GanttChart() {
             {months.map((m, i) => (
               <g key={`mn-${i}`}>
                 <rect x={LABEL_W + m.start * COL_W} y={0} width={(m.end - m.start + 1) * COL_W} height={MONTHNUM_H} fill="hsl(var(--accent))" />
-                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H - 4} textAnchor="middle" className="fill-accent-foreground text-[9px] font-semibold">Mes {i + 1}</text>
+                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H - 6} textAnchor="middle" className="fill-accent-foreground text-[12px] font-semibold">Mes {i + 1}</text>
               </g>
             ))}
             {months.map((m, i) => (
               <g key={`mh-${i}`}>
-                <rect x={LABEL_W + m.start * COL_W} y={MONTHNUM_H} width={(m.end - m.start + 1) * COL_W} height={20} fill="hsl(var(--primary))" />
-                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H + 14} textAnchor="middle" className="fill-primary-foreground text-[9px] font-medium">{m.month}</text>
+                <rect x={LABEL_W + m.start * COL_W} y={MONTHNUM_H} width={(m.end - m.start + 1) * COL_W} height={MONTH_H} fill="hsl(var(--primary))" />
+                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H + MONTH_H - 8} textAnchor="middle" className="fill-primary-foreground text-[12px] font-medium">{m.month}</text>
               </g>
             ))}
             {workdays.map((wd, i) => (
               <g key={`dh-${i}`}>
-                {i % 5 === 0 && <text x={LABEL_W + i * COL_W + COL_W / 2} y={MONTHNUM_H + 36} textAnchor="middle" className="fill-muted-foreground text-[8px]">{wd.label}</text>}
+                {i % 5 === 0 && <text x={LABEL_W + i * COL_W + COL_W / 2} y={MONTHNUM_H + MONTH_H + 13} textAnchor="middle" className="fill-muted-foreground text-[11px]">{wd.label}</text>}
                 <line x1={LABEL_W + i * COL_W} x2={LABEL_W + i * COL_W} y1={HEADER_H} y2={HEADER_H + totalRows * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
               </g>
             ))}
