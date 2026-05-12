@@ -12,7 +12,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/component
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useProject } from '@/context/ProjectContext';
 import { LookaheadItem, Activity, RESTRICTION_CATEGORIES, createEmptyRestrictions, DEFAULT_FAILURE_CAUSES } from '@/types/project';
-import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
+import { addDays, isNonWorkday, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import { getEffectiveStartDateSimple, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 

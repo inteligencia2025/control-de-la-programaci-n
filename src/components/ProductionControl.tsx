@@ -12,7 +12,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useProject } from '@/context/ProjectContext';
 import { PACRecord, DEFAULT_FAILURE_CAUSES, Activity, isPACCompliant } from '@/types/project';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Legend, LineChart, Line, ReferenceLine, ComposedChart } from 'recharts';
-import { addDays, isWeekend, startOfWeek, format } from 'date-fns';
+import { addDays, isNonWorkday, startOfWeek, format } from 'date-fns';
 import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -99,7 +99,7 @@ export function ProductionControl() {
       const start = getEffectiveStartDate(a, project.activities);
       const totalWorkdays = calcActivityWorkdays(a);
       let endDate = new Date(start); let count = 0;
-      while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
+      while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isNonWorkday(endDate)) count++; }
       if (!earliest || start < earliest) earliest = start;
       if (!latest || endDate > latest) latest = endDate;
     }
@@ -185,7 +185,7 @@ export function ProductionControl() {
         const start = getEffectiveStartDate(a, project.activities);
         const totalWorkdays = calcActivityWorkdays(a);
         let endDate = new Date(start); let count = 0;
-        while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isWeekend(endDate)) count++; }
+        while (count < totalWorkdays) { endDate = addDays(endDate, 1); if (!isNonWorkday(endDate)) count++; }
         return start <= weekEnd && endDate >= weekStart;
       })
       .filter(a => !existingNames.has(a.name))

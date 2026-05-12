@@ -1,4 +1,4 @@
-import { addDays, isWeekend, parseISO } from 'date-fns';
+import { addDays, isNonWorkday, parseISO } from 'date-fns';
 import { Activity } from '@/types/project';
 
 /**
@@ -45,7 +45,7 @@ export function advanceWorkdays(start: Date, workdays: number): Date {
   let count = 0;
   while (count < workdays) {
     current = addDays(current, 1);
-    if (!isWeekend(current)) count++;
+    if (!isNonWorkday(current)) count++;
   }
   return current;
 }
@@ -53,7 +53,7 @@ export function advanceWorkdays(start: Date, workdays: number): Date {
 /** Skip to next workday if current date is a weekend */
 export function ensureWorkday(date: Date): Date {
   let d = new Date(date);
-  while (isWeekend(d)) d = addDays(d, 1);
+  while (isNonWorkday(d)) d = addDays(d, 1);
   return d;
 }
 
@@ -62,7 +62,7 @@ export function workdayIndexBetween(projectStart: Date, target: Date): number {
   let count = 0;
   let current = new Date(projectStart);
   while (current < target) {
-    if (!isWeekend(current)) count++;
+    if (!isNonWorkday(current)) count++;
     current = addDays(current, 1);
   }
   return count;
