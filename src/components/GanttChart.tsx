@@ -165,7 +165,7 @@ export function GanttChart() {
 
   let totalRows = 0;
   groups.forEach(g => { totalRows++; if (!collapsed[g.key]) totalRows += g.items.length; });
-  const SUMMARY_H = 60;
+  const SUMMARY_H = 80;
   const WIDTH = LABEL_W + maxDay * COL_W + 20;
   const HEIGHT = HEADER_H + totalRows * ROW_H + SUMMARY_H + 20;
   const months: { month: string; start: number; end: number }[] = [];
@@ -174,6 +174,9 @@ export function GanttChart() {
     else months[months.length - 1].end = i;
   });
   let rowIdx = 0;
+
+  const totalUnits = project.buildingConfig.floors * project.buildingConfig.unitsPerFloor;
+  const totalMonths = months.length;
 
   return (
     <div className="flex flex-col h-full">
@@ -249,10 +252,13 @@ export function GanttChart() {
             <rect x={10} y={HEADER_H + totalRows * ROW_H + 10} width={WIDTH - 20} height={SUMMARY_H} rx={6}
               fill="hsl(var(--secondary))" stroke="hsl(var(--border))" strokeWidth={1} />
             <text x={24} y={HEADER_H + totalRows * ROW_H + 32} className="fill-foreground text-[12px] font-bold">
-              Resumen del Proyecto
+              Resumen del Proyecto — {project.name || 'Sin nombre'}
             </text>
-            <text x={24} y={HEADER_H + totalRows * ROW_H + 48} className="fill-foreground text-[11px]">
+            <text x={24} y={HEADER_H + totalRows * ROW_H + 50} className="fill-foreground text-[11px]">
               Inicio: {format(projectStart, 'dd/MM/yyyy', { locale: es })}  |  Fin: {format(projectEndDate, 'dd/MM/yyyy', { locale: es })}  |  Duración: {totalWorkdays} días laborales
+            </text>
+            <text x={24} y={HEADER_H + totalRows * ROW_H + 68} className="fill-foreground text-[11px]">
+              Total meses: {totalMonths}  |  Total unidades: {totalUnits}
             </text>
           </svg>
         </div>
