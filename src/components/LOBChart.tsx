@@ -352,19 +352,6 @@ export function LOBChart() {
     return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines: orderedPrelim, fachadaLines };
   }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, fachadaActivities, enabledActivities, project.activities, project.buildingConfig]);
 
-  const handleExportPNG = async () => {
-    if (!svgRef.current) return;
-    const svgEl = svgRef.current;
-    const width = svgEl.width.baseVal.value;
-    const height = svgEl.height.baseVal.value;
-
-    // Clone SVG and ensure namespaces + explicit dimensions
-    const clone = svgEl.cloneNode(true) as SVGSVGElement;
-    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
-    clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
-    clone.setAttribute('width', String(width));
-    clone.setAttribute('height', String(height));
-
   // Build a self-contained, light-themed clone of the SVG suitable for export/print.
   // Forces a fixed light palette so there are no dark/low-contrast areas regardless of the active theme.
   const buildExportSvg = (): { clone: SVGSVGElement; width: number; height: number } | null => {
