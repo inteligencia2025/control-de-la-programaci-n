@@ -267,7 +267,7 @@ export function LookaheadTable() {
             <Button key={w} variant={weekFilter === w ? 'default' : 'outline'} size="sm" className="h-7 text-xs px-2.5 shrink-0" onClick={() => setWeekFilter(w)}>S{w}</Button>
           ))}
         </div>
-        <span className="text-xs text-muted-foreground">{format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 4), 'dd/MM')}</span>
+        <span className="text-xs text-muted-foreground">{format(weekStart, 'dd/MM/yyyy')} - {format(addDays(weekStart, 6), 'dd/MM/yyyy')}</span>
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-7 text-xs">Restricciones</Button>
           <Button size="sm" variant={viewMode === 'review' ? 'default' : 'outline'} onClick={() => setViewMode('review')} className="gap-1 h-7 text-xs">Revisión</Button>
