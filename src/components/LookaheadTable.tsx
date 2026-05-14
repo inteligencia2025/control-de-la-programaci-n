@@ -256,6 +256,29 @@ export function LookaheadTable() {
     });
   }, [filteredItems]);
 
+  const groupedItems = useMemo(() => {
+    const groups: Record<string, typeof sortedItems> = {};
+    for (const item of sortedItems) {
+      const act = project.activities.find(a => a.id === item.activityId);
+      const cat = act?.category || 'otros';
+      if (!groups[cat]) groups[cat] = [];
+      groups[cat].push(item);
+    }
+    return groups;
+  }, [sortedItems, project.activities]);
+
+  const categoryLabels: Record<string, string> = {
+    estructura: 'Estructura',
+    acabados: 'Acabados',
+    zonas_sociales: 'Zonas Sociales',
+    cubierta: 'Cubierta',
+    preliminares: 'Preliminares',
+    fachada: 'Fachada',
+    otros: 'Otros',
+  };
+
+  const categoryOrder = ['preliminares', 'estructura', 'acabados', 'fachada', 'cubierta', 'zonas_sociales', 'otros'];
+
   const allCauses = useMemo(() => [...DEFAULT_FAILURE_CAUSES, ...(project.customFailureCauses || [])], [project.customFailureCauses]);
   const responsibles = project.responsibles || [];
 
