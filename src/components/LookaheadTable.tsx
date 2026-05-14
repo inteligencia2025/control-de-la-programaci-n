@@ -232,11 +232,19 @@ export function LookaheadTable() {
 
   const weekStart = getProjectWeekStartDate(weekFilter, project.activities);
   const weekEnd = addDays(weekStart, 6);
-  const lobActivityCount = project.activities.filter(a => {
-    if (!a.enabled) return false;
-    const range = getActivityWeekRange(a, project.activities);
-    return range.start <= weekEnd && range.end >= weekStart;
-  }).length;
+  const lobActivityCount = (() => {
+    const lookaheadEnd = addDays(weekEnd, 21);
+    const enabled = project.activities.filter(a => a.enabled);
+    const overlap = enabled.filter(a => {
+      const r = getActivityWeekRange(a, project.activities);
+      return r.start <= weekEnd && r.end >= weekStart;
+    });
+    if (overlap.length > 0) return overlap.length;
+    return enabled.filter(a => {
+      const r = getActivityWeekRange(a, project.activities);
+      return r.start > weekEnd && r.start <= lookaheadEnd;
+    }).length;
+  })();
 
   const sortedItems = useMemo(() => {
     return [...filteredItems].sort((a, b) => {
