@@ -682,9 +682,9 @@ export function ProductionControl() {
             <CardContent className={`px-3 pb-3 ${expandedChart === 'pareto' ? 'h-[500px]' : 'h-64'}`}>
               {paretoData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={paretoData} margin={{ left: 10, right: 40, top: 10, bottom: 40 }}>
+                  <ComposedChart data={paretoData} margin={{ left: 10, right: 40, top: 10, bottom: 80 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="name" tick={{ fontSize: 8 }} angle={-30} textAnchor="end" height={50} />
+                    <XAxis dataKey="name" tick={{ fontSize: 12 }} angle={-35} textAnchor="end" height={90} interval={0} />
                     <YAxis yAxisId="left" tick={{ fontSize: 11 }} />
                     <YAxis yAxisId="right" orientation="right" domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                     <Tooltip />
