@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
@@ -11,6 +11,10 @@ const MONTH_DAYS = 28; // 4 semanas calendario
 export function GanttChart() {
   const { project } = useProject();
   const svgRef = useRef<SVGSVGElement>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    preliminares: true, estructura: true, cubierta: true, ascensores: true, acabados: true, fachada: true, avaluosEntregas: true,
+  });
+  const toggle = (k: string) => setCollapsed(c => ({ ...c, [k]: !c[k] }));
 
   const chartData = useMemo(() => {
     const enabled = project.activities.filter(a => a.enabled);
@@ -136,9 +140,25 @@ export function GanttChart() {
   const MONTH_H = 24;
   const HEADER_H = MONTHNUM_H + MONTH_H;
   const SUMMARY_H = 80;
-  const totalRows = groups.length;
+  let totalRows = 0;
+  groups.forEach(g => { totalRows++; if (!collapsed[g.key]) totalRows += g.items.length; });
   const WIDTH = LABEL_W + numMonths * MONTH_W + 20;
   const HEIGHT = HEADER_H + totalRows * ROW_H + SUMMARY_H + 20;
+
+  let rowIdx = 0;
+  const renderedGroups = groups.map(g => {
+    const groupRow = rowIdx++;
+    const isOpen = !collapsed[g.key];
+    const childRows = isOpen
+      ? g.items.map(it => {
+          const startMonths = differenceInCalendarDays(it.startDate, projectStart) / MONTH_DAYS;
+          const durationMonths = Math.max(0.05, differenceInCalendarDays(it.endDate, it.startDate) / MONTH_DAYS);
+          const r = rowIdx++;
+          return { it, startMonths, durationMonths, r };
+        })
+      : [];
+    return { g, groupRow, isOpen, childRows };
+  });
 
   const totalUnits = project.buildingConfig.floors * project.buildingConfig.unitsPerFloor;
   const totalMonthsLabel = (totalCalDays / MONTH_DAYS).toFixed(1);
@@ -156,14 +176,12 @@ export function GanttChart() {
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-card rounded-lg border border-border inline-block">
           <svg ref={svgRef} width={WIDTH} height={HEIGHT}>
-            {/* Header: Mes N */}
             {Array.from({ length: numMonths }, (_, i) => (
               <g key={`mn-${i}`}>
                 <rect x={LABEL_W + i * MONTH_W} y={0} width={MONTH_W} height={MONTHNUM_H} fill="hsl(var(--accent))" stroke="hsl(var(--border))" strokeWidth={0.5} />
                 <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H - 7} textAnchor="middle" className="fill-accent-foreground text-[12px] font-semibold">Mes {i + 1}</text>
               </g>
             ))}
-            {/* Header: MMM yy aproximado */}
             {Array.from({ length: numMonths }, (_, i) => {
               const d = addDays(projectStart, i * MONTH_DAYS);
               return (
@@ -173,30 +191,42 @@ export function GanttChart() {
                 </g>
               );
             })}
-            {/* Líneas verticales guía */}
             {Array.from({ length: numMonths + 1 }, (_, i) => (
               <line key={`vl-${i}`} x1={LABEL_W + i * MONTH_W} x2={LABEL_W + i * MONTH_W} y1={HEADER_H} y2={HEADER_H + totalRows * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
             ))}
-            {/* Filas por categoría */}
-            {groups.map((g, idx) => {
-              const y = HEADER_H + idx * ROW_H;
+            {renderedGroups.map(({ g, groupRow, isOpen, childRows }) => {
+              const yG = HEADER_H + groupRow * ROW_H;
               const barX = LABEL_W + g.startMonths * MONTH_W;
               const barW = Math.max(8, g.durationMonths * MONTH_W);
               return (
                 <g key={g.key}>
-                  <rect x={0} y={y} width={WIDTH} height={ROW_H} fill={g.bgFill} />
-                  <line x1={0} x2={WIDTH} y1={y + ROW_H} y2={y + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                  <text x={12} y={y + ROW_H / 2 + 4} className="fill-foreground text-[12px] font-semibold">
-                    {g.label} ({g.items.length})
-                  </text>
-                  <rect x={barX} y={y + 6} width={barW} height={ROW_H - 12} rx={4} fill={g.barColor} opacity={0.85} />
-                  <text x={barX + barW / 2} y={y + ROW_H / 2 + 4} textAnchor="middle" className="text-[10px] font-bold" fill="white">
+                  <rect x={0} y={yG} width={WIDTH} height={ROW_H} fill={g.bgFill} />
+                  <line x1={0} x2={WIDTH} y1={yG + ROW_H} y2={yG + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                  <g onClick={() => toggle(g.key)} className="cursor-pointer">
+                    <text x={12} y={yG + ROW_H / 2 + 4} className="fill-foreground text-[12px] font-semibold">
+                      {isOpen ? '▾' : '▸'} {g.label} ({g.items.length})
+                    </text>
+                  </g>
+                  <rect x={barX} y={yG + 6} width={barW} height={ROW_H - 12} rx={4} fill={g.barColor} opacity={0.85} />
+                  <text x={barX + barW / 2} y={yG + ROW_H / 2 + 4} textAnchor="middle" className="text-[10px] font-bold" fill="white">
                     {g.durationMonths.toFixed(1)} m
                   </text>
+                  {childRows.map(({ it, startMonths, durationMonths, r }) => {
+                    const y = HEADER_H + r * ROW_H;
+                    const cx = LABEL_W + startMonths * MONTH_W;
+                    const cw = Math.max(6, durationMonths * MONTH_W);
+                    return (
+                      <g key={it.activity.id}>
+                        <line x1={0} x2={WIDTH} y1={y + ROW_H} y2={y + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                        <text x={24} y={y + ROW_H / 2 + 4} className="fill-foreground text-[10px]">{it.activity.name}</text>
+                        <rect x={cx} y={y + 8} width={cw} height={ROW_H - 16} rx={3} fill={it.activity.color} opacity={0.85} />
+                        <text x={cx + cw / 2} y={y + ROW_H / 2 + 3} textAnchor="middle" className="text-[9px] font-medium" fill="white">{durationMonths.toFixed(1)} m</text>
+                      </g>
+                    );
+                  })}
                 </g>
               );
             })}
-            {/* Resumen */}
             <rect x={10} y={HEADER_H + totalRows * ROW_H + 10} width={WIDTH - 20} height={SUMMARY_H} rx={6}
               fill="hsl(var(--secondary))" stroke="hsl(var(--border))" strokeWidth={1} />
             <text x={24} y={HEADER_H + totalRows * ROW_H + 32} className="fill-foreground text-[12px] font-bold">
