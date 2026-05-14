@@ -1,26 +1,26 @@
 ## Problema
 
-En `src/components/LookaheadTable.tsx` hay una constante `MAX_WEEKS = 12` que recorta el número de semanas mostradas en el Lookahead, sin importar la duración real del proyecto. Por eso Fiorenza Etapa 1 (23 meses ≈ 100 semanas) solo muestra hasta la S12.
+En la revisión del Lookahead no aparecen las actividades de cimentación porque la lógica actual de `handleAutoLoad` y `lobActivityCount` en `src/components/LookaheadTable.tsx`:
 
-```ts
-const MAX_WEEKS = 12;
-...
-return Math.max(6, Math.min(diffWeeks + 1, MAX_WEEKS));
-```
+1. Solo trae actividades **que se traslapan con la semana seleccionada**.
+2. Como *fallback* (cuando no hay traslape) busca actividades que arranquen dentro de los próximos **21 días (3 semanas)**.
+
+La metodología Lookahead exige ver las actividades a ejecutar **6 semanas antes** de su inicio. Si en una semana ya hay alguna actividad activa, las próximas (cimentación, etc.) no se cargan aunque empiecen en 4–5 semanas.
 
 ## Cambio
 
-Subir el tope para cubrir proyectos largos y dejar que el cálculo real de duración mande:
+En `src/components/LookaheadTable.tsx`:
 
-1. Cambiar `MAX_WEEKS` a `260` (≈ 5 años, margen amplio).
-2. Mantener la fórmula `Math.max(6, Math.min(diffWeeks + 1, MAX_WEEKS))` para que:
-   - Proyectos cortos sigan mostrando mínimo 6 semanas.
-   - Proyectos largos muestren todas las semanas reales hasta el tope.
+1. Cambiar la ventana de anticipación de 21 días a **42 días (6 semanas)**.
+2. Cambiar la lógica de "fallback" por una lógica **acumulativa**: el botón LOB siempre carga
+   - actividades que se traslapan con la semana actual, **más**
+   - actividades cuyo inicio cae dentro de las próximas 6 semanas desde el fin de la semana seleccionada.
+3. Aplicar la misma regla al contador `lobActivityCount` (el número que aparece junto al botón "LOB (n)").
 
-Con esto, Fiorenza Etapa 1 generará automáticamente las ~100 semanas que abarca su cronograma.
+Esto se aplica a las dos ocurrencias del bloque (líneas ~95–110 y ~235–247).
 
 ## Notas
 
-- No cambia lógica de negocio, scheduling, ni persistencia.
-- La barra superior de selección de semanas ya es scrollable horizontalmente, así que mostrar 100 botones S1…S100 no rompe el layout.
+- Sin cambios en scheduling, persistencia ni en otros módulos.
+- Se respetan los items ya existentes en la semana (no se duplican).
 - Solo se edita `src/components/LookaheadTable.tsx`.

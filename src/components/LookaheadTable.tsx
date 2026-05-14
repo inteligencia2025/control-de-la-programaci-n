@@ -97,15 +97,13 @@ export function LookaheadTable() {
     const weekEnd = addDays(weekStart, 6);
     const existingIds = new Set(project.lookahead.filter(i => i.week === weekFilter).map(i => i.activityId));
     
-    const lookaheadEnd = addDays(weekEnd, 21); // fallback: include upcoming activities within next 3 weeks
+    const lookaheadEnd = addDays(weekEnd, 42); // Lookahead methodology: 6 weeks ahead
     const enabledActs = project.activities.filter(a => a.enabled);
-    const overlapping = enabledActs.filter(a => {
+    const upcoming = enabledActs.filter(a => {
       const range = getActivityWeekRange(a, project.activities);
-      return range.start <= weekEnd && range.end >= weekStart;
-    });
-    const upcoming = overlapping.length > 0 ? overlapping : enabledActs.filter(a => {
-      const range = getActivityWeekRange(a, project.activities);
-      return range.start > weekEnd && range.start <= lookaheadEnd;
+      const overlaps = range.start <= weekEnd && range.end >= weekStart;
+      const startsSoon = range.start > weekEnd && range.start <= lookaheadEnd;
+      return overlaps || startsSoon;
     });
     const newItems: LookaheadItem[] = upcoming
       .filter(a => !existingIds.has(a.id))
