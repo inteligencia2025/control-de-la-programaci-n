@@ -29,6 +29,11 @@ function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date
 
 function getActivityWeekRange(activity: Activity, activities: Activity[]): { start: Date; end: Date } {
   const start = getEffectiveStartDate(activity, activities);
+  // Linear-band activities (preliminares, fachada, cubierta) store their real end in endDate
+  if (activity.endDate && (activity.category === 'preliminares' || activity.category === 'fachada' || activity.category === 'cubierta')) {
+    const end = parseISO(activity.endDate);
+    return { start, end: end >= start ? end : start };
+  }
   const totalWorkdays = calcActivityWorkdays(activity);
   return { start, end: advanceWorkdays(start, totalWorkdays) };
 }
