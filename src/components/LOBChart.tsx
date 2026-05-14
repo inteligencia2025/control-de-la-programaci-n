@@ -874,7 +874,7 @@ export function LOBChart() {
                 {/* Per-unit duration markers: horizontal segment representing time spent on each unit */}
                 {(() => {
                   const wdPerUnit = 1 / effectiveRate;
-                  if (wdPerUnit < 1) return null;
+                  if (wdPerUnit <= 1) return null;
                   const segs: JSX.Element[] = [];
                   const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
                   for (let k = 0; k < totalUnits; k++) {
