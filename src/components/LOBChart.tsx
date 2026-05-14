@@ -880,7 +880,7 @@ export function LOBChart() {
                   for (let k = 0; k < totalUnits; k++) {
                     const unit = actualUnitStart + direction * k;
                     const wdStart = startWd + k / effectiveRate;
-                    const wdEnd = wdStart + wdPerUnit;
+                    const wdEnd = wdStart + wdPerUnit - 1;
                     const y = scaleY(unit);
                     segs.push(
                       <line
