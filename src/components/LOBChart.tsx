@@ -809,9 +809,24 @@ export function LOBChart() {
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setZoom(1)}>
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportPNG} className="gap-1.5 ml-2">
-            <Camera className="h-3.5 w-3.5" />Exportar PNG
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 ml-2">
+                <Download className="h-3.5 w-3.5" />Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover">
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2">
+                <FileText className="h-4 w-4" /> PDF A3 (recomendado)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportSVG} className="gap-2">
+                <FileImage className="h-4 w-4" /> SVG vectorial (plotter)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPNG} className="gap-2">
+                <Camera className="h-4 w-4" /> PNG alta resolución
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <div ref={scrollRef} className="flex-1 overflow-auto p-4 relative" onClick={() => setClickTooltip(null)}>
