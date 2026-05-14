@@ -73,6 +73,7 @@ export function LookaheadTable() {
   const [weekFilter, setWeekFilter] = useState<number>(1);
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   const [collapsedActivityGroups, setCollapsedActivityGroups] = useState<Record<string, boolean>>({});
+  const [collapsedItems, setCollapsedItems] = useState<Record<string, boolean>>({});
   const [viewMode, setViewMode] = useState<'restrictions' | 'review' | 'dashboard'>('restrictions');
   const [showAddResponsible, setShowAddResponsible] = useState(false);
   const [newResponsible, setNewResponsible] = useState('');
