@@ -73,52 +73,94 @@ export function GanttChart() {
     return { groups, projectStart, projectEndDate, totalCalDays, numMonths };
   }, [project.activities]);
 
+  // Clone the SVG and inline all computed fills/strokes/fonts so CSS vars
+  // and Tailwind classes resolve correctly when rasterized.
+  const buildExportableSvg = (): { svgString: string; width: number; height: number } | null => {
+    if (!svgRef.current) return null;
+    const original = svgRef.current;
+    const clone = original.cloneNode(true) as SVGSVGElement;
+    const origNodes = original.querySelectorAll<SVGElement>('*');
+    const cloneNodes = clone.querySelectorAll<SVGElement>('*');
+    origNodes.forEach((node, i) => {
+      const cs = window.getComputedStyle(node);
+      const target = cloneNodes[i] as SVGElement;
+      if (!target) return;
+      const fill = cs.fill;
+      const stroke = cs.stroke;
+      const fillOpacity = cs.fillOpacity;
+      const strokeWidth = cs.strokeWidth;
+      const fontFamily = cs.fontFamily;
+      const fontSize = cs.fontSize;
+      const fontWeight = cs.fontWeight;
+      const opacity = cs.opacity;
+      const styleParts: string[] = [];
+      if (fill && fill !== 'none') styleParts.push(`fill:${fill}`);
+      if (stroke && stroke !== 'none') styleParts.push(`stroke:${stroke};stroke-width:${strokeWidth}`);
+      if (fillOpacity && fillOpacity !== '1') styleParts.push(`fill-opacity:${fillOpacity}`);
+      if (opacity && opacity !== '1') styleParts.push(`opacity:${opacity}`);
+      if (node.tagName === 'text') {
+        styleParts.push(`font-family:${fontFamily};font-size:${fontSize};font-weight:${fontWeight}`);
+      }
+      target.setAttribute('style', styleParts.join(';'));
+      target.removeAttribute('class');
+    });
+    const w = original.width.baseVal.value;
+    const h = original.height.baseVal.value;
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('width', String(w));
+    clone.setAttribute('height', String(h));
+    // White background rect at the very back
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('x', '0');
+    bg.setAttribute('y', '0');
+    bg.setAttribute('width', String(w));
+    bg.setAttribute('height', String(h));
+    bg.setAttribute('fill', '#ffffff');
+    clone.insertBefore(bg, clone.firstChild);
+    const svgString = new XMLSerializer().serializeToString(clone);
+    return { svgString, width: w, height: h };
+  };
+
+  const rasterize = (scale = 2): Promise<{ canvas: HTMLCanvasElement; width: number; height: number } | null> => {
+    return new Promise(resolve => {
+      const built = buildExportableSvg();
+      if (!built) return resolve(null);
+      const { svgString, width, height } = built;
+      const canvas = document.createElement('canvas');
+      canvas.width = width * scale;
+      canvas.height = height * scale;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(null);
+      ctx.scale(scale, scale);
+      const img = new Image();
+      img.onload = () => {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0);
+        resolve({ canvas, width, height });
+      };
+      img.onerror = () => resolve(null);
+      img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgString)));
+    });
+  };
+
   const handleExport = async () => {
-    if (!svgRef.current) return;
-    const svgData = new XMLSerializer().serializeToString(svgRef.current);
-    const canvas = document.createElement('canvas');
-    const svgEl = svgRef.current;
-    canvas.width = svgEl.width.baseVal.value * 2;
-    canvas.height = svgEl.height.baseVal.value * 2;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.scale(2, 2);
-    const img = new Image();
-    img.onload = () => {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = 'gantt.png';
-      a.click();
-    };
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    const r = await rasterize(2);
+    if (!r) return;
+    const a = document.createElement('a');
+    a.href = r.canvas.toDataURL('image/png');
+    a.download = `gantt-${project.name || 'proyecto'}.png`;
+    a.click();
   };
 
   const handleExportPDF = async () => {
-    if (!svgRef.current) return;
-    const svgEl = svgRef.current;
-    const svgData = new XMLSerializer().serializeToString(svgEl);
-    const w = svgEl.width.baseVal.value;
-    const h = svgEl.height.baseVal.value;
-    const canvas = document.createElement('canvas');
-    canvas.width = w * 2;
-    canvas.height = h * 2;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.scale(2, 2);
-    const img = new Image();
-    img.onload = () => {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      const orientation = w >= h ? 'landscape' : 'portrait';
-      const pdf = new jsPDF({ orientation, unit: 'pt', format: [w, h] });
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, h);
-      pdf.save(`gantt-${project.name || 'proyecto'}.pdf`);
-    };
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    const r = await rasterize(2);
+    if (!r) return;
+    const { canvas, width: w, height: h } = r;
+    const orientation = w >= h ? 'landscape' : 'portrait';
+    const pdf = new jsPDF({ orientation, unit: 'pt', format: [w, h] });
+    pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, h);
+    pdf.save(`gantt-${project.name || 'proyecto'}.pdf`);
   };
   const handleExportJSON = () => {
     if (!chartData) return;
