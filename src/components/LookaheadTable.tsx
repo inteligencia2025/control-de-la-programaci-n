@@ -366,12 +366,12 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
               <TableRow key={item.id} className={isComplete ? 'bg-success/5' : ''}>
                 <TableCell>
                   <Input value={item.activityName} onChange={e => updateItem({ ...item, activityName: e.target.value })}
-                    className="h-7 text-[10px]" placeholder="Nombre actividad" />
+                    className="h-8 text-xs" placeholder="Nombre actividad" />
                 </TableCell>
                 <TableCell>
                   {responsibles.length > 0 ? (
                     <Select value={item.responsible || '_empty'} onValueChange={v => updateItem({ ...item, responsible: v === '_empty' ? '' : v })}>
-                      <SelectTrigger className="h-7 text-[10px]"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_empty">— Seleccionar —</SelectItem>
                         {responsibles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -379,7 +379,7 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
                     </Select>
                   ) : (
                     <Input value={item.responsible} onChange={e => updateItem({ ...item, responsible: e.target.value })}
-                      className="h-7 text-[10px]" placeholder="Responsable" />
+                      className="h-8 text-xs" placeholder="Responsable" />
                   )}
                 </TableCell>
                 <TableCell>
