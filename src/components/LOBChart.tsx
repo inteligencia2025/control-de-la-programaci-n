@@ -20,7 +20,16 @@ function shiftWorkdays(dateStr: string, n: number): string {
 }
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Camera, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Camera, ZoomIn, ZoomOut, RotateCcw, FileImage, FileText, Download } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
+import { toast } from 'sonner';
 import { getEffectiveStartDate as getEffectiveStartDateShared, smartCeil, getEffectiveRate, normalizeRate } from '@/utils/schedulingUtils';
 
 interface LinePoint { workdayIndex: number; unit: number; }
@@ -343,64 +352,112 @@ export function LOBChart() {
     return { lines, workdays, minUnit, maxUnit, maxWorkday, intersections, projectStart, totalDuration, ganttBars, cubiertaLines, preliminaresLines: orderedPrelim, fachadaLines };
   }, [lobActivities, ganttActivities, cubiertaActivities, preliminaresActivities, fachadaActivities, enabledActivities, project.activities, project.buildingConfig]);
 
-  const handleExportPNG = async () => {
-    if (!svgRef.current) return;
+  // Build a self-contained, light-themed clone of the SVG suitable for export/print.
+  // Forces a fixed light palette so there are no dark/low-contrast areas regardless of the active theme.
+  const buildExportSvg = (): { clone: SVGSVGElement; width: number; height: number } | null => {
+    if (!svgRef.current) return null;
     const svgEl = svgRef.current;
     const width = svgEl.width.baseVal.value;
     const height = svgEl.height.baseVal.value;
 
-    // Clone SVG and ensure namespaces + explicit dimensions
     const clone = svgEl.cloneNode(true) as SVGSVGElement;
     clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
     clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
     clone.setAttribute('width', String(width));
     clone.setAttribute('height', String(height));
+    clone.setAttribute('viewBox', `0 0 ${width} ${height}`);
 
-    // Resolve CSS design tokens so hsl(var(--token)) renders standalone
-    const cs = getComputedStyle(document.documentElement);
-    const tokens = [
-      'background', 'foreground', 'card', 'card-foreground',
-      'popover', 'popover-foreground', 'primary', 'primary-foreground',
-      'secondary', 'secondary-foreground', 'muted', 'muted-foreground',
-      'accent', 'accent-foreground', 'destructive', 'destructive-foreground',
-      'border', 'input', 'ring',
-    ];
-    const tokenCss = tokens
-      .map(t => {
-        const v = cs.getPropertyValue(`--${t}`).trim();
-        return v ? `--${t}: ${v};` : '';
-      })
-      .filter(Boolean)
-      .join(' ');
-    const baseColor = cs.getPropertyValue('color') || '#000';
+    // Fixed light palette (HSL values matching shadcn light theme defaults).
+    // We override the CSS variables on the SVG itself so every hsl(var(--...)) inside
+    // resolves to a high-contrast light value, eliminating the "dark area" problem.
+    const lightPalette = `
+      --background: 0 0% 100%;
+      --foreground: 222.2 84% 4.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 222.2 84% 4.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 222.2 84% 4.9%;
+      --primary: 222.2 47.4% 11.2%;
+      --primary-foreground: 210 40% 98%;
+      --secondary: 210 40% 96.1%;
+      --secondary-foreground: 222.2 47.4% 11.2%;
+      --muted: 210 40% 96.1%;
+      --muted-foreground: 215.4 16.3% 46.9%;
+      --accent: 210 40% 96.1%;
+      --accent-foreground: 222.2 47.4% 11.2%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 210 40% 98%;
+      --border: 214.3 31.8% 91.4%;
+      --input: 214.3 31.8% 91.4%;
+      --ring: 222.2 84% 4.9%;
+    `.replace(/\s+/g, ' ');
+
     const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
-    styleEl.textContent = `svg { ${tokenCss} color: hsl(var(--foreground, 0 0% 0%)); font-family: ${cs.fontFamily || 'sans-serif'}; }`;
+    styleEl.textContent = `
+      svg { ${lightPalette} color: hsl(222.2 84% 4.9%); font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; background: #ffffff; }
+      svg text { fill: hsl(222.2 84% 4.9%); }
+    `;
     clone.insertBefore(styleEl, clone.firstChild);
+
+    // Solid white background rect (first child after style) so canvas/PDF never show dark.
+    const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bg.setAttribute('x', '0');
+    bg.setAttribute('y', '0');
+    bg.setAttribute('width', String(width));
+    bg.setAttribute('height', String(height));
+    bg.setAttribute('fill', '#ffffff');
+    clone.insertBefore(bg, styleEl.nextSibling);
+
+    return { clone, width, height };
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const fileBase = () => {
+    const safe = (project.name || 'lineas_balance').replace(/[^\w\-]+/g, '_').slice(0, 60);
+    return safe || 'lineas_balance';
+  };
+
+  const handleExportSVG = () => {
+    const built = buildExportSvg();
+    if (!built) return;
+    const svgData = new XMLSerializer().serializeToString(built.clone);
+    const blob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    downloadBlob(blob, `${fileBase()}.svg`);
+    toast.success('SVG exportado (vectorial, ideal para plotter)');
+  };
+
+  const handleExportPNG = async () => {
+    const built = buildExportSvg();
+    if (!built) return;
+    const { clone, width, height } = built;
 
     const svgData = new XMLSerializer().serializeToString(clone);
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const svgUrl = URL.createObjectURL(svgBlob);
 
-    // Cap pixel ratio to stay under canvas size limits (~16384px per side)
+    // Aim for ~300 DPI assuming the chart is intended for A3 landscape (~16.5 in wide).
+    // Cap to canvas size limits (~16000 px per side).
     const MAX_SIDE = 16000;
-    const scale = Math.min(2, MAX_SIDE / Math.max(width, height));
-
-    const downloadBlob = (blob: Blob, filename: string) => {
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      setTimeout(() => URL.revokeObjectURL(url), 1000);
-    };
+    const targetLong = 4950; // 16.5 in × 300 DPI
+    const longest = Math.max(width, height);
+    let scale = Math.max(2, targetLong / longest);
+    scale = Math.min(scale, MAX_SIDE / longest);
 
     const canvas = document.createElement('canvas');
     canvas.width = Math.floor(width * scale);
     canvas.height = Math.floor(height * scale);
     const ctx = canvas.getContext('2d');
-    if (!ctx) { URL.revokeObjectURL(svgUrl); return; }
+    if (!ctx) { URL.revokeObjectURL(svgUrl); toast.error('No se pudo crear el canvas'); return; }
     ctx.scale(scale, scale);
 
     const img = new Image();
@@ -412,24 +469,57 @@ export function LOBChart() {
         URL.revokeObjectURL(svgUrl);
         canvas.toBlob((blob) => {
           if (!blob) {
-            console.error('toBlob devolvió null; descargando SVG como respaldo');
-            downloadBlob(svgBlob, 'lineas_balance.svg');
+            toast.error('Error generando PNG, descargando SVG como respaldo');
+            downloadBlob(svgBlob, `${fileBase()}.svg`);
             return;
           }
-          downloadBlob(blob, 'lineas_balance.png');
+          downloadBlob(blob, `${fileBase()}.png`);
+          toast.success(`PNG exportado en alta resolución (${canvas.width}×${canvas.height})`);
         }, 'image/png');
       } catch (err) {
         console.error('Error exportando PNG:', err);
-        downloadBlob(svgBlob, 'lineas_balance.svg');
+        toast.error('Error exportando PNG, descargando SVG');
+        downloadBlob(svgBlob, `${fileBase()}.svg`);
       }
     };
     img.onerror = (e) => {
-      console.error('Error al cargar SVG para PNG, descargando SVG:', e);
+      console.error('Error al cargar SVG para PNG:', e);
       URL.revokeObjectURL(svgUrl);
-      downloadBlob(svgBlob, 'lineas_balance.svg');
+      toast.error('Error al renderizar SVG, descargando SVG');
+      downloadBlob(svgBlob, `${fileBase()}.svg`);
     };
     img.src = svgUrl;
   };
+
+  const handleExportPDF = async () => {
+    const built = buildExportSvg();
+    if (!built) return;
+    const { clone, width, height } = built;
+
+    try {
+      // A3 landscape: 420 × 297 mm. Reserve 10mm margin all around.
+      const pageW = 420;
+      const pageH = 297;
+      const margin = 10;
+      const availW = pageW - margin * 2;
+      const availH = pageH - margin * 2;
+      const scale = Math.min(availW / width, availH / height);
+      const drawW = width * scale;
+      const drawH = height * scale;
+      const offsetX = margin + (availW - drawW) / 2;
+      const offsetY = margin + (availH - drawH) / 2;
+
+      const pdf = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a3' });
+      // svg2pdf needs the element attached to a document; clone is already a detached SVGSVGElement which works.
+      await svg2pdf(clone, pdf, { x: offsetX, y: offsetY, width: drawW, height: drawH });
+      pdf.save(`${fileBase()}.pdf`);
+      toast.success('PDF A3 exportado (vectorial, listo para plotter)');
+    } catch (err) {
+      console.error('Error exportando PDF:', err);
+      toast.error('Error generando PDF, intente con SVG o PNG');
+    }
+  };
+
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
     if (!chartData || !svgRef.current) return;
@@ -719,9 +809,24 @@ export function LOBChart() {
           <Button variant="outline" size="icon" className="h-7 w-7" onClick={() => setZoom(1)}>
             <RotateCcw className="h-3.5 w-3.5" />
           </Button>
-          <Button variant="outline" size="sm" onClick={handleExportPNG} className="gap-1.5 ml-2">
-            <Camera className="h-3.5 w-3.5" />Exportar PNG
-          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm" className="gap-1.5 ml-2">
+                <Download className="h-3.5 w-3.5" />Exportar
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="bg-popover">
+              <DropdownMenuItem onClick={handleExportPDF} className="gap-2">
+                <FileText className="h-4 w-4" /> PDF A3 (recomendado)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportSVG} className="gap-2">
+                <FileImage className="h-4 w-4" /> SVG vectorial (plotter)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleExportPNG} className="gap-2">
+                <Camera className="h-4 w-4" /> PNG alta resolución
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
       <div ref={scrollRef} className="flex-1 overflow-auto p-4 relative" onClick={() => setClickTooltip(null)}>
