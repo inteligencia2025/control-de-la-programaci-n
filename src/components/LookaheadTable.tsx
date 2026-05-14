@@ -342,8 +342,8 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-40 text-[10px]">Actividad</TableHead>
-            <TableHead className="text-[10px] w-28">Responsable</TableHead>
+            <TableHead className="w-56 text-[10px]">Actividad</TableHead>
+            <TableHead className="text-[10px] w-40">Responsable</TableHead>
             <TableHead className="text-[10px] min-w-[200px]">Compromiso</TableHead>
             <TableHead className="text-[10px] w-28">Fecha Comp.</TableHead>
             <TableHead className="text-[10px] text-center w-16">Cumple</TableHead>
