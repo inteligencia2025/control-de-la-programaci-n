@@ -96,7 +96,32 @@ export function GanttChart() {
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
-  const handleExportJSON = () => {
+  const handleExportPDF = async () => {
+    if (!svgRef.current) return;
+    const svgEl = svgRef.current;
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const w = svgEl.width.baseVal.value;
+    const h = svgEl.height.baseVal.value;
+    const canvas = document.createElement('canvas');
+    canvas.width = w * 2;
+    canvas.height = h * 2;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    ctx.scale(2, 2);
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0);
+      const orientation = w >= h ? 'landscape' : 'portrait';
+      const pdf = new jsPDF({ orientation, unit: 'pt', format: [w, h] });
+      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, w, h);
+      pdf.save(`gantt-${project.name || 'proyecto'}.pdf`);
+    };
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+  };
+
+
     if (!chartData) return;
     const data = {
       project: project.name,
