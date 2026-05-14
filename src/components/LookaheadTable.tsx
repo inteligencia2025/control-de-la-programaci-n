@@ -179,6 +179,52 @@ export function LookaheadTable() {
     XLSX.writeFile(wb, `lookahead_semana_${weekFilter}.xlsx`);
   };
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const title = `${project.name || 'Proyecto'} — Lookahead Semana ${weekFilter}`;
+    const subtitle = `${format(weekStart, 'dd/MM/yyyy')} - ${format(addDays(weekStart, 6), 'dd/MM/yyyy')}`;
+    doc.setFontSize(14);
+    doc.text(title, 14, 14);
+    doc.setFontSize(10);
+    doc.text(subtitle, 14, 20);
+
+    if (viewMode === 'review') {
+      autoTable(doc, {
+        startY: 26,
+        head: [['Actividad', 'Responsable', 'Compromiso', 'Fecha Comp.', 'Cumple', 'Causa']],
+        body: filteredItems.map(it => [
+          it.activityName || '',
+          it.responsible || '',
+          it.commitment || '',
+          it.commitmentDate ? format(parseISO(it.commitmentDate), 'dd/MM/yyyy') : '',
+          it.commitmentMet === undefined ? '—' : it.commitmentMet ? 'Sí' : 'No',
+          it.commitmentCause || '',
+        ]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 58, 95] },
+      });
+    } else {
+      autoTable(doc, {
+        startY: 26,
+        head: [['Actividad', 'Responsable', 'Área', 'Restricción', 'Estado']],
+        body: filteredItems.flatMap(item =>
+          RESTRICTION_CATEGORIES.flatMap(cat =>
+            cat.items.map(ri => [
+              item.activityName || '',
+              item.responsible || '',
+              cat.name,
+              ri.label,
+              item.restrictions[ri.id] ? '✓ Liberada' : '✗ Pendiente',
+            ])
+          )
+        ),
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        headStyles: { fillColor: [30, 58, 95] },
+      });
+    }
+    doc.save(`lookahead_semana_${weekFilter}.pdf`);
+  };
+
   const weekStart = getProjectWeekStartDate(weekFilter, project.activities);
   const weekEnd = addDays(weekStart, 6);
   const lobActivityCount = project.activities.filter(a => {
