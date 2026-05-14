@@ -1,80 +1,71 @@
-import { useMemo, useRef, useState } from 'react';
+import { useMemo, useRef } from 'react';
 import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
-import { addDays, format } from 'date-fns';
-import { isNonWorkday } from '@/utils/holidays';
+import { addDays, format, differenceInCalendarDays } from 'date-fns';
 import { es } from 'date-fns/locale';
-import { getEffectiveStartDateSimple as getEffectiveStartDate, calcActivityWorkdays, safeParse } from '@/utils/schedulingUtils';
+import { getEffectiveStartDateSimple as getEffectiveStartDate, calcActivityWorkdays, advanceWorkdays, safeParse } from '@/utils/schedulingUtils';
 
-
-const ESTRUCTURA_COLOR = 'hsl(var(--primary))';
-const ACABADOS_COLOR = '#e69500';
-
-const countWorkdaysInclusive = (start: Date, end: Date): number => {
-  let current = new Date(start);
-  let count = 0;
-  while (current <= end) {
-    if (!isNonWorkday(current)) count++;
-    current = addDays(current, 1);
-  }
-  return Math.max(1, count);
-};
+const MONTH_DAYS = 28; // 4 semanas calendario
 
 export function GanttChart() {
   const { project } = useProject();
   const svgRef = useRef<SVGSVGElement>(null);
-  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({ preliminares: false, estructura: false, cubierta: false, ascensores: false, acabados: false, fachada: false, avaluosEntregas: false });
-  const toggle = (cat: string) => setCollapsed(c => ({ ...c, [cat]: !c[cat] }));
 
   const chartData = useMemo(() => {
     const enabled = project.activities.filter(a => a.enabled);
     if (enabled.length === 0) return null;
+
     const isLinearWithDates = (a: typeof enabled[number]) =>
       !!a.endDate && (a.category === 'preliminares' || a.category === 'cubierta' || a.category === 'fachada');
+
     const getStart = (a: typeof enabled[number]) =>
       isLinearWithDates(a) ? safeParse(a.startDate) : getEffectiveStartDate(a, project.activities);
-    const projectStart = new Date(Math.min(...enabled.map(a => getStart(a).getTime())));
-    const activities = enabled.map(activity => {
-      const start = getStart(activity);
-      const totalWorkdays = isLinearWithDates(activity)
-        ? countWorkdaysInclusive(start, safeParse(activity.endDate!))
-        : calcActivityWorkdays(activity);
-      let startIdx = 0;
-      let cur = new Date(projectStart);
-      while (cur < start) { if (!isNonWorkday(cur)) startIdx++; cur = addDays(cur, 1); }
-      return { activity, startIdx, duration: totalWorkdays };
-    });
-    const maxDay = Math.max(...activities.map(a => a.startIdx + a.duration)) + 3;
 
-    // Compute project dates
-    let projectEndDate = new Date(projectStart);
-    const endWorkdays = maxDay - 3;
-    let cur2 = new Date(projectStart);
-    let countWd = 0;
-    while (countWd < endWorkdays) { cur2 = addDays(cur2, 1); if (!isNonWorkday(cur2)) countWd++; }
-    projectEndDate = cur2;
+    const getEnd = (a: typeof enabled[number]) => {
+      if (isLinearWithDates(a)) return safeParse(a.endDate!);
+      const start = getStart(a);
+      const wd = calcActivityWorkdays(a);
+      return advanceWorkdays(start, wd);
+    };
 
-    const workdays: { label: string; month: string; date: Date }[] = [];
-    let current = new Date(projectStart);
-    while (workdays.length <= maxDay) {
-      if (!isNonWorkday(current)) workdays.push({ label: format(current, 'dd', { locale: es }), month: format(current, 'MMM yy', { locale: es }), date: new Date(current) });
-      current = addDays(current, 1);
-    }
-    return {
-      preliminares: activities.filter(a => a.activity.category === 'preliminares'),
-      estructura: activities.filter(a => {
+    const acts = enabled.map(activity => ({
+      activity,
+      startDate: getStart(activity),
+      endDate: getEnd(activity),
+    }));
+
+    const projectStart = new Date(Math.min(...acts.map(a => a.startDate.getTime())));
+    const projectEndDate = new Date(Math.max(...acts.map(a => a.endDate.getTime())));
+    const totalCalDays = Math.max(1, differenceInCalendarDays(projectEndDate, projectStart));
+    const numMonths = Math.max(1, Math.ceil(totalCalDays / MONTH_DAYS));
+
+    type Group = { key: string; label: string; barColor: string; bgFill: string; filter: (a: typeof acts[number]) => boolean };
+    const groupDefs: Group[] = [
+      { key: 'preliminares', label: 'Preliminares', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)', filter: a => a.activity.category === 'preliminares' },
+      { key: 'estructura', label: 'Estructura', barColor: '#1e3a5f', bgFill: 'hsl(var(--primary) / 0.15)', filter: a => {
         if (a.activity.category !== 'estructura') return false;
         const n = (a.activity.name || '').toUpperCase();
         return n.includes('VACIADO MURO') || n.includes('VACIADO LOSA');
-      }),
-      acabados: activities.filter(a => a.activity.category === 'acabados'),
-      cubierta: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow !== 'ascensores'),
-      ascensores: activities.filter(a => a.activity.category === 'cubierta' && a.activity.cubiertaRow === 'ascensores'),
-      fachada: activities.filter(a => a.activity.category === 'fachada' && !['AVALUOS', 'ENTREGAS', 'ESCRITURACIÓN', 'ESCRITURACION'].includes(a.activity.name?.toUpperCase?.() || '')),
-      avaluosEntregas: activities.filter(a => a.activity.category === 'fachada' && ['AVALUOS', 'ENTREGAS', 'ESCRITURACIÓN', 'ESCRITURACION'].includes(a.activity.name?.toUpperCase?.() || '')),
-      workdays, maxDay, projectStart, projectEndDate, totalWorkdays: endWorkdays,
-    };
+      }},
+      { key: 'cubierta', label: 'Cubierta', barColor: '#2d8a56', bgFill: 'hsl(var(--accent) / 0.35)', filter: a => a.activity.category === 'cubierta' && a.activity.cubiertaRow !== 'ascensores' },
+      { key: 'ascensores', label: 'Ascensores', barColor: '#16a085', bgFill: 'hsl(var(--accent) / 0.22)', filter: a => a.activity.category === 'cubierta' && a.activity.cubiertaRow === 'ascensores' },
+      { key: 'acabados', label: 'Acabados', barColor: '#e69500', bgFill: 'hsl(40 90% 50% / 0.15)', filter: a => a.activity.category === 'acabados' },
+      { key: 'fachada', label: 'Fachada', barColor: '#c0392b', bgFill: 'hsl(0 70% 50% / 0.12)', filter: a => a.activity.category === 'fachada' && !['AVALUOS', 'ENTREGAS', 'ESCRITURACIÓN', 'ESCRITURACION'].includes(a.activity.name?.toUpperCase?.() || '') },
+      { key: 'avaluosEntregas', label: 'Avalúos y Escrituración', barColor: '#8e44ad', bgFill: 'hsl(280 60% 50% / 0.12)', filter: a => a.activity.category === 'fachada' && ['AVALUOS', 'ENTREGAS', 'ESCRITURACIÓN', 'ESCRITURACION'].includes(a.activity.name?.toUpperCase?.() || '') },
+    ];
+
+    const groups = groupDefs.map(g => {
+      const items = acts.filter(g.filter);
+      if (items.length === 0) return null;
+      const minStart = new Date(Math.min(...items.map(i => i.startDate.getTime())));
+      const maxEnd = new Date(Math.max(...items.map(i => i.endDate.getTime())));
+      const startMonths = differenceInCalendarDays(minStart, projectStart) / MONTH_DAYS;
+      const durationMonths = Math.max(0.05, differenceInCalendarDays(maxEnd, minStart) / MONTH_DAYS);
+      return { ...g, items, minStart, maxEnd, startMonths, durationMonths };
+    }).filter(Boolean) as Array<Group & { items: typeof acts; minStart: Date; maxEnd: Date; startMonths: number; durationMonths: number }>;
+
+    return { groups, projectStart, projectEndDate, totalCalDays, numMonths };
   }, [project.activities]);
 
   const handleExport = async () => {
@@ -106,21 +97,16 @@ export function GanttChart() {
       project: project.name,
       projectStart: format(chartData.projectStart, 'yyyy-MM-dd'),
       projectEnd: format(chartData.projectEndDate, 'yyyy-MM-dd'),
-      totalWorkdays: chartData.totalWorkdays,
-      activities: [...chartData.preliminares, ...chartData.estructura, ...chartData.cubierta, ...chartData.ascensores, ...chartData.acabados, ...chartData.fachada, ...chartData.avaluosEntregas].map(({ activity, startIdx, duration }) => ({
-        id: activity.id,
-        name: activity.name,
-        category: activity.category,
-        rate: activity.rate,
-        crews: activity.crews,
-        unitStart: activity.unitStart,
-        unitEnd: activity.unitEnd,
-        startDate: activity.startDate,
-        effectiveStartWorkday: startIdx,
-        durationWorkdays: duration,
-        bufferDays: activity.bufferDays,
-        predecessorId: activity.predecessorId || null,
-        color: activity.color,
+      totalMonths: +(chartData.totalCalDays / MONTH_DAYS).toFixed(2),
+      totalWeeks: +(chartData.totalCalDays / 7).toFixed(1),
+      groups: chartData.groups.map(g => ({
+        category: g.key,
+        label: g.label,
+        startMonth: +g.startMonths.toFixed(2),
+        durationMonths: +g.durationMonths.toFixed(2),
+        startDate: format(g.minStart, 'yyyy-MM-dd'),
+        endDate: format(g.maxEnd, 'yyyy-MM-dd'),
+        activitiesCount: g.items.length,
       })),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -142,46 +128,26 @@ export function GanttChart() {
     );
   }
 
-  const { preliminares, estructura, cubierta, ascensores, acabados, fachada, avaluosEntregas, workdays, maxDay, projectStart, projectEndDate, totalWorkdays } = chartData;
-  const COL_W = 28; const ROW_H = 32; const LABEL_W = 200; const MONTHNUM_H = 22; const MONTH_H = 26; const DAY_H = 18; const HEADER_H = MONTHNUM_H + MONTH_H + DAY_H;
-  const groups = [
-    { key: 'preliminares', label: 'Preliminares', items: preliminares, color: 'hsl(var(--muted-foreground))', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)' },
-    { key: 'estructura', label: 'Estructura', items: estructura, color: ESTRUCTURA_COLOR, barColor: '#1e3a5f', bgFill: 'hsl(var(--primary) / 0.15)' },
-    { key: 'cubierta', label: 'Cubierta', items: cubierta, color: 'hsl(var(--accent-foreground))', barColor: '#2d8a56', bgFill: 'hsl(var(--accent) / 0.35)' },
-    { key: 'ascensores', label: 'Ascensores', items: ascensores, color: 'hsl(var(--accent-foreground))', barColor: '#16a085', bgFill: 'hsl(var(--accent) / 0.22)' },
-    { key: 'acabados', label: 'Acabados', items: acabados, color: ACABADOS_COLOR, barColor: '#e69500', bgFill: 'hsl(40 90% 50% / 0.15)' },
-    { key: 'fachada', label: 'Fachada', items: fachada, color: 'hsl(var(--accent-foreground))', barColor: '#c0392b', bgFill: 'hsl(0 70% 50% / 0.12)' },
-    { key: 'avaluosEntregas', label: 'Avalúos y Escrituración', items: avaluosEntregas, color: 'hsl(var(--accent-foreground))', barColor: '#8e44ad', bgFill: 'hsl(280 60% 50% / 0.12)' },
-  ];
-
-  const groupSummary: Record<string, { minStart: number; maxEnd: number }> = {};
-  groups.forEach(g => {
-    if (g.items.length > 0) {
-      const minStart = Math.min(...g.items.map(i => i.startIdx));
-      const maxEnd = Math.max(...g.items.map(i => i.startIdx + i.duration));
-      groupSummary[g.key] = { minStart, maxEnd };
-    }
-  });
-
-  let totalRows = 0;
-  groups.forEach(g => { totalRows++; if (!collapsed[g.key]) totalRows += g.items.length; });
+  const { groups, projectStart, projectEndDate, totalCalDays, numMonths } = chartData;
+  const MONTH_W = 90;
+  const ROW_H = 36;
+  const LABEL_W = 200;
+  const MONTHNUM_H = 24;
+  const MONTH_H = 24;
+  const HEADER_H = MONTHNUM_H + MONTH_H;
   const SUMMARY_H = 80;
-  const WIDTH = LABEL_W + maxDay * COL_W + 20;
+  const totalRows = groups.length;
+  const WIDTH = LABEL_W + numMonths * MONTH_W + 20;
   const HEIGHT = HEADER_H + totalRows * ROW_H + SUMMARY_H + 20;
-  const months: { month: string; start: number; end: number }[] = [];
-  workdays.forEach((wd, i) => {
-    if (months.length === 0 || months[months.length - 1].month !== wd.month) months.push({ month: wd.month, start: i, end: i });
-    else months[months.length - 1].end = i;
-  });
-  let rowIdx = 0;
 
   const totalUnits = project.buildingConfig.floors * project.buildingConfig.unitsPerFloor;
-  const totalMonths = months.length;
+  const totalMonthsLabel = (totalCalDays / MONTH_DAYS).toFixed(1);
+  const totalWeeksLabel = Math.round(totalCalDays / 7);
 
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-2 border-b border-border">
-        <h3 className="text-sm font-semibold">Diagrama Gantt</h3>
+        <h3 className="text-sm font-semibold">Diagrama Gantt — Resumen Mensual (1 mes = 4 semanas)</h3>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportJSON} className="gap-1.5"><Download className="h-3.5 w-3.5" />Exportar JSON</Button>
           <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5"><Camera className="h-3.5 w-3.5" />Exportar PNG</Button>
@@ -190,75 +156,57 @@ export function GanttChart() {
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-card rounded-lg border border-border inline-block">
           <svg ref={svgRef} width={WIDTH} height={HEIGHT}>
-            {months.map((m, i) => (
+            {/* Header: Mes N */}
+            {Array.from({ length: numMonths }, (_, i) => (
               <g key={`mn-${i}`}>
-                <rect x={LABEL_W + m.start * COL_W} y={0} width={(m.end - m.start + 1) * COL_W} height={MONTHNUM_H} fill="hsl(var(--accent))" />
-                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H - 6} textAnchor="middle" className="fill-accent-foreground text-[12px] font-semibold">Mes {i + 1}</text>
+                <rect x={LABEL_W + i * MONTH_W} y={0} width={MONTH_W} height={MONTHNUM_H} fill="hsl(var(--accent))" stroke="hsl(var(--border))" strokeWidth={0.5} />
+                <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H - 7} textAnchor="middle" className="fill-accent-foreground text-[12px] font-semibold">Mes {i + 1}</text>
               </g>
             ))}
-            {months.map((m, i) => (
-              <g key={`mh-${i}`}>
-                <rect x={LABEL_W + m.start * COL_W} y={MONTHNUM_H} width={(m.end - m.start + 1) * COL_W} height={MONTH_H} fill="hsl(var(--primary))" />
-                <text x={LABEL_W + ((m.start + m.end) / 2) * COL_W + COL_W / 2} y={MONTHNUM_H + MONTH_H - 8} textAnchor="middle" className="fill-primary-foreground text-[12px] font-medium">{m.month}</text>
-              </g>
-            ))}
-            {workdays.map((wd, i) => (
-              <g key={`dh-${i}`}>
-                {i % 5 === 0 && <text x={LABEL_W + i * COL_W + COL_W / 2} y={MONTHNUM_H + MONTH_H + 13} textAnchor="middle" className="fill-muted-foreground text-[11px]">{wd.label}</text>}
-                <line x1={LABEL_W + i * COL_W} x2={LABEL_W + i * COL_W} y1={HEADER_H} y2={HEADER_H + totalRows * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
-              </g>
-            ))}
-            {groups.map(g => {
-              const groupRow = rowIdx++;
-              const groupY = HEADER_H + groupRow * ROW_H;
-              const isCollapsed = collapsed[g.key];
-              const summary = groupSummary[g.key];
+            {/* Header: MMM yy aproximado */}
+            {Array.from({ length: numMonths }, (_, i) => {
+              const d = addDays(projectStart, i * MONTH_DAYS);
               return (
-                <g key={g.key}>
-                  <rect x={0} y={groupY} width={WIDTH} height={ROW_H}
-                    fill={g.bgFill || (g.key === 'estructura' ? 'hsl(var(--primary) / 0.15)' : 'hsl(40 90% 50% / 0.15)')} />
-                  <g onClick={() => toggle(g.key)} className="cursor-pointer">
-                    <text x={12} y={groupY + ROW_H / 2 + 4} className="fill-foreground text-[11px] font-semibold">
-                      {isCollapsed ? '▸' : '▾'} {g.label} ({g.items.length})
-                    </text>
-                  </g>
-                  {isCollapsed && summary && (
-                    <g>
-                      <rect x={LABEL_W + summary.minStart * COL_W} y={groupY + 6}
-                        width={(summary.maxEnd - summary.minStart) * COL_W} height={ROW_H - 12} rx={3}
-                        fill={g.barColor} opacity={0.7} />
-                      <text x={LABEL_W + summary.minStart * COL_W + ((summary.maxEnd - summary.minStart) * COL_W) / 2}
-                        y={groupY + ROW_H / 2 + 3} textAnchor="middle" className="text-[9px] font-bold" fill="white">
-                        {summary.maxEnd - summary.minStart} días
-                      </text>
-                    </g>
-                  )}
-                  {!isCollapsed && g.items.map(({ activity, startIdx, duration }) => {
-                    const r = rowIdx++;
-                    const y = HEADER_H + r * ROW_H;
-                    return (
-                      <g key={activity.id}>
-                        <line x1={0} x2={WIDTH} y1={y} y2={y} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                        <text x={8} y={y + ROW_H / 2 + 4} className="fill-foreground text-[10px]">{activity.name}</text>
-                        <rect x={LABEL_W + startIdx * COL_W} y={y + 6} width={duration * COL_W} height={ROW_H - 12} rx={3} fill={activity.color} opacity={0.85} />
-                        <text x={LABEL_W + startIdx * COL_W + (duration * COL_W) / 2} y={y + ROW_H / 2 + 3} textAnchor="middle" className="text-[8px] font-medium" fill="white">{duration}d</text>
-                      </g>
-                    );
-                  })}
+                <g key={`mh-${i}`}>
+                  <rect x={LABEL_W + i * MONTH_W} y={MONTHNUM_H} width={MONTH_W} height={MONTH_H} fill="hsl(var(--primary))" stroke="hsl(var(--border))" strokeWidth={0.5} />
+                  <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H + MONTH_H - 8} textAnchor="middle" className="fill-primary-foreground text-[11px] font-medium">{format(d, 'MMM yy', { locale: es })}</text>
                 </g>
               );
             })}
-            {/* Project Summary Box */}
+            {/* Líneas verticales guía */}
+            {Array.from({ length: numMonths + 1 }, (_, i) => (
+              <line key={`vl-${i}`} x1={LABEL_W + i * MONTH_W} x2={LABEL_W + i * MONTH_W} y1={HEADER_H} y2={HEADER_H + totalRows * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
+            ))}
+            {/* Filas por categoría */}
+            {groups.map((g, idx) => {
+              const y = HEADER_H + idx * ROW_H;
+              const barX = LABEL_W + g.startMonths * MONTH_W;
+              const barW = Math.max(8, g.durationMonths * MONTH_W);
+              return (
+                <g key={g.key}>
+                  <rect x={0} y={y} width={WIDTH} height={ROW_H} fill={g.bgFill} />
+                  <line x1={0} x2={WIDTH} y1={y + ROW_H} y2={y + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                  <text x={12} y={y + ROW_H / 2 + 4} className="fill-foreground text-[12px] font-semibold">
+                    {g.label} ({g.items.length})
+                  </text>
+                  <rect x={barX} y={y + 6} width={barW} height={ROW_H - 12} rx={4} fill={g.barColor} opacity={0.85} />
+                  <text x={barX + barW / 2} y={y + ROW_H / 2 + 4} textAnchor="middle" className="text-[10px] font-bold" fill="white">
+                    {g.durationMonths.toFixed(1)} m
+                  </text>
+                </g>
+              );
+            })}
+            {/* Resumen */}
             <rect x={10} y={HEADER_H + totalRows * ROW_H + 10} width={WIDTH - 20} height={SUMMARY_H} rx={6}
               fill="hsl(var(--secondary))" stroke="hsl(var(--border))" strokeWidth={1} />
             <text x={24} y={HEADER_H + totalRows * ROW_H + 32} className="fill-foreground text-[12px] font-bold">
               Resumen del Proyecto — {project.name || 'Sin nombre'}
             </text>
             <text x={24} y={HEADER_H + totalRows * ROW_H + 50} className="fill-foreground text-[11px]">
-              Inicio: {format(projectStart, 'dd/MM/yyyy', { locale: es })}  |  Fin: {format(projectEndDate, 'dd/MM/yyyy', { locale: es })}  |  Duración: {totalWorkdays} días laborales
+              Inicio: {format(projectStart, 'dd/MM/yyyy', { locale: es })}  |  Fin: {format(projectEndDate, 'dd/MM/yyyy', { locale: es })}  |  Duración: {totalMonthsLabel} meses ({totalWeeksLabel} semanas)
             </text>
             <text x={24} y={HEADER_H + totalRows * ROW_H + 68} className="fill-foreground text-[11px]">
-              Total meses: {totalMonths}  |  Total unidades: {totalUnits}
+              Total meses (eje): {numMonths}  |  Total unidades: {totalUnits}
             </text>
           </svg>
         </div>
