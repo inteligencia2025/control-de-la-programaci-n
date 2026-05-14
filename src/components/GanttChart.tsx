@@ -120,8 +120,7 @@ export function GanttChart() {
     };
     img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
-
-
+  const handleExportJSON = () => {
     if (!chartData) return;
     const data = {
       project: project.name,
