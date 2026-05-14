@@ -240,9 +240,9 @@ export function LookaheadTable() {
               return (
                 <div key={item.id} className={`border rounded-lg p-3 bg-card space-y-2 ${isComplete ? 'border-success/50 bg-success/5' : 'border-border'}`}>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <Input value={item.activityName} onChange={e => updateLookahead({ ...item, activityName: e.target.value })} className="h-7 text-xs" placeholder="Actividad" />
-                      <Input value={item.responsible} onChange={e => updateLookahead({ ...item, responsible: e.target.value })} className="h-7 text-xs" placeholder="Responsable" />
+                    <div className="flex-1 grid grid-cols-[minmax(220px,1fr)_minmax(160px,1fr)] gap-2">
+                      <Input value={item.activityName} onChange={e => updateLookahead({ ...item, activityName: e.target.value })} className="h-8 text-xs" placeholder="Actividad" />
+                      <Input value={item.responsible} onChange={e => updateLookahead({ ...item, responsible: e.target.value })} className="h-8 text-xs" placeholder="Responsable" />
                     </div>
                     {isComplete ? (
                       <Badge className="bg-success text-success-foreground gap-1 text-[10px] shrink-0"><CheckCircle2 className="h-3 w-3" /> 100% ✓ Cerrada</Badge>
@@ -342,8 +342,8 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-40 text-[10px]">Actividad</TableHead>
-            <TableHead className="text-[10px] w-28">Responsable</TableHead>
+            <TableHead className="w-56 text-[10px]">Actividad</TableHead>
+            <TableHead className="text-[10px] w-40">Responsable</TableHead>
             <TableHead className="text-[10px] min-w-[200px]">Compromiso</TableHead>
             <TableHead className="text-[10px] w-28">Fecha Comp.</TableHead>
             <TableHead className="text-[10px] text-center w-16">Cumple</TableHead>
@@ -366,12 +366,12 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
               <TableRow key={item.id} className={isComplete ? 'bg-success/5' : ''}>
                 <TableCell>
                   <Input value={item.activityName} onChange={e => updateItem({ ...item, activityName: e.target.value })}
-                    className="h-7 text-[10px]" placeholder="Nombre actividad" />
+                    className="h-8 text-xs" placeholder="Nombre actividad" />
                 </TableCell>
                 <TableCell>
                   {responsibles.length > 0 ? (
                     <Select value={item.responsible || '_empty'} onValueChange={v => updateItem({ ...item, responsible: v === '_empty' ? '' : v })}>
-                      <SelectTrigger className="h-7 text-[10px]"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                      <SelectTrigger className="h-8 text-xs"><SelectValue placeholder="Seleccionar" /></SelectTrigger>
                       <SelectContent>
                         <SelectItem value="_empty">— Seleccionar —</SelectItem>
                         {responsibles.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}
@@ -379,7 +379,7 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
                     </Select>
                   ) : (
                     <Input value={item.responsible} onChange={e => updateItem({ ...item, responsible: e.target.value })}
-                      className="h-7 text-[10px]" placeholder="Responsable" />
+                      className="h-8 text-xs" placeholder="Responsable" />
                   )}
                 </TableCell>
                 <TableCell>
@@ -526,8 +526,8 @@ function LookaheadDashboard({ items, weekFilter, allItems, totalWeeks }: Dashboa
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[10px]">Actividad</TableHead>
-                <TableHead className="text-[10px] w-28">Responsable</TableHead>
+                <TableHead className="text-[10px] w-56">Actividad</TableHead>
+                <TableHead className="text-[10px] w-40">Responsable</TableHead>
                 <TableHead className="text-[10px] w-24 text-right">Progreso</TableHead>
                 <TableHead className="text-[10px] w-40">Barra</TableHead>
               </TableRow>
