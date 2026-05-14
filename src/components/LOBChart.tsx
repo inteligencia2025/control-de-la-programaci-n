@@ -345,25 +345,72 @@ export function LOBChart() {
 
   const handleExportPNG = async () => {
     if (!svgRef.current) return;
-    const svgData = new XMLSerializer().serializeToString(svgRef.current);
-    const canvas = document.createElement('canvas');
     const svgEl = svgRef.current;
-    canvas.width = svgEl.width.baseVal.value * 2;
-    canvas.height = svgEl.height.baseVal.value * 2;
+    const width = svgEl.width.baseVal.value;
+    const height = svgEl.height.baseVal.value;
+
+    // Clone SVG and ensure namespaces + explicit dimensions
+    const clone = svgEl.cloneNode(true) as SVGSVGElement;
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    clone.setAttribute('width', String(width));
+    clone.setAttribute('height', String(height));
+
+    // Resolve CSS design tokens so hsl(var(--token)) renders standalone
+    const cs = getComputedStyle(document.documentElement);
+    const tokens = [
+      'background', 'foreground', 'card', 'card-foreground',
+      'popover', 'popover-foreground', 'primary', 'primary-foreground',
+      'secondary', 'secondary-foreground', 'muted', 'muted-foreground',
+      'accent', 'accent-foreground', 'destructive', 'destructive-foreground',
+      'border', 'input', 'ring',
+    ];
+    const tokenCss = tokens
+      .map(t => {
+        const v = cs.getPropertyValue(`--${t}`).trim();
+        return v ? `--${t}: ${v};` : '';
+      })
+      .filter(Boolean)
+      .join(' ');
+    const baseColor = cs.getPropertyValue('color') || '#000';
+    const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleEl.textContent = `svg { ${tokenCss} color: hsl(var(--foreground, 0 0% 0%)); font-family: ${cs.fontFamily || 'sans-serif'}; }`;
+    clone.insertBefore(styleEl, clone.firstChild);
+
+    const svgData = new XMLSerializer().serializeToString(clone);
+    const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+    const svgUrl = URL.createObjectURL(svgBlob);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = width * 2;
+    canvas.height = height * 2;
     const ctx = canvas.getContext('2d');
-    if (!ctx) return;
+    if (!ctx) { URL.revokeObjectURL(svgUrl); return; }
     ctx.scale(2, 2);
+
     const img = new Image();
     img.onload = () => {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0);
-      const a = document.createElement('a');
-      a.href = canvas.toDataURL('image/png');
-      a.download = 'lineas_balance.png';
-      a.click();
+      ctx.drawImage(img, 0, 0, width, height);
+      URL.revokeObjectURL(svgUrl);
+      canvas.toBlob((blob) => {
+        if (!blob) return;
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'lineas_balance.png';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      }, 'image/png');
     };
-    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    img.onerror = () => {
+      URL.revokeObjectURL(svgUrl);
+      console.error('Error al rasterizar el SVG para exportar PNG');
+    };
+    img.src = svgUrl;
   };
 
   const handleMouseMove = useCallback((e: React.MouseEvent<SVGSVGElement>) => {
