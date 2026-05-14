@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react';
-import { Camera, Download } from 'lucide-react';
+import { Camera, Download, FileText } from 'lucide-react';
+import jsPDF from 'jspdf';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
 import { addDays, format, differenceInCalendarDays } from 'date-fns';
