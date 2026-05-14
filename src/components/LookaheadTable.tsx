@@ -248,23 +248,24 @@ export function LookaheadTable() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap">
-        <h3 className="text-sm font-semibold">Lookahead Planning</h3>
-        <div className="flex gap-0.5 overflow-x-auto max-w-[200px]">
+        <h3 className="text-lg font-semibold">Lookahead Planning</h3>
+        <div className="flex gap-0.5 overflow-x-auto max-w-[260px]">
           {WEEKS.map(w => (
-            <Button key={w} variant={weekFilter === w ? 'default' : 'outline'} size="sm" className="h-6 text-[10px] px-2 shrink-0" onClick={() => setWeekFilter(w)}>S{w}</Button>
+            <Button key={w} variant={weekFilter === w ? 'default' : 'outline'} size="sm" className="h-7 text-xs px-2.5 shrink-0" onClick={() => setWeekFilter(w)}>S{w}</Button>
           ))}
         </div>
-        <span className="text-[10px] text-muted-foreground">{format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 4), 'dd/MM')}</span>
+        <span className="text-xs text-muted-foreground">{format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 4), 'dd/MM')}</span>
         <div className="ml-auto flex gap-1">
-          <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-6 text-[10px]">Restricciones</Button>
-          <Button size="sm" variant={viewMode === 'review' ? 'default' : 'outline'} onClick={() => setViewMode('review')} className="gap-1 h-6 text-[10px]">Revisión</Button>
-          <Button size="sm" variant={viewMode === 'dashboard' ? 'default' : 'outline'} onClick={() => setViewMode('dashboard')} className="gap-1 h-6 text-[10px]"><BarChart3 className="h-3 w-3" />Resumen</Button>
-          <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-6 text-[10px]"><FileSpreadsheet className="h-3 w-3" />Excel</Button>
-          <Button size="sm" variant="outline" onClick={() => setShowAddResponsible(!showAddResponsible)} className="gap-1 h-6 text-[10px]"><UserPlus className="h-3 w-3" />Responsable</Button>
-          <Button size="sm" variant="outline" onClick={handleAutoLoad} className="gap-1 h-6 text-[10px]" disabled={lobActivityCount === 0}>
-            <RefreshCw className="h-3 w-3" />LOB ({lobActivityCount})
+          <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-7 text-xs">Restricciones</Button>
+          <Button size="sm" variant={viewMode === 'review' ? 'default' : 'outline'} onClick={() => setViewMode('review')} className="gap-1 h-7 text-xs">Revisión</Button>
+          <Button size="sm" variant={viewMode === 'dashboard' ? 'default' : 'outline'} onClick={() => setViewMode('dashboard')} className="gap-1 h-7 text-xs"><BarChart3 className="h-3.5 w-3.5" />Resumen</Button>
+          <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-7 text-xs"><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
+          <Button size="sm" variant="outline" onClick={handleExportPDF} className="gap-1 h-7 text-xs"><FileText className="h-3.5 w-3.5" />PDF</Button>
+          <Button size="sm" variant="outline" onClick={() => setShowAddResponsible(!showAddResponsible)} className="gap-1 h-7 text-xs"><UserPlus className="h-3.5 w-3.5" />Responsable</Button>
+          <Button size="sm" variant="outline" onClick={handleAutoLoad} className="gap-1 h-7 text-xs" disabled={lobActivityCount === 0}>
+            <RefreshCw className="h-3.5 w-3.5" />LOB ({lobActivityCount})
           </Button>
-          <Button size="sm" onClick={handleAdd} className="gap-1 h-6 text-[10px]"><Plus className="h-3 w-3" />Agregar</Button>
+          <Button size="sm" onClick={handleAdd} className="gap-1 h-7 text-xs"><Plus className="h-3.5 w-3.5" />Agregar</Button>
         </div>
       </div>
 
