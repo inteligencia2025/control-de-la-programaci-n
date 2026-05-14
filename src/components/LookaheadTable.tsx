@@ -73,6 +73,7 @@ export function LookaheadTable() {
   const [weekFilter, setWeekFilter] = useState<number>(1);
   const [collapsedCats, setCollapsedCats] = useState<Record<string, boolean>>({});
   const [collapsedActivityGroups, setCollapsedActivityGroups] = useState<Record<string, boolean>>({});
+  const [collapsedItems, setCollapsedItems] = useState<Record<string, boolean>>({});
   const [viewMode, setViewMode] = useState<'restrictions' | 'review' | 'dashboard'>('restrictions');
   const [showAddResponsible, setShowAddResponsible] = useState(false);
   const [newResponsible, setNewResponsible] = useState('');
@@ -361,82 +362,94 @@ export function LookaheadTable() {
                         {items.map(item => {
                           const progress = getRestrictionProgress(item.restrictions);
                           const isComplete = progress === 100;
+                          const itemOpen = !collapsedItems[item.id];
                           return (
-                            <div key={item.id} className={`border rounded-lg p-3 bg-background space-y-2 ${isComplete ? 'border-success/50 bg-success/5' : 'border-border'}`}>
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1 grid grid-cols-[minmax(220px,1fr)_minmax(160px,1fr)] gap-2">
-                                  <Input value={item.activityName} onChange={e => updateLookahead({ ...item, activityName: e.target.value })} className="h-8 text-xs" placeholder="Actividad" />
-                                  <Input value={item.responsible} onChange={e => updateLookahead({ ...item, responsible: e.target.value })} className="h-8 text-xs" placeholder="Responsable" />
+                            <div key={item.id} className={`border rounded-lg bg-background ${isComplete ? 'border-success/50 bg-success/5' : 'border-border'}`}>
+                              <Collapsible open={itemOpen} onOpenChange={o => setCollapsedItems(c => ({ ...c, [item.id]: !o }))}>
+                                <div className="flex items-center gap-2 p-3">
+                                  <CollapsibleTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0">
+                                      {itemOpen ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
+                                    </Button>
+                                  </CollapsibleTrigger>
+                                  <div className="flex-1 grid grid-cols-[minmax(220px,1fr)_minmax(160px,1fr)] gap-2">
+                                    <Input value={item.activityName} onChange={e => updateLookahead({ ...item, activityName: e.target.value })} className="h-8 text-xs" placeholder="Actividad" />
+                                    <Input value={item.responsible} onChange={e => updateLookahead({ ...item, responsible: e.target.value })} className="h-8 text-xs" placeholder="Responsable" />
+                                  </div>
+                                  {isComplete ? (
+                                    <Badge className="bg-success text-success-foreground gap-1 text-[10px] shrink-0"><CheckCircle2 className="h-3 w-3" /> 100% ✓ Cerrada</Badge>
+                                  ) : (
+                                    <Badge variant="secondary" className="gap-1 text-[10px] shrink-0"><XCircle className="h-3 w-3" /> {progress}%</Badge>
+                                  )}
+                                  <div className="w-24 h-1.5 bg-secondary rounded-full overflow-hidden shrink-0">
+                                    <div className={`h-full rounded-full transition-all ${isComplete ? 'bg-success' : 'bg-primary'}`} style={{ width: `${progress}%` }} />
+                                  </div>
+                                  <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive shrink-0" onClick={() => removeLookahead(item.id)}>
+                                    <Trash2 className="h-3 w-3" />
+                                  </Button>
                                 </div>
-                                {isComplete ? (
-                                  <Badge className="bg-success text-success-foreground gap-1 text-[10px] shrink-0"><CheckCircle2 className="h-3 w-3" /> 100% ✓ Cerrada</Badge>
-                                ) : (
-                                  <Badge variant="secondary" className="gap-1 text-[10px] shrink-0"><XCircle className="h-3 w-3" /> {progress}%</Badge>
-                                )}
-                                <Button variant="ghost" size="icon" className="h-6 w-6 text-destructive shrink-0" onClick={() => removeLookahead(item.id)}>
-                                  <Trash2 className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              <div className="w-full h-1.5 bg-secondary rounded-full overflow-hidden">
-                                <div className={`h-full rounded-full transition-all ${isComplete ? 'bg-success' : 'bg-primary'}`} style={{ width: `${progress}%` }} />
-                              </div>
-                              {!isComplete && (
-                                <div className="mt-2 border-l-2 border-primary/20 ml-1">
-                                  {RESTRICTION_CATEGORIES.map(cat => {
-                                    const isOpenCat = !collapsedCats[`${item.id}-${cat.id}`];
-                                    const complete = catComplete(item.restrictions, cat.id);
-                                    const completedCount = cat.items.filter(i => item.restrictions[i.id]).length;
-                                    return (
-                                      <div key={cat.id} className="relative">
-                                        <div className="absolute left-0 top-[14px] w-3 border-t border-primary/20" />
-                                        <Collapsible open={isOpenCat} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
-                                          <div className="flex items-center ml-4">
-                                            <CollapsibleTrigger className="flex items-center gap-1.5 flex-1 text-left px-2 py-2 rounded hover:bg-secondary/50 transition-colors group">
-                                              {isOpenCat ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
-                                              <span className={`text-xs font-semibold flex-1 ${complete ? 'text-success line-through' : ''}`}>{cat.name}</span>
-                                            </CollapsibleTrigger>
-                                            <Button
-                                              variant={complete ? 'default' : 'outline'}
-                                              size="sm"
-                                              className={`h-6 text-[10px] px-2 gap-1 shrink-0 ${complete ? 'bg-success hover:bg-success/90 text-success-foreground' : ''}`}
-                                              title={complete ? 'Desmarcar todo' : 'Marcar todo'}
-                                              onClick={(e) => {
-                                                e.stopPropagation();
-                                                const newRestrictions = { ...item.restrictions };
-                                                const newVal = !complete;
-                                                cat.items.forEach(ri => { newRestrictions[ri.id] = newVal; });
-                                                updateLookahead({ ...item, restrictions: newRestrictions });
-                                              }}
-                                            >
-                                              <CheckCheck className="h-3.5 w-3.5" />
-                                              {complete ? 'Completado' : 'Marcar todo'}
-                                            </Button>
-                                            <Badge variant={complete ? 'default' : 'secondary'} className={`text-[10px] h-5 px-2 ml-1 ${complete ? 'bg-success text-success-foreground' : ''}`}>
-                                              {completedCount}/{cat.items.length}
-                                            </Badge>
-                                          </div>
-                                          <CollapsibleContent>
-                                            <div className="ml-4 border-l-2 border-muted-foreground/15 pl-1">
-                                              {cat.items.map(ri => {
-                                                const checked = item.restrictions[ri.id] || false;
-                                                return (
-                                                  <div key={ri.id} className="relative flex items-center">
-                                                    <div className="absolute left-0 top-1/2 w-3 border-t border-muted-foreground/15" />
-                                                    <label className="flex items-center gap-2 cursor-pointer py-1.5 pl-4 pr-2 ml-1 rounded hover:bg-secondary/30 transition-colors w-full">
-                                                      <Checkbox checked={checked} onCheckedChange={() => toggleRestriction(item, ri.id)} className="h-3.5 w-3.5" />
-                                                      <span className={`text-[11px] ${checked ? 'text-muted-foreground line-through' : ''}`}>{ri.label}</span>
-                                                    </label>
+                                <CollapsibleContent>
+                                  <div className="px-3 pb-3 space-y-2">
+                                    {!isComplete && (
+                                      <div className="mt-1 border-l-2 border-primary/20 ml-1">
+                                        {RESTRICTION_CATEGORIES.map(cat => {
+                                          const isOpenCat = !collapsedCats[`${item.id}-${cat.id}`];
+                                          const complete = catComplete(item.restrictions, cat.id);
+                                          const completedCount = cat.items.filter(i => item.restrictions[i.id]).length;
+                                          return (
+                                            <div key={cat.id} className="relative">
+                                              <div className="absolute left-0 top-[14px] w-3 border-t border-primary/20" />
+                                              <Collapsible open={isOpenCat} onOpenChange={o => setCollapsedCats(c => ({ ...c, [`${item.id}-${cat.id}`]: !o }))}>
+                                                <div className="flex items-center ml-4">
+                                                  <CollapsibleTrigger className="flex items-center gap-1.5 flex-1 text-left px-2 py-2 rounded hover:bg-secondary/50 transition-colors group">
+                                                    {isOpenCat ? <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" /> : <ChevronRight className="h-3.5 w-3.5 text-muted-foreground" />}
+                                                    <span className={`text-xs font-semibold flex-1 ${complete ? 'text-success line-through' : ''}`}>{cat.name}</span>
+                                                  </CollapsibleTrigger>
+                                                  <Button
+                                                    variant={complete ? 'default' : 'outline'}
+                                                    size="sm"
+                                                    className={`h-6 text-[10px] px-2 gap-1 shrink-0 ${complete ? 'bg-success hover:bg-success/90 text-success-foreground' : ''}`}
+                                                    title={complete ? 'Desmarcar todo' : 'Marcar todo'}
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      const newRestrictions = { ...item.restrictions };
+                                                      const newVal = !complete;
+                                                      cat.items.forEach(ri => { newRestrictions[ri.id] = newVal; });
+                                                      updateLookahead({ ...item, restrictions: newRestrictions });
+                                                    }}
+                                                  >
+                                                    <CheckCheck className="h-3.5 w-3.5" />
+                                                    {complete ? 'Completado' : 'Marcar todo'}
+                                                  </Button>
+                                                  <Badge variant={complete ? 'default' : 'secondary'} className={`text-[10px] h-5 px-2 ml-1 ${complete ? 'bg-success text-success-foreground' : ''}`}>
+                                                    {completedCount}/{cat.items.length}
+                                                  </Badge>
+                                                </div>
+                                                <CollapsibleContent>
+                                                  <div className="ml-4 border-l-2 border-muted-foreground/15 pl-1">
+                                                    {cat.items.map(ri => {
+                                                      const checked = item.restrictions[ri.id] || false;
+                                                      return (
+                                                        <div key={ri.id} className="relative flex items-center">
+                                                          <div className="absolute left-0 top-1/2 w-3 border-t border-muted-foreground/15" />
+                                                          <label className="flex items-center gap-2 cursor-pointer py-1.5 pl-4 pr-2 ml-1 rounded hover:bg-secondary/30 transition-colors w-full">
+                                                            <Checkbox checked={checked} onCheckedChange={() => toggleRestriction(item, ri.id)} className="h-3.5 w-3.5" />
+                                                            <span className={`text-[11px] ${checked ? 'text-muted-foreground line-through' : ''}`}>{ri.label}</span>
+                                                          </label>
+                                                        </div>
+                                                      );
+                                                    })}
                                                   </div>
-                                                );
-                                              })}
+                                                </CollapsibleContent>
+                                              </Collapsible>
                                             </div>
-                                          </CollapsibleContent>
-                                        </Collapsible>
+                                          );
+                                        })}
                                       </div>
-                                    );
-                                  })}
-                                </div>
-                              )}
+                                    )}
+                                  </div>
+                                </CollapsibleContent>
+                              </Collapsible>
                             </div>
                           );
                         })}
