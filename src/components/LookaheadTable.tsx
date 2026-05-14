@@ -231,16 +231,13 @@ export function LookaheadTable() {
   const weekStart = getProjectWeekStartDate(weekFilter, project.activities);
   const weekEnd = addDays(weekStart, 6);
   const lobActivityCount = (() => {
-    const lookaheadEnd = addDays(weekEnd, 21);
+    const lookaheadEnd = addDays(weekEnd, 42);
     const enabled = project.activities.filter(a => a.enabled);
-    const overlap = enabled.filter(a => {
-      const r = getActivityWeekRange(a, project.activities);
-      return r.start <= weekEnd && r.end >= weekStart;
-    });
-    if (overlap.length > 0) return overlap.length;
     return enabled.filter(a => {
       const r = getActivityWeekRange(a, project.activities);
-      return r.start > weekEnd && r.start <= lookaheadEnd;
+      const overlaps = r.start <= weekEnd && r.end >= weekStart;
+      const startsSoon = r.start > weekEnd && r.start <= lookaheadEnd;
+      return overlaps || startsSoon;
     }).length;
   })();
 
