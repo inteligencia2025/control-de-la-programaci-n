@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, FileSpreadsheet, ChevronDown, ChevronRight, UserPlus, CheckCheck, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, FileSpreadsheet, ChevronDown, ChevronRight, UserPlus, CheckCheck, BarChart3, CalendarIcon, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,10 +10,15 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { useProject } from '@/context/ProjectContext';
 import { LookaheadItem, Activity, RESTRICTION_CATEGORIES, createEmptyRestrictions, DEFAULT_FAILURE_CAUSES } from '@/types/project';
-import { addDays, startOfWeek, format } from 'date-fns';
+import { addDays, startOfWeek, format, parseISO } from 'date-fns';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 
 const MAX_WEEKS = 12;
