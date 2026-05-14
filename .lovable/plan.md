@@ -1,20 +1,24 @@
 ## Problema
 
-Actualmente la línea horizontal de duración por unidad usa `1 / effectiveRate` (ritmo × cuadrillas). Con ritmo 0.25 u/d y 4 cuadrillas el ritmo efectivo = 1 u/d, por lo que `wdPerUnit = 1` y la línea se ve corta o no se dibuja, aunque cada cuadrilla realmente tarda **4 días** por unidad.
+Las líneas horizontales por unidad representan correctamente la duración (1/rate) de una cuadrilla, pero están ancladas con espaciado de `1/rate` entre unidades, ignorando que con más cuadrillas el ritmo efectivo aumenta. Esto provoca que las líneas se extiendan mucho más allá de la diagonal.
 
 ## Solución
 
-La línea horizontal debe representar el tiempo real que toma ejecutar una unidad por **una cuadrilla**, es decir `1 / rate` (ignorando el número de cuadrillas).
+Cada segmento horizontal debe **anclarse al punto de la diagonal** correspondiente a esa unidad (que sí usa el ritmo efectivo) y extenderse hacia la derecha con longitud `1/rate` (duración real de una cuadrilla en esa unidad).
 
-### Cambio en `src/components/LOBChart.tsx`
+Así, al aumentar cuadrillas:
+- Las unidades se ubican más juntas en el tiempo (diagonal más empinada).
+- Cada segmento sigue midiendo 1/rate días (lo que tarda una cuadrilla).
+- Los segmentos quedan paralelos y desplazados, representando visualmente las cuadrillas trabajando en paralelo.
 
-En el bloque "Per-unit duration markers" (línea ~875):
+### Cambio en `src/components/LOBChart.tsx` (bloque "Per-unit duration markers", ~línea 875)
 
-- Reemplazar `const wdPerUnit = 1 / effectiveRate;` por `const wdPerUnit = 1 / normalizeRate(activity.rate);`
-- Mantener la condición `if (wdPerUnit <= 1) return null;` (sólo se dibuja cuando la duración por unidad es mayor a 1 día).
-
-Asegurarse de que `normalizeRate` esté importado desde `@/utils/schedulingUtils` (ya se usa en otras partes del archivo, verificar import).
+- Mantener `wdPerUnit = 1 / normalizeRate(activity.rate)` (longitud del segmento).
+- Cambiar el cálculo de `wdStart` para usar el **ritmo efectivo** (alineado con la diagonal):
+  - `wdStart = startWd + k / effectiveRate`
+  - `wdEnd = wdStart + wdPerUnit`
+- Mantener la condición `if (wdPerUnit <= 1) return null;`.
 
 ## Resultado
 
-Para el caso del usuario (rate 0.25, crews 4): `wdPerUnit = 4` → cada unidad mostrará un segmento horizontal de 4 días, reflejando el tiempo real de una cuadrilla por unidad, como en la imagen 2.
+Cada unidad tendrá una línea horizontal que arranca en el punto de la diagonal (ritmo efectivo) y se extiende 1/rate días, mostrando visualmente que con más cuadrillas se acelera el avance pero cada cuadrilla mantiene su tiempo por unidad.
