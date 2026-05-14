@@ -21,7 +21,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 
-const MAX_WEEKS = 12;
+const MAX_WEEKS = 260;
 
 function getEffectiveStartDate(activity: Activity, activities: Activity[]): Date {
   return getEffectiveStartDateSimple(activity, activities);
