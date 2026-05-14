@@ -1,4 +1,4 @@
-import { useMemo, useRef } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Camera, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useProject } from '@/context/ProjectContext';
@@ -11,6 +11,10 @@ const MONTH_DAYS = 28; // 4 semanas calendario
 export function GanttChart() {
   const { project } = useProject();
   const svgRef = useRef<SVGSVGElement>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({
+    preliminares: true, estructura: true, cubierta: true, ascensores: true, acabados: true, fachada: true, avaluosEntregas: true,
+  });
+  const toggle = (k: string) => setCollapsed(c => ({ ...c, [k]: !c[k] }));
 
   const chartData = useMemo(() => {
     const enabled = project.activities.filter(a => a.enabled);
