@@ -526,8 +526,8 @@ function LookaheadDashboard({ items, weekFilter, allItems, totalWeeks }: Dashboa
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="text-[10px]">Actividad</TableHead>
-                <TableHead className="text-[10px] w-28">Responsable</TableHead>
+                <TableHead className="text-[10px] w-56">Actividad</TableHead>
+                <TableHead className="text-[10px] w-40">Responsable</TableHead>
                 <TableHead className="text-[10px] w-24 text-right">Progreso</TableHead>
                 <TableHead className="text-[10px] w-40">Barra</TableHead>
               </TableRow>
