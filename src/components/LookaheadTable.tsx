@@ -439,8 +439,29 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
                     className="min-h-[32px] text-[10px] resize-none py-1" placeholder="Describir compromiso..." />
                 </TableCell>
                 <TableCell>
-                  <Input type="date" value={commitmentDate} onChange={e => updateField(item, 'commitmentDate', e.target.value)}
-                    className="h-7 text-[10px] w-[110px]" />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-8 w-[130px] justify-start text-left font-normal text-xs px-2",
+                          !commitmentDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                        {commitmentDate ? format(parseISO(commitmentDate), 'dd/MM/yyyy') : <span>Elegir</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={commitmentDate ? parseISO(commitmentDate) : undefined}
+                        onSelect={(d) => updateField(item, 'commitmentDate', d ? format(d, 'yyyy-MM-dd') : '')}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </TableCell>
                 <TableCell className="text-center">
                   <Select value={commitmentMet === undefined ? '_none' : commitmentMet ? 'si' : 'no'}
