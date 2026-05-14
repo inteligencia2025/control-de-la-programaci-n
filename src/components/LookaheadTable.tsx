@@ -262,11 +262,23 @@ export function LookaheadTable() {
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap">
         <h3 className="text-lg font-semibold">Lookahead Planning</h3>
-        <div className="flex gap-0.5 overflow-x-auto max-w-[260px]">
+        <Button variant="outline" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => setWeekFilter(w => Math.max(1, w - 1))} disabled={weekFilter <= 1} title="Semana anterior">
+          <ChevronLeft className="h-3.5 w-3.5" />
+        </Button>
+        <div className="flex gap-0.5 overflow-x-auto max-w-[260px] scroll-smooth">
           {WEEKS.map(w => (
             <Button key={w} variant={weekFilter === w ? 'default' : 'outline'} size="sm" className="h-7 text-xs px-2.5 shrink-0" onClick={() => setWeekFilter(w)}>S{w}</Button>
           ))}
         </div>
+        <Button variant="outline" size="sm" className="h-7 w-7 p-0 shrink-0" onClick={() => setWeekFilter(w => Math.min(totalProjectWeeks, w + 1))} disabled={weekFilter >= totalProjectWeeks} title="Semana siguiente">
+          <ChevronRight className="h-3.5 w-3.5" />
+        </Button>
+        <Select value={String(weekFilter)} onValueChange={v => setWeekFilter(Number(v))}>
+          <SelectTrigger className="h-7 w-24 text-xs shrink-0"><SelectValue /></SelectTrigger>
+          <SelectContent className="max-h-72">
+            {WEEKS.map(w => <SelectItem key={w} value={String(w)} className="text-xs">Semana {w}</SelectItem>)}
+          </SelectContent>
+        </Select>
         <span className="text-xs text-muted-foreground">{format(weekStart, 'dd/MM/yyyy')} - {format(addDays(weekStart, 6), 'dd/MM/yyyy')}</span>
         <div className="ml-auto flex gap-1">
           <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-7 text-xs">Restricciones</Button>
