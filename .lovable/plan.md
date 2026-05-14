@@ -1,40 +1,25 @@
-# Blindar el auto-guardado para que no se pierdan actividades
+## Problema
 
-Ya restauraste Fiorenza desde tu copia local — perfecto. Ahora hay que evitar que el bug se repita.
+En `ProjectContext.updateActivity` (líneas 622–651), cuando se modifica una actividad se hace una "cascada" que **reescribe el `startDate` almacenado** de todas las actividades sucesoras. Esa cascada se dispara cuando cambia cualquiera de: `startDate`, `rate`, `crews`, `unitStart`, `unitEnd`.
 
-## Causa raíz
-`src/context/ProjectContext.tsx` → `doSave` hace `DELETE all + INSERT` para actividades, lookahead y PAC. Si se dispara con `project.activities = []` (estado por defecto que aparece momentáneamente al cambiar de proyecto, o por una carrera entre `loadProject` y el effect de auto-save), borra todo en BD sin reinsertar nada. El guard `loadedProjectIdRef` que pusimos antes no cierra del todo la ventana.
+Por eso, al ajustar el **ritmo** o las **cuadrillas** de una actividad, las sucesoras se "corren" en pantalla y además quedan persistidas con la nueva fecha.
 
-## Cambios en `src/context/ProjectContext.tsx`
+## Cambio propuesto
 
-### 1. Guard anti-wipe en `doSave`
-Antes de borrar/insertar cada tabla:
-- Contar cuántas filas existen ya en BD para ese `projectId`.
-- Si `data.activities.length === 0` y la BD tiene > 0 actividades, **abortar** todo el guardado (`console.warn` + `return`). Solo se permite guardar vacío si el usuario explícitamente borró la última (flag `intentionalEmptyRef`, ver punto 3).
-- Misma regla para `lookahead` y `pac_records`.
+Limitar la cascada de reescritura de `startDate` únicamente a cambios de **fecha de inicio** de la predecesora. Los cambios de `rate`, `crews`, `unitStart` y `unitEnd` no deben mover las fechas almacenadas de las sucesoras.
 
-### 2. Reemplazar `DELETE all + INSERT` por `upsert + diff`
-Por cada tabla:
-- `upsert` de los registros presentes en `data` (por `id`, `onConflict: 'id'`).
-- `delete` solo de los `id` que ya no están: `.delete().eq('project_id', projectId).not('id', 'in', '(<lista actual>)')`.
-- Así, una salvada mal disparada nunca puede destruir todo: en el peor caso no borra nada.
+### Detalle técnico
 
-### 3. `dirtyRef` — no auto-guardar hasta que el usuario edite
-- `dirtyRef = useRef(false)`.
-- Se marca `true` solo dentro del `setProject` envuelto (acciones del usuario).
-- Se resetea a `false` al final de `loadProject`, `switchProject`, `createNewProject` y tras cada `doSave` exitoso.
-- El `useEffect` de auto-save chequea `dirtyRef.current` antes de llamar al debounce.
-- `intentionalEmptyRef = useRef(false)` → se marca `true` solo cuando `removeActivity` deja la lista vacía, así el guard del punto 1 sabe que el vacío fue intencional. Se resetea tras el guardado.
+En `src/context/ProjectContext.tsx`, dentro de `updateActivity`:
 
-### 4. Re-validar `loadedProjectIdRef.current === projectId` después de cada `await` dentro de `doSave`
-No solo al inicio. Si durante el guardado el usuario cambió de proyecto, abortar a mitad para no contaminar otra fila.
+- Cambiar la condición `schedulingChanged` para que solo sea verdadera cuando `prev.startDate !== a.startDate`.
+- Eliminar `rate`, `crews`, `unitStart` y `unitEnd` como disparadores de la cascada.
+- El cálculo visual en el LOB (vía `getEffectiveStartDate`) seguirá reflejando el efecto del nuevo ritmo en tiempo real sin tocar datos almacenados.
 
-### 5. Cancelar debounce en `beforeunload`
-Listener `window.addEventListener('beforeunload', () => debouncedSave.cancel())` para evitar que un guardado a medias se dispare al cerrar.
+No se modifica ningún otro archivo.
 
-## Verificación
-- Reproducir el flujo: abrir Fiorenza → cambiar a Majestic → volver a Fiorenza → revisar Network: ningún `DELETE` debe pasar mientras el `project` esté en estado por defecto.
-- Confirmar en BD (`SELECT count FROM activities WHERE project_id = …`) que el conteo se mantiene tras varios cambios de proyecto sin editar.
+## Resultado
 
-## Archivos tocados
-- `src/context/ProjectContext.tsx` (único cambio).
+- Editar ritmo o cuadrillas de una actividad ya no desplaza las fechas guardadas de otras actividades.
+- Cambiar la fecha de inicio de una predecesora sigue propagando a sucesoras (comportamiento actual deseado).
+- El gráfico LOB sigue mostrando correctamente el balance entre actividades porque ese cálculo es en tiempo de render.

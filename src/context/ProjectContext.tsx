@@ -622,10 +622,10 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const updateActivity = useCallback((a: Activity) => setProject(p => {
     const prev = p.activities.find(x => x.id === a.id);
     let activities = p.activities.map(x => x.id === a.id ? a : x);
-    // Only cascade when fields that affect successor scheduling changed.
-    const schedulingChanged = !prev || prev.startDate !== a.startDate
-      || prev.rate !== a.rate || (prev.crews || 1) !== (a.crews || 1)
-      || prev.unitStart !== a.unitStart || prev.unitEnd !== a.unitEnd;
+    // Only cascade when the predecessor's stored startDate changed.
+    // Changes to rate/crews/unit range affect visual LOB scheduling at render time
+    // (via getEffectiveStartDate) but must NOT rewrite successors' stored dates.
+    const schedulingChanged = !!prev && prev.startDate !== a.startDate;
     if (!schedulingChanged) return { ...p, activities };
     // Cascade: update stored startDate of all successors based on predecessor constraint
     const cascadeSuccessors = (changedId: string) => {
