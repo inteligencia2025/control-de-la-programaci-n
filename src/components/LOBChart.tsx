@@ -871,6 +871,31 @@ export function LOBChart() {
                 {points.map((p, i) => (
                   <circle key={i} cx={scaleX(p.workdayIndex)} cy={scaleY(p.unit)} r={3} fill={activity.color} stroke="white" strokeWidth={1} className="cursor-pointer" />
                 ))}
+                {/* Per-unit duration markers: horizontal segment representing time spent on each unit */}
+                {(() => {
+                  const wdPerUnit = 1 / effectiveRate;
+                  if (wdPerUnit < 1) return null;
+                  const segs: JSX.Element[] = [];
+                  const totalUnits = Math.abs(activity.unitEnd - actualUnitStart) + 1;
+                  for (let k = 0; k < totalUnits; k++) {
+                    const unit = actualUnitStart + direction * k;
+                    const wdStart = startWd + k * wdPerUnit;
+                    const wdEnd = wdStart + wdPerUnit;
+                    const y = scaleY(unit);
+                    segs.push(
+                      <line
+                        key={`du-${activity.id}-${k}`}
+                        x1={scaleX(wdStart)} x2={scaleX(wdEnd)}
+                        y1={y} y2={y}
+                        stroke={activity.color}
+                        strokeWidth={1.5}
+                        opacity={0.55}
+                        strokeLinecap="round"
+                      />
+                    );
+                  }
+                  return segs;
+                })()}
                 {/* Buffer line (dashed extension) */}
                 {(() => {
                   const buf = chartData.lines.find(l => l.activity.id === activity.id)?.buffer;
