@@ -240,9 +240,9 @@ export function LookaheadTable() {
               return (
                 <div key={item.id} className={`border rounded-lg p-3 bg-card space-y-2 ${isComplete ? 'border-success/50 bg-success/5' : 'border-border'}`}>
                   <div className="flex items-center gap-2">
-                    <div className="flex-1 grid grid-cols-2 gap-2">
-                      <Input value={item.activityName} onChange={e => updateLookahead({ ...item, activityName: e.target.value })} className="h-7 text-xs" placeholder="Actividad" />
-                      <Input value={item.responsible} onChange={e => updateLookahead({ ...item, responsible: e.target.value })} className="h-7 text-xs" placeholder="Responsable" />
+                    <div className="flex-1 grid grid-cols-[minmax(220px,1fr)_minmax(160px,1fr)] gap-2">
+                      <Input value={item.activityName} onChange={e => updateLookahead({ ...item, activityName: e.target.value })} className="h-8 text-xs" placeholder="Actividad" />
+                      <Input value={item.responsible} onChange={e => updateLookahead({ ...item, responsible: e.target.value })} className="h-8 text-xs" placeholder="Responsable" />
                     </div>
                     {isComplete ? (
                       <Badge className="bg-success text-success-foreground gap-1 text-[10px] shrink-0"><CheckCircle2 className="h-3 w-3" /> 100% ✓ Cerrada</Badge>
