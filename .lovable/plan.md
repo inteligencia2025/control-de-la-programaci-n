@@ -1,25 +1,34 @@
-## Problema
+## Objetivo
 
-En `ProjectContext.updateActivity` (líneas 622–651), cuando se modifica una actividad se hace una "cascada" que **reescribe el `startDate` almacenado** de todas las actividades sucesoras. Esa cascada se dispara cuando cambia cualquiera de: `startDate`, `rate`, `crews`, `unitStart`, `unitEnd`.
+Representar visualmente en el gráfico de Líneas de Balance el tiempo que toma ejecutar cada unidad, mostrando segmentos horizontales en cada punto unitario (como en la imagen 2).
 
-Por eso, al ajustar el **ritmo** o las **cuadrillas** de una actividad, las sucesoras se "corren" en pantalla y además quedan persistidas con la nueva fecha.
+## Comportamiento
 
-## Cambio propuesto
+Para cada actividad en el LOB, en cada punto unitario de su línea diagonal se dibujará un pequeño segmento horizontal hacia la derecha cuya longitud (en el eje X) representa el tiempo de ejecución de esa unidad por una cuadrilla.
 
-Limitar la cascada de reescritura de `startDate` únicamente a cambios de **fecha de inicio** de la predecesora. Los cambios de `rate`, `crews`, `unitStart` y `unitEnd` no deben mover las fechas almacenadas de las sucesoras.
+- **Longitud del segmento** = `1 / rate` workdays (tiempo que una cuadrilla tarda en completar una unidad).
+- **Color**: el mismo color de la actividad, con un grosor menor al de la línea principal (~1px) o ligera transparencia para no saturar.
+- **Visibilidad**: solo se renderiza cuando `1/rate >= 1` día (si el ritmo es mayor a 1 u/día el segmento sería muy corto / invisible y se omite).
+- Aplicado tanto a la línea consolidada como a las `crewLines` (cuando hay varias cuadrillas, cada cuadrilla muestra sus propios segmentos por unidad).
 
-### Detalle técnico
+Esto deja claro al usuario:
+- Ritmo lento (ej. 0.2 u/d → 5 días por unidad) se ve como segmentos largos.
+- Más cuadrillas → líneas paralelas, cada una con sus segmentos.
 
-En `src/context/ProjectContext.tsx`, dentro de `updateActivity`:
+## Cambios técnicos
 
-- Cambiar la condición `schedulingChanged` para que solo sea verdadera cuando `prev.startDate !== a.startDate`.
-- Eliminar `rate`, `crews`, `unitStart` y `unitEnd` como disparadores de la cascada.
-- El cálculo visual en el LOB (vía `getEffectiveStartDate`) seguirá reflejando el efecto del nuevo ritmo en tiempo real sin tocar datos almacenados.
+Archivo: `src/components/LOBChart.tsx`
 
-No se modifica ningún otro archivo.
+1. En el bloque de render de líneas (alrededor de la línea 400-500 donde se dibujan `lines` y `crewLines`), añadir un nuevo loop que, por cada punto entero de unidad de la línea, dibuje un `<line>` SVG horizontal:
+   - `x1 = PAD.left + (workdayIndex / maxWorkday) * plotW`
+   - `x2 = PAD.left + ((workdayIndex + 1/rate) / maxWorkday) * plotW`
+   - `y1 = y2 = lobTop + plotH - ((unit - minUnit) / unitRange) * plotH`
+2. Iterar solo sobre puntos cuya `unit` sea entera (que coincidan con unidades reales).
+3. Usar `stroke={activity.color}` con `strokeWidth={1}` y opacidad ~0.6.
+4. Saltar el render cuando `1 / normalizeRate(activity.rate) < 1` (ritmo ≥ 1 u/día).
 
-## Resultado
+No se modifica la lógica de scheduling ni de fechas — es un cambio puramente visual.
 
-- Editar ritmo o cuadrillas de una actividad ya no desplaza las fechas guardadas de otras actividades.
-- Cambiar la fecha de inicio de una predecesora sigue propagando a sucesoras (comportamiento actual deseado).
-- El gráfico LOB sigue mostrando correctamente el balance entre actividades porque ese cálculo es en tiempo de render.
+## Resultado esperado
+
+El gráfico mostrará pequeños "trazos horizontales" en cada unidad indicando la duración real de trabajo por unidad, similar a la imagen 2 adjunta.
