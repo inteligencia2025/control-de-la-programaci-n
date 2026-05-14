@@ -381,34 +381,52 @@ export function LOBChart() {
     const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
     const svgUrl = URL.createObjectURL(svgBlob);
 
+    // Cap pixel ratio to stay under canvas size limits (~16384px per side)
+    const MAX_SIDE = 16000;
+    const scale = Math.min(2, MAX_SIDE / Math.max(width, height));
+
+    const downloadBlob = (blob: Blob, filename: string) => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    };
+
     const canvas = document.createElement('canvas');
-    canvas.width = width * 2;
-    canvas.height = height * 2;
+    canvas.width = Math.floor(width * scale);
+    canvas.height = Math.floor(height * scale);
     const ctx = canvas.getContext('2d');
     if (!ctx) { URL.revokeObjectURL(svgUrl); return; }
-    ctx.scale(2, 2);
+    ctx.scale(scale, scale);
 
     const img = new Image();
     img.onload = () => {
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.drawImage(img, 0, 0, width, height);
-      URL.revokeObjectURL(svgUrl);
-      canvas.toBlob((blob) => {
-        if (!blob) return;
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = 'lineas_balance.png';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 1000);
-      }, 'image/png');
+      try {
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, width, height);
+        URL.revokeObjectURL(svgUrl);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            console.error('toBlob devolvió null; descargando SVG como respaldo');
+            downloadBlob(svgBlob, 'lineas_balance.svg');
+            return;
+          }
+          downloadBlob(blob, 'lineas_balance.png');
+        }, 'image/png');
+      } catch (err) {
+        console.error('Error exportando PNG:', err);
+        downloadBlob(svgBlob, 'lineas_balance.svg');
+      }
     };
-    img.onerror = () => {
+    img.onerror = (e) => {
+      console.error('Error al cargar SVG para PNG, descargando SVG:', e);
       URL.revokeObjectURL(svgUrl);
-      console.error('Error al rasterizar el SVG para exportar PNG');
+      downloadBlob(svgBlob, 'lineas_balance.svg');
     };
     img.src = svgUrl;
   };
