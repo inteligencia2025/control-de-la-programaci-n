@@ -159,7 +159,74 @@ export function GanttChart() {
       : [];
     return { g, groupRow, isOpen, childRows };
   });
-            {/* Resumen */}
+
+  const totalUnits = project.buildingConfig.floors * project.buildingConfig.unitsPerFloor;
+  const totalMonthsLabel = (totalCalDays / MONTH_DAYS).toFixed(1);
+  const totalWeeksLabel = Math.round(totalCalDays / 7);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center justify-between px-4 py-2 border-b border-border">
+        <h3 className="text-sm font-semibold">Diagrama Gantt — Resumen Mensual (1 mes = 4 semanas)</h3>
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" onClick={handleExportJSON} className="gap-1.5"><Download className="h-3.5 w-3.5" />Exportar JSON</Button>
+          <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5"><Camera className="h-3.5 w-3.5" />Exportar PNG</Button>
+        </div>
+      </div>
+      <div className="flex-1 overflow-auto p-4">
+        <div className="bg-card rounded-lg border border-border inline-block">
+          <svg ref={svgRef} width={WIDTH} height={HEIGHT}>
+            {Array.from({ length: numMonths }, (_, i) => (
+              <g key={`mn-${i}`}>
+                <rect x={LABEL_W + i * MONTH_W} y={0} width={MONTH_W} height={MONTHNUM_H} fill="hsl(var(--accent))" stroke="hsl(var(--border))" strokeWidth={0.5} />
+                <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H - 7} textAnchor="middle" className="fill-accent-foreground text-[12px] font-semibold">Mes {i + 1}</text>
+              </g>
+            ))}
+            {Array.from({ length: numMonths }, (_, i) => {
+              const d = addDays(projectStart, i * MONTH_DAYS);
+              return (
+                <g key={`mh-${i}`}>
+                  <rect x={LABEL_W + i * MONTH_W} y={MONTHNUM_H} width={MONTH_W} height={MONTH_H} fill="hsl(var(--primary))" stroke="hsl(var(--border))" strokeWidth={0.5} />
+                  <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H + MONTH_H - 8} textAnchor="middle" className="fill-primary-foreground text-[11px] font-medium">{format(d, 'MMM yy', { locale: es })}</text>
+                </g>
+              );
+            })}
+            {Array.from({ length: numMonths + 1 }, (_, i) => (
+              <line key={`vl-${i}`} x1={LABEL_W + i * MONTH_W} x2={LABEL_W + i * MONTH_W} y1={HEADER_H} y2={HEADER_H + totalRows * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
+            ))}
+            {renderedGroups.map(({ g, groupRow, isOpen, childRows }) => {
+              const yG = HEADER_H + groupRow * ROW_H;
+              const barX = LABEL_W + g.startMonths * MONTH_W;
+              const barW = Math.max(8, g.durationMonths * MONTH_W);
+              return (
+                <g key={g.key}>
+                  <rect x={0} y={yG} width={WIDTH} height={ROW_H} fill={g.bgFill} />
+                  <line x1={0} x2={WIDTH} y1={yG + ROW_H} y2={yG + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                  <g onClick={() => toggle(g.key)} className="cursor-pointer">
+                    <text x={12} y={yG + ROW_H / 2 + 4} className="fill-foreground text-[12px] font-semibold">
+                      {isOpen ? '▾' : '▸'} {g.label} ({g.items.length})
+                    </text>
+                  </g>
+                  <rect x={barX} y={yG + 6} width={barW} height={ROW_H - 12} rx={4} fill={g.barColor} opacity={0.85} />
+                  <text x={barX + barW / 2} y={yG + ROW_H / 2 + 4} textAnchor="middle" className="text-[10px] font-bold" fill="white">
+                    {g.durationMonths.toFixed(1)} m
+                  </text>
+                  {childRows.map(({ it, startMonths, durationMonths, r }) => {
+                    const y = HEADER_H + r * ROW_H;
+                    const cx = LABEL_W + startMonths * MONTH_W;
+                    const cw = Math.max(6, durationMonths * MONTH_W);
+                    return (
+                      <g key={it.activity.id}>
+                        <line x1={0} x2={WIDTH} y1={y + ROW_H} y2={y + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
+                        <text x={24} y={y + ROW_H / 2 + 4} className="fill-foreground text-[10px]">{it.activity.name}</text>
+                        <rect x={cx} y={y + 8} width={cw} height={ROW_H - 16} rx={3} fill={it.activity.color} opacity={0.85} />
+                        <text x={cx + cw / 2} y={y + ROW_H / 2 + 3} textAnchor="middle" className="text-[9px] font-medium" fill="white">{durationMonths.toFixed(1)} m</text>
+                      </g>
+                    );
+                  })}
+                </g>
+              );
+            })}
             <rect x={10} y={HEADER_H + totalRows * ROW_H + 10} width={WIDTH - 20} height={SUMMARY_H} rx={6}
               fill="hsl(var(--secondary))" stroke="hsl(var(--border))" strokeWidth={1} />
             <text x={24} y={HEADER_H + totalRows * ROW_H + 32} className="fill-foreground text-[12px] font-bold">
