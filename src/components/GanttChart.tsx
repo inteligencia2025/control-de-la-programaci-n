@@ -195,6 +195,7 @@ export function GanttChart() {
         <h3 className="text-sm font-semibold">Diagrama Gantt — Resumen Mensual (1 mes = 4 semanas)</h3>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={handleExportJSON} className="gap-1.5"><Download className="h-3.5 w-3.5" />Exportar JSON</Button>
+          <Button variant="outline" size="sm" onClick={handleExportPDF} className="gap-1.5"><FileText className="h-3.5 w-3.5" />Exportar PDF</Button>
           <Button variant="outline" size="sm" onClick={handleExport} className="gap-1.5"><Camera className="h-3.5 w-3.5" />Exportar PNG</Button>
         </div>
       </div>
