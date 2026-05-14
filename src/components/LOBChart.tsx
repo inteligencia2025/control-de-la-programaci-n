@@ -20,7 +20,16 @@ function shiftWorkdays(dateStr: string, n: number): string {
 }
 import { es } from 'date-fns/locale';
 import { Button } from '@/components/ui/button';
-import { Camera, ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { Camera, ZoomIn, ZoomOut, RotateCcw, FileImage, FileText, Download } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { jsPDF } from 'jspdf';
+import { svg2pdf } from 'svg2pdf.js';
+import { toast } from 'sonner';
 import { getEffectiveStartDate as getEffectiveStartDateShared, smartCeil, getEffectiveRate, normalizeRate } from '@/utils/schedulingUtils';
 
 interface LinePoint { workdayIndex: number; unit: number; }
