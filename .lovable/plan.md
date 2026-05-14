@@ -1,17 +1,29 @@
+# Arreglar exportación PNG del gráfico LOB
+
 ## Problema
+Al pulsar "Exportar PNG" el archivo se descarga pero el sistema operativo lo reporta como dañado/corrupto.
 
-Con ritmo 0.25/día (1 unidad = 4 días), el segmento horizontal por unidad se dibuja con longitud `wdPerUnit = 1/rate = 4` días-ancho. Visualmente esto cubre 5 marcas de día (día 1 al día 5), proyectándose un día extra. La duración real de una cuadrilla en una unidad son 4 días contados de forma inclusiva (día 1 al día 4 → ancho de 3).
+## Causa raíz
+En `src/components/LOBChart.tsx` (`handleExportPNG`, líneas 346-367) la exportación tiene varios problemas que producen un PNG inválido o vacío:
 
-## Solución
+1. El SVG serializado no incluye los atributos `xmlns` ni `xmlns:xlink`, lo que hace que algunos navegadores fallen al cargarlo como `<img>`. Cuando `img.onload` no se dispara (o se dispara sin contenido), `canvas.toDataURL` produce un data URL vacío/inválido que se descarga como un .png "dañado".
+2. No hay manejador `img.onerror`, por lo que los fallos son silenciosos.
+3. El SVG usa colores con tokens de diseño HSL (`hsl(var(--...))`) y `currentColor` heredado del DOM. Al serializarlo sin esos estilos computados, el render resulta vacío/transparente.
+4. El ancla `<a>` no se añade al DOM antes del `click()`, lo cual en algunos navegadores impide la descarga real del blob.
+5. Para SVGs grandes, `canvas.toDataURL` puede fallar; conviene usar `canvas.toBlob` + `URL.createObjectURL`.
 
-En `src/components/LOBChart.tsx` (~línea 883), restar 1 a la longitud del segmento horizontal para que represente exactamente los días que la cuadrilla pasa en la unidad:
+## Cambios propuestos
+Reescribir `handleExportPNG` en `src/components/LOBChart.tsx`:
 
-- `wdEnd = wdStart + wdPerUnit - 1`
+- Clonar el `<svg>` y añadir `xmlns="http://www.w3.org/2000/svg"` y `xmlns:xlink="http://www.w3.org/1999/xlink"`.
+- Fijar explícitamente `width` y `height` en el clon.
+- Inyectar un `<style>` dentro del clon con las variables CSS resueltas desde `getComputedStyle(document.documentElement)` para los tokens utilizados (background, foreground, border, primary, accent, muted, etc.) y un `color` base, de modo que `hsl(var(--token))` y `currentColor` se rendericen igual que en pantalla.
+- Serializar a Blob (`type: image/svg+xml;charset=utf-8`) y crear un `URL.createObjectURL` para `img.src` (más robusto que base64).
+- Agregar `img.onerror` con un `toast` informativo y limpieza del object URL.
+- En `onload`, dibujar sobre canvas 2x con fondo blanco y exportar con `canvas.toBlob(blob => ...)` a un `<a>` que se añade al `document.body`, se hace `click()` y se elimina; revocar ambos object URLs.
 
-La condición de mostrar sólo cuando `wdPerUnit > 1` se mantiene (duración 1 día → longitud 0, no se dibuja).
+## Validación
+- Pulsar "Exportar PNG" y abrir el archivo descargado: debe verse el gráfico con los mismos colores y trazos del preview.
+- Probar en Chrome y Firefox.
 
-## Resultado
-
-- Ritmo 0.25/día → segmento de 3 días-ancho representando 4 días de trabajo (inclusivo).
-- Ritmo 0.5/día → segmento de 1 día-ancho representando 2 días.
-- Aumentar cuadrillas sigue acelerando la diagonal (anclaje con `effectiveRate`), pero cada segmento mantiene la duración real por cuadrilla.
+No se modifica lógica de negocio ni de cálculo; solo el flujo de exportación visual.
