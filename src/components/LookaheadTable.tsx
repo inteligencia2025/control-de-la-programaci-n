@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react';
-import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, FileSpreadsheet, ChevronDown, ChevronRight, UserPlus, CheckCheck, BarChart3 } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, XCircle, RefreshCw, FileSpreadsheet, ChevronDown, ChevronRight, UserPlus, CheckCheck, BarChart3, CalendarIcon, FileText } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -10,10 +10,15 @@ import { Progress } from '@/components/ui/progress';
 import { Textarea } from '@/components/ui/textarea';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import { useProject } from '@/context/ProjectContext';
 import { LookaheadItem, Activity, RESTRICTION_CATEGORIES, createEmptyRestrictions, DEFAULT_FAILURE_CAUSES } from '@/types/project';
-import { addDays, startOfWeek, format } from 'date-fns';
+import { addDays, startOfWeek, format, parseISO } from 'date-fns';
 import * as XLSX from 'xlsx';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 
 const MAX_WEEKS = 12;
@@ -174,6 +179,52 @@ export function LookaheadTable() {
     XLSX.writeFile(wb, `lookahead_semana_${weekFilter}.xlsx`);
   };
 
+  const handleExportPDF = () => {
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'mm', format: 'a4' });
+    const title = `${project.name || 'Proyecto'} — Lookahead Semana ${weekFilter}`;
+    const subtitle = `${format(weekStart, 'dd/MM/yyyy')} - ${format(addDays(weekStart, 6), 'dd/MM/yyyy')}`;
+    doc.setFontSize(14);
+    doc.text(title, 14, 14);
+    doc.setFontSize(10);
+    doc.text(subtitle, 14, 20);
+
+    if (viewMode === 'review') {
+      autoTable(doc, {
+        startY: 26,
+        head: [['Actividad', 'Responsable', 'Compromiso', 'Fecha Comp.', 'Cumple', 'Causa']],
+        body: filteredItems.map(it => [
+          it.activityName || '',
+          it.responsible || '',
+          it.commitment || '',
+          it.commitmentDate ? format(parseISO(it.commitmentDate), 'dd/MM/yyyy') : '',
+          it.commitmentMet === undefined ? '—' : it.commitmentMet ? 'Sí' : 'No',
+          it.commitmentCause || '',
+        ]),
+        styles: { fontSize: 8, cellPadding: 2 },
+        headStyles: { fillColor: [30, 58, 95] },
+      });
+    } else {
+      autoTable(doc, {
+        startY: 26,
+        head: [['Actividad', 'Responsable', 'Área', 'Restricción', 'Estado']],
+        body: filteredItems.flatMap(item =>
+          RESTRICTION_CATEGORIES.flatMap(cat =>
+            cat.items.map(ri => [
+              item.activityName || '',
+              item.responsible || '',
+              cat.name,
+              ri.label,
+              item.restrictions[ri.id] ? '✓ Liberada' : '✗ Pendiente',
+            ])
+          )
+        ),
+        styles: { fontSize: 8, cellPadding: 1.5 },
+        headStyles: { fillColor: [30, 58, 95] },
+      });
+    }
+    doc.save(`lookahead_semana_${weekFilter}.pdf`);
+  };
+
   const weekStart = getProjectWeekStartDate(weekFilter, project.activities);
   const weekEnd = addDays(weekStart, 6);
   const lobActivityCount = project.activities.filter(a => {
@@ -197,23 +248,24 @@ export function LookaheadTable() {
   return (
     <div className="flex flex-col h-full">
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap">
-        <h3 className="text-sm font-semibold">Lookahead Planning</h3>
-        <div className="flex gap-0.5 overflow-x-auto max-w-[200px]">
+        <h3 className="text-lg font-semibold">Lookahead Planning</h3>
+        <div className="flex gap-0.5 overflow-x-auto max-w-[260px]">
           {WEEKS.map(w => (
-            <Button key={w} variant={weekFilter === w ? 'default' : 'outline'} size="sm" className="h-6 text-[10px] px-2 shrink-0" onClick={() => setWeekFilter(w)}>S{w}</Button>
+            <Button key={w} variant={weekFilter === w ? 'default' : 'outline'} size="sm" className="h-7 text-xs px-2.5 shrink-0" onClick={() => setWeekFilter(w)}>S{w}</Button>
           ))}
         </div>
-        <span className="text-[10px] text-muted-foreground">{format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 4), 'dd/MM')}</span>
+        <span className="text-xs text-muted-foreground">{format(weekStart, 'dd/MM')} - {format(addDays(weekStart, 4), 'dd/MM')}</span>
         <div className="ml-auto flex gap-1">
-          <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-6 text-[10px]">Restricciones</Button>
-          <Button size="sm" variant={viewMode === 'review' ? 'default' : 'outline'} onClick={() => setViewMode('review')} className="gap-1 h-6 text-[10px]">Revisión</Button>
-          <Button size="sm" variant={viewMode === 'dashboard' ? 'default' : 'outline'} onClick={() => setViewMode('dashboard')} className="gap-1 h-6 text-[10px]"><BarChart3 className="h-3 w-3" />Resumen</Button>
-          <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-6 text-[10px]"><FileSpreadsheet className="h-3 w-3" />Excel</Button>
-          <Button size="sm" variant="outline" onClick={() => setShowAddResponsible(!showAddResponsible)} className="gap-1 h-6 text-[10px]"><UserPlus className="h-3 w-3" />Responsable</Button>
-          <Button size="sm" variant="outline" onClick={handleAutoLoad} className="gap-1 h-6 text-[10px]" disabled={lobActivityCount === 0}>
-            <RefreshCw className="h-3 w-3" />LOB ({lobActivityCount})
+          <Button size="sm" variant={viewMode === 'restrictions' ? 'default' : 'outline'} onClick={() => setViewMode('restrictions')} className="gap-1 h-7 text-xs">Restricciones</Button>
+          <Button size="sm" variant={viewMode === 'review' ? 'default' : 'outline'} onClick={() => setViewMode('review')} className="gap-1 h-7 text-xs">Revisión</Button>
+          <Button size="sm" variant={viewMode === 'dashboard' ? 'default' : 'outline'} onClick={() => setViewMode('dashboard')} className="gap-1 h-7 text-xs"><BarChart3 className="h-3.5 w-3.5" />Resumen</Button>
+          <Button size="sm" variant="outline" onClick={handleExportExcel} className="gap-1 h-7 text-xs"><FileSpreadsheet className="h-3.5 w-3.5" />Excel</Button>
+          <Button size="sm" variant="outline" onClick={handleExportPDF} className="gap-1 h-7 text-xs"><FileText className="h-3.5 w-3.5" />PDF</Button>
+          <Button size="sm" variant="outline" onClick={() => setShowAddResponsible(!showAddResponsible)} className="gap-1 h-7 text-xs"><UserPlus className="h-3.5 w-3.5" />Responsable</Button>
+          <Button size="sm" variant="outline" onClick={handleAutoLoad} className="gap-1 h-7 text-xs" disabled={lobActivityCount === 0}>
+            <RefreshCw className="h-3.5 w-3.5" />LOB ({lobActivityCount})
           </Button>
-          <Button size="sm" onClick={handleAdd} className="gap-1 h-6 text-[10px]"><Plus className="h-3 w-3" />Agregar</Button>
+          <Button size="sm" onClick={handleAdd} className="gap-1 h-7 text-xs"><Plus className="h-3.5 w-3.5" />Agregar</Button>
         </div>
       </div>
 
@@ -387,8 +439,29 @@ function LookaheadReview({ items, weekStart, allCauses, responsibles, updateItem
                     className="min-h-[32px] text-[10px] resize-none py-1" placeholder="Describir compromiso..." />
                 </TableCell>
                 <TableCell>
-                  <Input type="date" value={commitmentDate} onChange={e => updateField(item, 'commitmentDate', e.target.value)}
-                    className="h-7 text-[10px] w-[110px]" />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        className={cn(
+                          "h-8 w-[130px] justify-start text-left font-normal text-xs px-2",
+                          !commitmentDate && "text-muted-foreground"
+                        )}
+                      >
+                        <CalendarIcon className="mr-1.5 h-3.5 w-3.5" />
+                        {commitmentDate ? format(parseISO(commitmentDate), 'dd/MM/yyyy') : <span>Elegir</span>}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0" align="start">
+                      <Calendar
+                        mode="single"
+                        selected={commitmentDate ? parseISO(commitmentDate) : undefined}
+                        onSelect={(d) => updateField(item, 'commitmentDate', d ? format(d, 'yyyy-MM-dd') : '')}
+                        initialFocus
+                        className={cn("p-3 pointer-events-auto")}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </TableCell>
                 <TableCell className="text-center">
                   <Select value={commitmentMet === undefined ? '_none' : commitmentMet ? 'si' : 'no'}
