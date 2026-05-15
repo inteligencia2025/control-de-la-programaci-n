@@ -1,11 +1,15 @@
-import { Save, Upload, FileSpreadsheet, HardHat, PlusCircle, Trash2, Undo2, Redo2, LogOut, Loader2, Shield } from 'lucide-react';
+import { Save, Upload, FileSpreadsheet, HardHat, PlusCircle, Trash2, Undo2, Redo2, LogOut, Loader2, Shield, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useUserRole } from '@/hooks/useUserRole';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { useProject } from '@/context/ProjectContext';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import * as XLSX from 'xlsx';
 import { RESTRICTION_CATEGORIES } from '@/types/project';
@@ -16,6 +20,9 @@ export function ProjectToolbar() {
   const { isAdmin } = useUserRole();
   const navigate = useNavigate();
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const [deleteStep, setDeleteStep] = useState<0 | 1 | 2>(0);
+  const [confirmText, setConfirmText] = useState('');
 
   const handleImport = () => fileInputRef.current?.click();
 
@@ -56,6 +63,14 @@ export function ProjectToolbar() {
     XLSX.writeFile(wb, `${project.name.replace(/\s+/g, '_')}.xlsx`);
   };
 
+  const closeDeleteDialog = () => { setDeleteStep(0); setConfirmText(''); };
+
+  const confirmDelete = () => {
+    if (confirmText.trim() !== project.name.trim()) return;
+    deleteProject(activeProjectId);
+    closeDeleteDialog();
+  };
+
   return (
     <header className="lean-gradient px-6 py-3 flex items-center gap-4 shadow-md">
       <div className="flex items-center gap-2">
@@ -86,7 +101,7 @@ export function ProjectToolbar() {
           </Button>
         )}
         {isAdmin && projectsList.length > 1 && (
-          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => deleteProject(activeProjectId)} title="Mover a papelera">
+          <Button variant="secondary" size="icon" className="h-8 w-8" onClick={() => setDeleteStep(1)} title="Mover a papelera">
             <Trash2 className="h-4 w-4" />
           </Button>
         )}
@@ -113,6 +128,63 @@ export function ProjectToolbar() {
           <LogOut className="h-4 w-4" />
         </Button>
       </div>
+
+      {/* Paso 1: confirmación inicial */}
+      <AlertDialog open={deleteStep === 1} onOpenChange={(o) => !o && closeDeleteDialog()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              ¿Mover proyecto a papelera?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Estás a punto de mover el proyecto <strong>"{project.name}"</strong> a la papelera.
+              Esta acción afecta todas sus actividades, lookahead y registros PAC.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); setDeleteStep(2); }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Continuar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Paso 2: confirmación escribiendo nombre */}
+      <AlertDialog open={deleteStep === 2} onOpenChange={(o) => !o && closeDeleteDialog()}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5 text-destructive" />
+              Confirmación final
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Para confirmar, escribe el nombre exacto del proyecto:{' '}
+              <strong className="text-foreground">{project.name}</strong>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <Input
+            autoFocus
+            value={confirmText}
+            onChange={(e) => setConfirmText(e.target.value)}
+            placeholder={project.name}
+          />
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => { e.preventDefault(); confirmDelete(); }}
+              disabled={confirmText.trim() !== project.name.trim()}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 disabled:opacity-50"
+            >
+              Eliminar definitivamente
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </header>
   );
 }
