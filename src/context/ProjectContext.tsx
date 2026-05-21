@@ -55,6 +55,9 @@ interface ProjectContextType {
   saving: boolean;
   flushSave: () => Promise<void>;
   saveNow: (data: ProjectData) => Promise<void>;
+  addContractor: (name: string) => Promise<void>;
+  addCustomCause: (name: string) => Promise<void>;
+
 }
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
