@@ -534,6 +534,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     doSave(data, projectId);
   }, 1500);
 
+  // Force-flush any pending debounced save immediately
+  const flushSave = useCallback(async () => {
+    debouncedSave.cancel?.();
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    if (!dirtyRef.current) return;
+    if (loadedProjectIdRef.current !== pid) return;
+    await doSave(latestProjectRef.current, pid);
+  }, [debouncedSave, doSave]);
+
   // Auto-save on project changes — only when loaded data corresponds to active project AND user has actually edited
   useEffect(() => {
     if (!loaded || !activeProjectId || !user) return;
@@ -543,12 +553,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     debouncedSave(project, activeProjectId);
   }, [project, activeProjectId, loaded, user, debouncedSave]);
 
-  // Cancel pending debounce on unload to avoid half-saves with stale state
+  // Flush pending saves on unload / tab hide to avoid losing in-flight edits
   useEffect(() => {
-    const handler = () => debouncedSave.cancel?.();
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [debouncedSave]);
+    const fireSync = () => {
+      const pid = activeIdRef.current;
+      if (!pid || !dirtyRef.current || loadedProjectIdRef.current !== pid) return;
+      debouncedSave.cancel?.();
+      // Fire-and-forget; browser keeps the in-flight fetch alive briefly
+      doSave(latestProjectRef.current, pid);
+    };
+    const onBeforeUnload = () => fireSync();
+    const onVisibility = () => { if (document.visibilityState === 'hidden') fireSync(); };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [debouncedSave, doSave]);
 
   // Also update project name in list
   useEffect(() => {
