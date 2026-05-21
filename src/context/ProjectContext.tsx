@@ -601,14 +601,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skipHistory.current = false;
     latestProjectRef.current = { ...latestProjectRef.current, contractors: nextList };
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ contractors: nextList, updated_at: new Date().toISOString() })
-        .eq('id', pid);
+      const { data, error } = await supabase.rpc('add_project_contractor' as any, { _project_id: pid, _contractor: name });
       if (error) {
         console.error('[addContractor] update failed:', error);
         toast({ title: 'Error', description: 'No se pudo guardar el contratista', variant: 'destructive' });
+        return;
       }
+      const savedList = (data as string[] | null) || nextList;
+      skipHistory.current = true;
+      setProjectInternal(p => ({ ...p, contractors: savedList }));
+      skipHistory.current = false;
+      latestProjectRef.current = { ...latestProjectRef.current, contractors: savedList };
     } catch (err) {
       console.error('[addContractor] exception:', err);
     }
@@ -627,14 +630,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skipHistory.current = false;
     latestProjectRef.current = { ...latestProjectRef.current, customFailureCauses: nextList };
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ custom_failure_causes: nextList, updated_at: new Date().toISOString() })
-        .eq('id', pid);
+      const { data, error } = await supabase.rpc('add_project_custom_failure_cause' as any, { _project_id: pid, _cause: name });
       if (error) {
         console.error('[addCustomCause] update failed:', error);
         toast({ title: 'Error', description: 'No se pudo guardar la causa', variant: 'destructive' });
+        return;
       }
+      const savedList = (data as string[] | null) || nextList;
+      skipHistory.current = true;
+      setProjectInternal(p => ({ ...p, customFailureCauses: savedList }));
+      skipHistory.current = false;
+      latestProjectRef.current = { ...latestProjectRef.current, customFailureCauses: savedList };
     } catch (err) {
       console.error('[addCustomCause] exception:', err);
     }
