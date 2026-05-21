@@ -203,12 +203,14 @@ export function ProductionControl() {
     if (!newContractor.trim()) return;
     setProject(p => ({ ...p, contractors: [...(p.contractors || []), newContractor.trim()] }));
     setNewContractor(''); setShowAddContractor(false);
+    setTimeout(() => { flushSave(); }, 0);
   };
 
   const handleAddCause = () => {
     if (!newCause.trim()) return;
     setProject(p => ({ ...p, customFailureCauses: [...(p.customFailureCauses || []), newCause.trim()] }));
     setNewCause(''); setShowAddCause(false);
+    setTimeout(() => { flushSave(); }, 0);
   };
 
   const contractors = project.contractors || [];
