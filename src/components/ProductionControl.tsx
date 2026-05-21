@@ -79,7 +79,7 @@ function getPACWeekDates(weekNum: number, activities: Activity[], pacRecords: PA
 }
 
 export function ProductionControl() {
-  const { project, setProject, addPACRecord, updatePACRecord, removePACRecord } = useProject();
+  const { project, setProject, addPACRecord, updatePACRecord, removePACRecord, flushSave } = useProject();
   const [weekView, setWeekView] = useState<number>(1);
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
   const [newContractor, setNewContractor] = useState('');
