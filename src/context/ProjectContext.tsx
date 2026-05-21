@@ -302,9 +302,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // for existing projects that already had other fachada activities loaded.
     // One-time per project via localStorage flag so user-deletions are respected.
     // Also rename legacy 'ENTREGAS' -> 'ESCRITURACIÓN'.
-    projectData.activities = projectData.activities.map(a =>
-      a.name === 'ENTREGAS' ? { ...a, name: 'ESCRITURACIÓN' } : a
-    );
+    let adjustedLoadedProject = false;
+    projectData.activities = projectData.activities.map(a => {
+      if (a.name !== 'ENTREGAS') return a;
+      adjustedLoadedProject = true;
+      return { ...a, name: 'ESCRITURACIÓN' };
+    });
     const injectKey = `lob-preload-fachada-v4:${projectId}`;
     try {
       if (!localStorage.getItem(injectKey)) {
@@ -339,6 +342,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
           if (toInject.length > 0) {
             projectData.activities = [...projectData.activities, ...toInject];
+            adjustedLoadedProject = true;
           }
         }
         localStorage.setItem(injectKey, '1');
@@ -354,8 +358,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Mark that DB data has been loaded into state for this specific project
     loadedProjectIdRef.current = projectId;
     loadedFromDbRef.current = true;
-    // Force a save check to persist any injection/rename
-    dirtyRef.current = true;
+    // Only save immediately when the load actually performed a one-time migration.
+    dirtyRef.current = adjustedLoadedProject;
     intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
   };
 
