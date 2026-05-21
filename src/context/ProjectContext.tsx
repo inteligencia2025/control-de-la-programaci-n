@@ -559,6 +559,63 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await doSave(data, pid);
   }, [debouncedSave, doSave]);
 
+  // Dedicated single-column updates for project metadata lists.
+  // These bypass the full doSave path (anti-wipe queries + activities/lookahead/pac sync),
+  // which can be aborted mid-flight by a tab/project switch and silently lose the new value.
+  const addContractor = useCallback(async (rawName: string) => {
+    const name = rawName.trim();
+    if (!name) return;
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    const current = latestProjectRef.current.contractors || [];
+    if (current.includes(name)) return;
+    const nextList = [...current, name];
+    // Update local state immediately so the UI reflects the change.
+    skipHistory.current = true;
+    setProjectInternal(p => ({ ...p, contractors: nextList }));
+    skipHistory.current = false;
+    latestProjectRef.current = { ...latestProjectRef.current, contractors: nextList };
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ contractors: nextList, updated_at: new Date().toISOString() })
+        .eq('id', pid);
+      if (error) {
+        console.error('[addContractor] update failed:', error);
+        toast({ title: 'Error', description: 'No se pudo guardar el contratista', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('[addContractor] exception:', err);
+    }
+  }, [toast]);
+
+  const addCustomCause = useCallback(async (rawName: string) => {
+    const name = rawName.trim();
+    if (!name) return;
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    const current = latestProjectRef.current.customFailureCauses || [];
+    if (current.includes(name)) return;
+    const nextList = [...current, name];
+    skipHistory.current = true;
+    setProjectInternal(p => ({ ...p, customFailureCauses: nextList }));
+    skipHistory.current = false;
+    latestProjectRef.current = { ...latestProjectRef.current, customFailureCauses: nextList };
+    try {
+      const { error } = await supabase
+        .from('projects')
+        .update({ custom_failure_causes: nextList, updated_at: new Date().toISOString() })
+        .eq('id', pid);
+      if (error) {
+        console.error('[addCustomCause] update failed:', error);
+        toast({ title: 'Error', description: 'No se pudo guardar la causa', variant: 'destructive' });
+      }
+    } catch (err) {
+      console.error('[addCustomCause] exception:', err);
+    }
+  }, [toast]);
+
+
   // Auto-save on project changes — only when loaded data corresponds to active project AND user has actually edited
   useEffect(() => {
     if (!loaded || !activeProjectId || !user) return;
