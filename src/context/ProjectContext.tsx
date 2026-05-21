@@ -601,7 +601,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skipHistory.current = false;
     latestProjectRef.current = { ...latestProjectRef.current, contractors: nextList };
     try {
-      const { data, error } = await supabase.rpc('add_project_contractor' as any, { _project_id: pid, _contractor: name });
+      const { data, error } = await (supabase as any).rpc('add_project_contractor', { _project_id: pid, _contractor: name });
       if (error) {
         console.error('[addContractor] update failed:', error);
         toast({ title: 'Error', description: 'No se pudo guardar el contratista', variant: 'destructive' });
@@ -630,7 +630,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skipHistory.current = false;
     latestProjectRef.current = { ...latestProjectRef.current, customFailureCauses: nextList };
     try {
-      const { data, error } = await supabase.rpc('add_project_custom_failure_cause' as any, { _project_id: pid, _cause: name });
+      const { data, error } = await (supabase as any).rpc('add_project_custom_failure_cause', { _project_id: pid, _cause: name });
       if (error) {
         console.error('[addCustomCause] update failed:', error);
         toast({ title: 'Error', description: 'No se pudo guardar la causa', variant: 'destructive' });
