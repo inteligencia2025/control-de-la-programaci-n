@@ -53,6 +53,7 @@ interface ProjectContextType {
   canUndo: boolean;
   canRedo: boolean;
   saving: boolean;
+  flushSave: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
