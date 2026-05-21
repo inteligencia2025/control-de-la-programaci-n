@@ -1,21 +1,28 @@
-## Plan
+## Diagnóstico
 
-1. Ajustar el guardado inmediato de contratistas en Control PAC
-   - Cambiar el flujo de `handleAddContractor` para construir el siguiente estado del proyecto y enviarlo directamente a un guardado inmediato.
-   - Evitar depender de `setTimeout + flushSave()`, porque al cambiar de pestaña el navegador puede pausar ese temporizador antes de que alcance a guardar.
+El video sí muestra el problema: al añadir **“Jorge Eduardo Cardona”**, el nombre aparece en la lista y en el selector, pero luego al cambiar de proyecto/pestaña vuelve a desaparecer.
 
-2. Hacer el guardado manual más confiable en el contexto del proyecto
-   - Agregar una función de guardado inmediato que reciba explícitamente el `ProjectData` actualizado.
-   - Reutilizar la lógica existente de `doSave`, respetando `dirtyRef`, proyecto activo, anti-wipe guard y reglas actuales de persistencia.
-   - Mantener `flushSave()` para cierres/cambios de pestaña, pero hacerlo compatible con el nuevo guardado explícito.
+La señal clave está en las peticiones de red: después del flujo se están enviando `PATCH` a `projects` con `contractors: []`. Es decir, no es solo un problema visual: una sincronización posterior está sobrescribiendo en la base el arreglo de contratistas con una versión vieja/vacía.
 
-3. Aplicar el mismo patrón a causas personalizadas
-   - Actualizar `handleAddCause` igual que contratistas, ya que usa el mismo flujo de guardado crítico.
+## Plan de corrección
 
-4. Validar el resultado
-   - Verificar que TypeScript compile mediante el chequeo automático del entorno.
-   - Confirmar en el código que el contratista queda incluido en el payload guardado antes de limpiar el input o depender del debounce.
+1. **Proteger los metadatos del proyecto contra sobrescrituras antiguas**
+   - En el guardado general, evitar que una versión vieja del estado pueda pisar `contractors`, `responsibles` o `customFailureCauses` cuando solo se están guardando actividades/PAC/lookahead.
+   - Esto corrige el caso visto en red: guardados posteriores no deben volver a mandar `contractors: []` si ya existe una lista más reciente.
 
-## Detalles técnicos
+2. **Agregar operaciones dedicadas para listas simples**
+   - Crear funciones específicas en el contexto para añadir contratistas y causas personalizadas.
+   - Estas funciones actualizarán solo la columna necesaria del proyecto, con el arreglo final explícito, sin ejecutar toda la sincronización de actividades/PAC.
 
-La causa probable es una carrera de estado: `setProject(...)` actualiza React de forma asíncrona, pero `flushSave()` lee `latestProjectRef.current`. Si el usuario cambia de pestaña inmediatamente, el `setTimeout` puede no ejecutarse o puede leer todavía el proyecto anterior, guardando sin el contratista nuevo. La solución es guardar el objeto `nextProject` explícito en el mismo handler que lo crea.
+3. **Actualizar Control PAC para usar esas operaciones**
+   - `handleAddContractor` usará la nueva función dedicada.
+   - `handleAddCause` usará la misma estrategia.
+   - Mantener actualización inmediata en pantalla para que el selector muestre el contratista recién agregado.
+
+4. **Evitar duplicados y entradas vacías**
+   - Normalizar el nombre con `trim()`.
+   - No añadir el mismo contratista dos veces.
+
+5. **Validación**
+   - Confirmar en el código que añadir contratista ya no dispara un guardado completo con datos viejos.
+   - Verificar que el payload de guardado dedicado incluya el nuevo contratista y que los guardados posteriores no puedan limpiar la lista.
