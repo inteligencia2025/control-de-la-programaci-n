@@ -708,7 +708,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addLookahead, updateLookahead, removeLookahead,
       addPACRecord, updatePACRecord, removePACRecord,
       saveToFile, loadFromFile,
-      undo, redo, canUndo, canRedo, saving,
+      undo, redo, canUndo, canRedo, saving, flushSave,
     }}>
       {children}
     </ProjectContext.Provider>
