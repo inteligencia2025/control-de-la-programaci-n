@@ -54,6 +54,7 @@ interface ProjectContextType {
   canRedo: boolean;
   saving: boolean;
   flushSave: () => Promise<void>;
+  saveNow: (data: ProjectData) => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
@@ -544,6 +545,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     await doSave(latestProjectRef.current, pid);
   }, [debouncedSave, doSave]);
 
+  // Save explicit data immediately, bypassing React state timing
+  const saveNow = useCallback(async (data: ProjectData) => {
+    debouncedSave.cancel?.();
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    if (loadedProjectIdRef.current !== pid) return;
+    dirtyRef.current = true;
+    latestProjectRef.current = data;
+    await doSave(data, pid);
+  }, [debouncedSave, doSave]);
+
   // Auto-save on project changes — only when loaded data corresponds to active project AND user has actually edited
   useEffect(() => {
     if (!loaded || !activeProjectId || !user) return;
@@ -708,7 +720,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addLookahead, updateLookahead, removeLookahead,
       addPACRecord, updatePACRecord, removePACRecord,
       saveToFile, loadFromFile,
-      undo, redo, canUndo, canRedo, saving, flushSave,
+      undo, redo, canUndo, canRedo, saving, flushSave, saveNow,
     }}>
       {children}
     </ProjectContext.Provider>

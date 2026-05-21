@@ -79,7 +79,7 @@ function getPACWeekDates(weekNum: number, activities: Activity[], pacRecords: PA
 }
 
 export function ProductionControl() {
-  const { project, setProject, addPACRecord, updatePACRecord, removePACRecord, flushSave } = useProject();
+  const { project, setProject, addPACRecord, updatePACRecord, removePACRecord, flushSave, saveNow } = useProject();
   const [weekView, setWeekView] = useState<number>(1);
   const [responsibleFilter, setResponsibleFilter] = useState<string>('all');
   const [newContractor, setNewContractor] = useState('');
@@ -200,17 +200,22 @@ export function ProductionControl() {
   };
 
   const handleAddContractor = () => {
-    if (!newContractor.trim()) return;
-    setProject(p => ({ ...p, contractors: [...(p.contractors || []), newContractor.trim()] }));
+    const name = newContractor.trim();
+    if (!name) return;
+    const next = { ...project, contractors: [...(project.contractors || []), name] };
+    setProject(() => next);
     setNewContractor(''); setShowAddContractor(false);
-    setTimeout(() => { flushSave(); }, 0);
+    // Persist immediately with explicit data to avoid React state timing races
+    saveNow(next).catch(err => console.error('[saveNow contractor]', err));
   };
 
   const handleAddCause = () => {
-    if (!newCause.trim()) return;
-    setProject(p => ({ ...p, customFailureCauses: [...(p.customFailureCauses || []), newCause.trim()] }));
+    const name = newCause.trim();
+    if (!name) return;
+    const next = { ...project, customFailureCauses: [...(project.customFailureCauses || []), name] };
+    setProject(() => next);
     setNewCause(''); setShowAddCause(false);
-    setTimeout(() => { flushSave(); }, 0);
+    saveNow(next).catch(err => console.error('[saveNow cause]', err));
   };
 
   const contractors = project.contractors || [];
