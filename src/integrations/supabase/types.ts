@@ -363,6 +363,14 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      add_project_contractor: {
+        Args: { _contractor: string; _project_id: string }
+        Returns: string[]
+      }
+      add_project_custom_failure_cause: {
+        Args: { _cause: string; _project_id: string }
+        Returns: string[]
+      }
       get_user_role: {
         Args: { _user_id: string }
         Returns: Database["public"]["Enums"]["app_role"]

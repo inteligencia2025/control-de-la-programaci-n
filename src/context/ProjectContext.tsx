@@ -302,9 +302,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // for existing projects that already had other fachada activities loaded.
     // One-time per project via localStorage flag so user-deletions are respected.
     // Also rename legacy 'ENTREGAS' -> 'ESCRITURACIÓN'.
-    projectData.activities = projectData.activities.map(a =>
-      a.name === 'ENTREGAS' ? { ...a, name: 'ESCRITURACIÓN' } : a
-    );
+    let adjustedLoadedProject = false;
+    projectData.activities = projectData.activities.map(a => {
+      if (a.name !== 'ENTREGAS') return a;
+      adjustedLoadedProject = true;
+      return { ...a, name: 'ESCRITURACIÓN' };
+    });
     const injectKey = `lob-preload-fachada-v4:${projectId}`;
     try {
       if (!localStorage.getItem(injectKey)) {
@@ -339,6 +342,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
           if (toInject.length > 0) {
             projectData.activities = [...projectData.activities, ...toInject];
+            adjustedLoadedProject = true;
           }
         }
         localStorage.setItem(injectKey, '1');
@@ -354,8 +358,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // Mark that DB data has been loaded into state for this specific project
     loadedProjectIdRef.current = projectId;
     loadedFromDbRef.current = true;
-    // Force a save check to persist any injection/rename
-    dirtyRef.current = true;
+    // Only save immediately when the load actually performed a one-time migration.
+    dirtyRef.current = adjustedLoadedProject;
     intentionalEmptyRef.current = { activities: false, lookahead: false, pac: false };
   };
 
@@ -415,17 +419,34 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setSaving(true);
     try {
-      // Update project metadata. Always read the most-recent contractors/responsibles/
-      // customFailureCauses from latestProjectRef so a stale debounced snapshot can't
-      // overwrite a list that was just updated via addContractor/addCustomCause.
+      const { data: currentProject } = await supabase
+        .from('projects')
+        .select('contractors, responsibles, custom_failure_causes')
+        .eq('id', projectId)
+        .maybeSingle();
+      if (!stillCurrent()) return;
+      const dbContractors = (currentProject?.contractors as string[] | null) || [];
+      const dbResponsibles = (currentProject?.responsibles as string[] | null) || [];
+      const dbCustomCauses = (currentProject?.custom_failure_causes as string[] | null) || [];
       const liveLists = latestProjectRef.current;
+      const mergeTextLists = (...lists: Array<string[] | undefined>) => {
+        const result: string[] = [];
+        const seen = new Set<string>();
+        lists.flat().forEach(value => {
+          const name = (value || '').trim();
+          if (!name || seen.has(name)) return;
+          seen.add(name);
+          result.push(name);
+        });
+        return result;
+      };
       await supabase.from('projects').update({
         name: data.name,
         project_type: data.projectType,
         building_config: data.buildingConfig as any,
-        contractors: liveLists.contractors || [],
-        responsibles: liveLists.responsibles || [],
-        custom_failure_causes: liveLists.customFailureCauses || [],
+        contractors: mergeTextLists(dbContractors, data.contractors, liveLists.contractors),
+        responsibles: mergeTextLists(dbResponsibles, data.responsibles, liveLists.responsibles),
+        custom_failure_causes: mergeTextLists(dbCustomCauses, data.customFailureCauses, liveLists.customFailureCauses),
         project_start_date: data.projectStartDate || null,
         default_units: data.defaultUnits || 10,
         unit_labels: (data.unitLabels || {}) as any,
@@ -580,14 +601,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skipHistory.current = false;
     latestProjectRef.current = { ...latestProjectRef.current, contractors: nextList };
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ contractors: nextList, updated_at: new Date().toISOString() })
-        .eq('id', pid);
+      const { data, error } = await (supabase as any).rpc('add_project_contractor', { _project_id: pid, _contractor: name });
       if (error) {
         console.error('[addContractor] update failed:', error);
         toast({ title: 'Error', description: 'No se pudo guardar el contratista', variant: 'destructive' });
+        return;
       }
+      const savedList = (data as string[] | null) || nextList;
+      skipHistory.current = true;
+      setProjectInternal(p => ({ ...p, contractors: savedList }));
+      skipHistory.current = false;
+      latestProjectRef.current = { ...latestProjectRef.current, contractors: savedList };
     } catch (err) {
       console.error('[addContractor] exception:', err);
     }
@@ -606,14 +630,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     skipHistory.current = false;
     latestProjectRef.current = { ...latestProjectRef.current, customFailureCauses: nextList };
     try {
-      const { error } = await supabase
-        .from('projects')
-        .update({ custom_failure_causes: nextList, updated_at: new Date().toISOString() })
-        .eq('id', pid);
+      const { data, error } = await (supabase as any).rpc('add_project_custom_failure_cause', { _project_id: pid, _cause: name });
       if (error) {
         console.error('[addCustomCause] update failed:', error);
         toast({ title: 'Error', description: 'No se pudo guardar la causa', variant: 'destructive' });
+        return;
       }
+      const savedList = (data as string[] | null) || nextList;
+      skipHistory.current = true;
+      setProjectInternal(p => ({ ...p, customFailureCauses: savedList }));
+      skipHistory.current = false;
+      latestProjectRef.current = { ...latestProjectRef.current, customFailureCauses: savedList };
     } catch (err) {
       console.error('[addCustomCause] exception:', err);
     }
