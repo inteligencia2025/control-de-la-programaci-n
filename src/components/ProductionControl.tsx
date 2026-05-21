@@ -472,7 +472,35 @@ export function ProductionControl() {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
-                ) : filtered.map(r => {
+                ) : (() => {
+                  const groups = new Map<string, typeof filtered>();
+                  filtered.forEach(r => {
+                    const key = r.responsible || '— Sin responsable —';
+                    if (!groups.has(key)) groups.set(key, [] as typeof filtered);
+                    groups.get(key)!.push(r);
+                  });
+                  const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+                    if (a.startsWith('—')) return 1;
+                    if (b.startsWith('—')) return -1;
+                    return a.localeCompare(b);
+                  });
+                  return sortedKeys.flatMap(key => {
+                    const rows = groups.get(key)!;
+                    const planned = rows.filter(r => r.plannedPct > 0).length;
+                    const done = rows.filter(r => isPACCompliant(r)).length;
+                    const pct = planned > 0 ? Math.round((done / planned) * 100) : 0;
+                    return [
+                      <TableRow key={`group-${key}`} className="bg-muted/60 hover:bg-muted/60">
+                        <TableCell colSpan={6} className="py-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold uppercase tracking-wide">{key}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {rows.length} actividad{rows.length !== 1 ? 'es' : ''} · PAC {pct}% ({done}/{planned})
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>,
+                      ...rows.map(r => {
                   const compliant = isPACCompliant(r);
                   const hasShortfall = r.plannedPct > 0 && r.completedPct < r.plannedPct;
                   const clampPct = (v: number) => Math.max(0, Math.min(100, isFinite(v) ? v : 0));
@@ -554,7 +582,10 @@ export function ProductionControl() {
                     </TableCell>
                   </TableRow>
                   );
-                })}
+                })
+                    ];
+                  });
+                })()}
               </TableBody>
             </Table>
           </Card>
