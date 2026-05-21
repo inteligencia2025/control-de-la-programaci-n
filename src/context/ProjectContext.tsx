@@ -785,6 +785,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addPACRecord, updatePACRecord, removePACRecord,
       saveToFile, loadFromFile,
       undo, redo, canUndo, canRedo, saving, flushSave, saveNow,
+      addContractor, addCustomCause,
+
     }}>
       {children}
     </ProjectContext.Provider>
