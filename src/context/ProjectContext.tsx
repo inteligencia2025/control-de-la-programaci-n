@@ -607,6 +607,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [user, updateUndoRedoState, debouncedSave]);
 
   const switchProject = useCallback(async (id: string) => {
+    await flushSave();
     debouncedSave.cancel?.();
     loadedFromDbRef.current = false;
     loadedProjectIdRef.current = '';
@@ -615,7 +616,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setActiveProjectId(id);
     if (user) localStorage.setItem(getActiveProjectStorageKey(user.id), id);
     await loadProject(id);
-  }, [user, debouncedSave]);
+  }, [user, debouncedSave, flushSave]);
 
   const deleteProject = useCallback(async (id: string) => {
     if (projectsList.length <= 1) return;
