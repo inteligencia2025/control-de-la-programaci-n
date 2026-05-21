@@ -53,6 +53,7 @@ interface ProjectContextType {
   canUndo: boolean;
   canRedo: boolean;
   saving: boolean;
+  flushSave: () => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
@@ -93,6 +94,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loadedProjectIdRef = useRef<string>(''); // id of project whose data is currently in `project` state
   const dirtyRef = useRef(false); // true once user makes a real edit; prevents auto-save firing from a load
   const intentionalEmptyRef = useRef<{ activities: boolean; lookahead: boolean; pac: boolean }>({ activities: false, lookahead: false, pac: false });
+  const latestProjectRef = useRef<ProjectData>(defaultProject);
+  latestProjectRef.current = project;
 
   // Undo/Redo
   const undoStack = useRef<ProjectData[]>([]);
@@ -531,6 +534,16 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     doSave(data, projectId);
   }, 1500);
 
+  // Force-flush any pending debounced save immediately
+  const flushSave = useCallback(async () => {
+    debouncedSave.cancel?.();
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    if (!dirtyRef.current) return;
+    if (loadedProjectIdRef.current !== pid) return;
+    await doSave(latestProjectRef.current, pid);
+  }, [debouncedSave, doSave]);
+
   // Auto-save on project changes — only when loaded data corresponds to active project AND user has actually edited
   useEffect(() => {
     if (!loaded || !activeProjectId || !user) return;
@@ -540,12 +553,24 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     debouncedSave(project, activeProjectId);
   }, [project, activeProjectId, loaded, user, debouncedSave]);
 
-  // Cancel pending debounce on unload to avoid half-saves with stale state
+  // Flush pending saves on unload / tab hide to avoid losing in-flight edits
   useEffect(() => {
-    const handler = () => debouncedSave.cancel?.();
-    window.addEventListener('beforeunload', handler);
-    return () => window.removeEventListener('beforeunload', handler);
-  }, [debouncedSave]);
+    const fireSync = () => {
+      const pid = activeIdRef.current;
+      if (!pid || !dirtyRef.current || loadedProjectIdRef.current !== pid) return;
+      debouncedSave.cancel?.();
+      // Fire-and-forget; browser keeps the in-flight fetch alive briefly
+      doSave(latestProjectRef.current, pid);
+    };
+    const onBeforeUnload = () => fireSync();
+    const onVisibility = () => { if (document.visibilityState === 'hidden') fireSync(); };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      window.removeEventListener('beforeunload', onBeforeUnload);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [debouncedSave, doSave]);
 
   // Also update project name in list
   useEffect(() => {
@@ -582,6 +607,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [user, updateUndoRedoState, debouncedSave]);
 
   const switchProject = useCallback(async (id: string) => {
+    await flushSave();
     debouncedSave.cancel?.();
     loadedFromDbRef.current = false;
     loadedProjectIdRef.current = '';
@@ -590,7 +616,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setActiveProjectId(id);
     if (user) localStorage.setItem(getActiveProjectStorageKey(user.id), id);
     await loadProject(id);
-  }, [user, debouncedSave]);
+  }, [user, debouncedSave, flushSave]);
 
   const deleteProject = useCallback(async (id: string) => {
     if (projectsList.length <= 1) return;
@@ -682,7 +708,7 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addLookahead, updateLookahead, removeLookahead,
       addPACRecord, updatePACRecord, removePACRecord,
       saveToFile, loadFromFile,
-      undo, redo, canUndo, canRedo, saving,
+      undo, redo, canUndo, canRedo, saving, flushSave,
     }}>
       {children}
     </ProjectContext.Provider>
