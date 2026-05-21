@@ -415,19 +415,23 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     setSaving(true);
     try {
-      // Update project metadata
+      // Update project metadata. Always read the most-recent contractors/responsibles/
+      // customFailureCauses from latestProjectRef so a stale debounced snapshot can't
+      // overwrite a list that was just updated via addContractor/addCustomCause.
+      const liveLists = latestProjectRef.current;
       await supabase.from('projects').update({
         name: data.name,
         project_type: data.projectType,
         building_config: data.buildingConfig as any,
-        contractors: data.contractors,
-        responsibles: data.responsibles,
-        custom_failure_causes: data.customFailureCauses,
+        contractors: liveLists.contractors || [],
+        responsibles: liveLists.responsibles || [],
+        custom_failure_causes: liveLists.customFailureCauses || [],
         project_start_date: data.projectStartDate || null,
         default_units: data.defaultUnits || 10,
         unit_labels: (data.unitLabels || {}) as any,
         updated_at: new Date().toISOString(),
       }).eq('id', projectId);
+
       if (!stillCurrent()) return;
 
       // ---- Sync activities (upsert + diff delete) ----
