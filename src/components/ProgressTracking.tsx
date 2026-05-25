@@ -165,54 +165,52 @@ export function ProgressTracking() {
               </tr>
             </thead>
             <tbody>
-              {groups.map(([cat, catRows]) => (
-                <tbody key={`g-${cat}`} className="contents">
-                  <tr className="bg-muted/50">
-                    <td colSpan={units.length + 5} className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
-                      {cat}
-                    </td>
-                  </tr>
-                  {catRows.map(r => {
-                    const stats = computeActivityStats(cells, r.key, r.totalUnits);
-                    const sched = r.activity ? computeScheduledPct(r.activity, project.activities) : 0;
-                    const dev = stats.realPct - sched;
-                    return (
-                      <tr key={r.key} className="hover:bg-secondary/30">
-                        <td className="sticky left-0 bg-background z-10 px-2 py-0.5 border-r border-border font-medium truncate max-w-[200px]" title={r.name}>
-                          {r.name}
-                        </td>
-                        {units.map(u => {
-                          const s = getStatus(r.key, u);
-                          return (
-                            <td key={u} className="border border-border/40 p-0 text-center">
-                              <button
-                                onClick={() => handleClickCell(r.key, u)}
-                                className={`w-full h-7 text-[10px] font-bold ${statusClasses(s)}`}
-                                title={`${r.name} – U${u}${s ? ` – ${s}` : ''}`}
-                              >
-                                {s === 'NA' ? 'N/A' : s || ''}
-                              </button>
-                            </td>
-                          );
-                        })}
-                        <td className="px-2 py-0.5 border-l border-border text-center font-bold">{stats.realPct}%</td>
-                        <td className="px-2 py-0.5 text-center">{sched}%</td>
-                        <td className={`px-2 py-0.5 text-center font-semibold ${dev >= 0 ? 'text-success' : 'text-destructive'}`}>
-                          {dev > 0 ? '+' : ''}{dev}%
-                        </td>
-                        <td className="text-center">
-                          {r.isExtra && (
-                            <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
-                              onClick={() => removeProgressExtra(r.key.replace('extra:', ''))}>
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </>
-              ))}
+              {groups.flatMap(([cat, catRows]) => [
+                <tr key={`g-${cat}`} className="bg-muted/50">
+                  <td colSpan={units.length + 5} className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
+                    {cat}
+                  </td>
+                </tr>,
+                ...catRows.map(r => {
+                  const stats = computeActivityStats(cells, r.key, r.totalUnits);
+                  const sched = r.activity ? computeScheduledPct(r.activity, project.activities) : 0;
+                  const dev = stats.realPct - sched;
+                  return (
+                    <tr key={r.key} className="hover:bg-secondary/30">
+                      <td className="sticky left-0 bg-background z-10 px-2 py-0.5 border-r border-border font-medium truncate max-w-[200px]" title={r.name}>
+                        {r.name}
+                      </td>
+                      {units.map(u => {
+                        const s = getStatus(r.key, u);
+                        return (
+                          <td key={u} className="border border-border/40 p-0 text-center">
+                            <button
+                              onClick={() => handleClickCell(r.key, u)}
+                              className={`w-full h-7 text-[10px] font-bold ${statusClasses(s)}`}
+                              title={`${r.name} – U${u}${s ? ` – ${s}` : ''}`}
+                            >
+                              {s === 'NA' ? 'N/A' : s || ''}
+                            </button>
+                          </td>
+                        );
+                      })}
+                      <td className="px-2 py-0.5 border-l border-border text-center font-bold">{stats.realPct}%</td>
+                      <td className="px-2 py-0.5 text-center">{sched}%</td>
+                      <td className={`px-2 py-0.5 text-center font-semibold ${dev >= 0 ? 'text-success' : 'text-destructive'}`}>
+                        {dev > 0 ? '+' : ''}{dev}%
+                      </td>
+                      <td className="text-center">
+                        {r.isExtra && (
+                          <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
+                            onClick={() => removeProgressExtra(r.key.replace('extra:', ''))}>
+                            <Trash2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </td>
+                    </tr>
+                  );
+                })
+              ])}
             </tbody>
           </table>
         </Card>
