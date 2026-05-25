@@ -28,9 +28,6 @@ interface LookaheadRow {
   commitment_cause: string | null;
 }
 
-function isCompliant(r: PacRow) {
-  return r.planned_pct > 0 && r.completed_pct >= r.planned_pct;
-}
 
 function inScope(dateStr: string, scope: Scope, ref: Date): boolean {
   if (!dateStr) return false;
