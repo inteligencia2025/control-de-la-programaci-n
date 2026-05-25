@@ -23,7 +23,7 @@ const SCOPE_LABELS: Record<Scope, string> = {
 
 const SUPABASE_URL = 'https://qxgoujqndhurhoasbfla.supabase.co';
 
-export function LeanAssistant({ view }: Props) {
+export function LeanAssistant({ view, weekNumber }: Props) {
   const { activeProjectId } = useProject();
   const [scope, setScope] = useState<Scope>('week');
   const [analysis, setAnalysis] = useState<string>('');
