@@ -26,7 +26,7 @@ interface Row {
 }
 
 export function ProgressTracking() {
-  const { project, setProgressCell, addProgressExtra, removeProgressExtra, updateProgressExtra } = useProject();
+  const { project, setProgressCell, addProgressExtra, removeProgressExtra } = useProject();
   const [newExtraName, setNewExtraName] = useState('');
   const [showAddExtra, setShowAddExtra] = useState(false);
 
