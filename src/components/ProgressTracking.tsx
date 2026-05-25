@@ -339,7 +339,40 @@ export function ProgressTracking() {
           );
         })}
       </div>
+      <ProgressChart rows={rows} cells={cells} />
     </div>
+  );
+}
+
+function ProgressChart({ rows, cells }: { rows: Row[]; cells: { activityKey: string; unitNumber: number; status: ProgressStatus }[] }) {
+  const data = useMemo(() => {
+    return rows.map(r => {
+      const s = computeActivityStats(cells, r.key, r.totalUnits);
+      return { name: r.name, pct: s.realPct };
+    });
+  }, [rows, cells]);
+  const max = 100;
+  if (data.length === 0) return null;
+  return (
+    <Card className="p-3">
+      <h4 className="text-sm font-bold mb-2">% Avance Real por actividad</h4>
+      <div className="space-y-1 max-h-[300px] overflow-auto pr-2">
+        {data.map(d => (
+          <div key={d.name} className="flex items-center gap-2 text-xs">
+            <div className="w-44 truncate" title={d.name}>{d.name}</div>
+            <div className="flex-1 bg-muted h-4 rounded overflow-hidden relative">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${(d.pct / max) * 100}%` }}
+              />
+              <span className="absolute inset-0 flex items-center justify-end pr-1 text-[10px] font-bold">
+                {d.pct}%
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
