@@ -32,24 +32,26 @@ export function ProgressTracking() {
 
   const isCasas = project.projectType === 'casas';
   const units = useMemo(
-    () => listProjectUnits(project.projectType, project.buildingConfig, project.defaultUnits),
-    [project.projectType, project.buildingConfig, project.defaultUnits],
+    () => listProjectUnits(project.projectType, project.buildingConfig, project.defaultUnits, project.activities),
+    [project.projectType, project.buildingConfig, project.defaultUnits, project.activities],
   );
   const totalUnits = units.length;
   const cells = project.progressCells || [];
   const extras = project.progressExtras || [];
 
   const rows: Row[] = useMemo(() => {
-    const lobRows: Row[] = project.activities
-      .filter(a => a.enabled)
-      .map(a => ({
-        key: a.id,
-        name: a.name,
-        category: a.category,
-        isExtra: false,
-        totalUnits: Math.max(1, a.unitEnd - a.unitStart + 1),
-        activity: a,
-      }));
+    // For casas: each activity row spans the units defined in the activity (unitStart..unitEnd).
+    // For edificios: each activity applies to ALL apartments in the building.
+    const lobRows: Row[] = project.activities.map(a => ({
+      key: a.id,
+      name: a.name,
+      category: a.category,
+      isExtra: false,
+      totalUnits: isCasas
+        ? Math.max(1, (a.unitEnd || totalUnits) - (a.unitStart || 1) + 1)
+        : totalUnits,
+      activity: a,
+    }));
     const extraRows: Row[] = extras
       .slice()
       .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -61,7 +63,8 @@ export function ProgressTracking() {
         totalUnits,
       }));
     return [...lobRows, ...extraRows];
-  }, [project.activities, extras, totalUnits]);
+  }, [project.activities, extras, totalUnits, isCasas]);
+
 
   // Group rows by category in original order
   const groups = useMemo(() => {
