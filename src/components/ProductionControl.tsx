@@ -596,8 +596,8 @@ export function ProductionControl() {
         </TabsContent>
 
         <TabsContent value="indicadores" className="flex-1 overflow-auto m-0 p-3 space-y-3">
-          <LeanAssistant view="pac" weekNumber={displayWeek} />
           <div className="grid grid-cols-3 gap-3">
+
             <Card>
               <CardHeader className="pb-1 pt-2 px-3">
                 <CardTitle className="text-xs font-bold">PAC Semana {displayWeek}</CardTitle>
