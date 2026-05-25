@@ -736,6 +736,9 @@ function LookaheadDashboard({ items, weekFilter, allItems, totalWeeks }: Dashboa
             ))}
           </div>
         </div>
+
+        <LeanAssistant view="lookahead" weekNumber={weekFilter} />
+
       </div>
     </ScrollArea>
   );
