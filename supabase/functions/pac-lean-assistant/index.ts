@@ -135,11 +135,11 @@ function aggregate(
   const restrictionCounts: Record<string, number> = {};
   let totalRestrictionFlags = 0;
   let pendingFlags = 0;
-  const commitmentMet = lookahead.filter((l) => l.commitment_met === true).length;
-  const commitmentUnmet = lookahead.filter((l) => l.commitment_met === false).length;
+  const commitmentMet = filteredLook.filter((l) => l.commitment_met === true).length;
+  const commitmentUnmet = filteredLook.filter((l) => l.commitment_met === false).length;
   const unmetCauses: Record<string, number> = {};
 
-  for (const it of lookahead) {
+  for (const it of filteredLook) {
     const r = it.restrictions || {};
     for (const [k, v] of Object.entries(r)) {
       totalRestrictionFlags++;
@@ -159,6 +159,7 @@ function aggregate(
 
   return {
     scope,
+    weekNumber: scope === "week" ? weekNumber : undefined,
     pacPct,
     plannedCount: planned.length,
     compliantCount: compliant.length,
@@ -166,7 +167,7 @@ function aggregate(
     responsibleStats,
     worstActivities,
     lookahead: {
-      total: lookahead.length,
+      total: filteredLook.length,
       pendingFlags,
       totalRestrictionFlags,
       topRestrictions,
