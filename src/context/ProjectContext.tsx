@@ -945,6 +945,8 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       saveToFile, loadFromFile,
       undo, redo, canUndo, canRedo, saving, flushSave, saveNow,
       addContractor, addCustomCause,
+      setProgressCell, addProgressExtra, updateProgressExtra, removeProgressExtra,
+
 
     }}>
       {children}
