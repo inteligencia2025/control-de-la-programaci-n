@@ -40,7 +40,6 @@ function inScope(dateStr: string, scope: Scope, now: Date): boolean {
   if (scope === "year") return dt.getFullYear() === now.getFullYear();
   if (scope === "month")
     return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
-  // week: last 7 days
   const diff = (now.getTime() - dt.getTime()) / (1000 * 60 * 60 * 24);
   return diff >= 0 && diff <= 7;
 }
@@ -97,7 +96,6 @@ function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
     .sort((a, b) => a.pac - b.pac)
     .slice(0, 5);
 
-  // Lookahead restrictions stats
   const restrictionCounts: Record<string, number> = {};
   let totalRestrictionFlags = 0;
   let pendingFlags = 0;
@@ -247,6 +245,7 @@ Acciones específicas basadas en Last Planner System (PPC, análisis de causas, 
       },
       body: JSON.stringify({
         model: "google/gemini-3-flash-preview",
+        stream: true,
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -268,8 +267,8 @@ Acciones específicas basadas en Last Planner System (PPC, análisis de causas, 
         { status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" } },
       );
     }
-    if (!aiResp.ok) {
-      const t = await aiResp.text();
+    if (!aiResp.ok || !aiResp.body) {
+      const t = await aiResp.text().catch(() => "");
       console.error("AI gateway error", aiResp.status, t);
       return new Response(JSON.stringify({ error: "Error del asistente IA" }), {
         status: 500,
@@ -277,12 +276,74 @@ Acciones específicas basadas en Last Planner System (PPC, análisis de causas, 
       });
     }
 
-    const data = await aiResp.json();
-    const analysis = data?.choices?.[0]?.message?.content || "Sin contenido generado.";
+    // Stream the AI response back to the client as SSE.
+    // This keeps the connection alive while the model thinks and avoids
+    // browser "Failed to fetch" caused by long idle responses.
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder();
 
-    return new Response(JSON.stringify({ analysis, stats }), {
+    const stream = new ReadableStream({
+      async start(controller) {
+        // Send stats first as a single SSE event
+        controller.enqueue(
+          encoder.encode(`event: stats\ndata: ${JSON.stringify(stats)}\n\n`),
+        );
+
+        const reader = aiResp.body!.getReader();
+        let buffer = "";
+        try {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+            buffer += decoder.decode(value, { stream: true });
+            let nl: number;
+            while ((nl = buffer.indexOf("\n")) !== -1) {
+              const line = buffer.slice(0, nl).trim();
+              buffer = buffer.slice(nl + 1);
+              if (!line.startsWith("data:")) continue;
+              const data = line.slice(5).trim();
+              if (data === "[DONE]") {
+                controller.enqueue(encoder.encode("event: done\ndata: {}\n\n"));
+                controller.close();
+                return;
+              }
+              try {
+                const json = JSON.parse(data);
+                const delta = json?.choices?.[0]?.delta?.content;
+                if (delta) {
+                  controller.enqueue(
+                    encoder.encode(
+                      `event: delta\ndata: ${JSON.stringify({ t: delta })}\n\n`,
+                    ),
+                  );
+                }
+              } catch {
+                // ignore parse errors on partial chunks
+              }
+            }
+          }
+          controller.enqueue(encoder.encode("event: done\ndata: {}\n\n"));
+          controller.close();
+        } catch (e) {
+          console.error("stream error", e);
+          controller.enqueue(
+            encoder.encode(
+              `event: error\ndata: ${JSON.stringify({ error: String(e) })}\n\n`,
+            ),
+          );
+          controller.close();
+        }
+      },
+    });
+
+    return new Response(stream, {
       status: 200,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: {
+        ...corsHeaders,
+        "Content-Type": "text/event-stream",
+        "Cache-Control": "no-cache, no-transform",
+        Connection: "keep-alive",
+      },
     });
   } catch (e) {
     console.error("pac-lean-assistant error", e);
