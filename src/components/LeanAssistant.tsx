@@ -57,7 +57,7 @@ export function LeanAssistant({ view, weekNumber }: Props) {
             Authorization: `Bearer ${token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ projectId: activeProjectId, scope, view }),
+          body: JSON.stringify({ projectId: activeProjectId, scope, view, weekNumber }),
           signal: ac.signal,
         },
       );
