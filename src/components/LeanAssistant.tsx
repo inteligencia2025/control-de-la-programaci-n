@@ -12,6 +12,7 @@ type Scope = 'week' | 'month' | 'year';
 
 interface Props {
   view: 'pac' | 'lookahead';
+  weekNumber?: number;
 }
 
 const SCOPE_LABELS: Record<Scope, string> = {
@@ -22,7 +23,7 @@ const SCOPE_LABELS: Record<Scope, string> = {
 
 const SUPABASE_URL = 'https://qxgoujqndhurhoasbfla.supabase.co';
 
-export function LeanAssistant({ view }: Props) {
+export function LeanAssistant({ view, weekNumber }: Props) {
   const { activeProjectId } = useProject();
   const [scope, setScope] = useState<Scope>('week');
   const [analysis, setAnalysis] = useState<string>('');
@@ -56,7 +57,7 @@ export function LeanAssistant({ view }: Props) {
             Authorization: `Bearer ${token}`,
             apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
           },
-          body: JSON.stringify({ projectId: activeProjectId, scope, view }),
+          body: JSON.stringify({ projectId: activeProjectId, scope, view, weekNumber }),
           signal: ac.signal,
         },
       );

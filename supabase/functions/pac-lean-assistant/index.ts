@@ -55,20 +55,33 @@ function isCompliantRow(r: PacRow): boolean {
   return (r as any).completed === true;
 }
 
-function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
-  // Use the most recent record date as the reference, falling back to now.
-  // This avoids empty results when the user logs data for a past/future week.
-  const latestTs = pac.reduce((acc, r) => {
-    if (!r.date) return acc;
-    const [y, m, d] = r.date.split("-").map(Number);
-    if (!y || !m || !d) return acc;
-    const t = new Date(y, m - 1, d).getTime();
-    return t > acc ? t : acc;
-  }, 0);
-  const ref = latestTs > 0 ? new Date(latestTs) : new Date();
-  const filtered = pac.filter((r) => inScope(r.date, scope, ref));
+function aggregate(
+  pac: PacRow[],
+  lookahead: LookaheadRow[],
+  scope: Scope,
+  weekNumber?: number,
+) {
+  let filtered: PacRow[];
+  let filteredLook = lookahead;
+  if (scope === "week" && typeof weekNumber === "number") {
+    // Filter directly by the week the user is viewing
+    filtered = pac.filter((r) => r.week_number === weekNumber);
+    filteredLook = lookahead.filter((l) => l.week === weekNumber);
+  } else {
+    // Use the most recent record date as the reference, falling back to now.
+    const latestTs = pac.reduce((acc, r) => {
+      if (!r.date) return acc;
+      const [y, m, d] = r.date.split("-").map(Number);
+      if (!y || !m || !d) return acc;
+      const t = new Date(y, m - 1, d).getTime();
+      return t > acc ? t : acc;
+    }, 0);
+    const ref = latestTs > 0 ? new Date(latestTs) : new Date();
+    filtered = pac.filter((r) => inScope(r.date, scope, ref));
+  }
   const planned = filtered.filter(isPlanned);
   const compliant = planned.filter(isCompliantRow);
+
 
   const pacPct = planned.length
     ? Math.round((compliant.length / planned.length) * 100)
@@ -122,11 +135,11 @@ function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
   const restrictionCounts: Record<string, number> = {};
   let totalRestrictionFlags = 0;
   let pendingFlags = 0;
-  const commitmentMet = lookahead.filter((l) => l.commitment_met === true).length;
-  const commitmentUnmet = lookahead.filter((l) => l.commitment_met === false).length;
+  const commitmentMet = filteredLook.filter((l) => l.commitment_met === true).length;
+  const commitmentUnmet = filteredLook.filter((l) => l.commitment_met === false).length;
   const unmetCauses: Record<string, number> = {};
 
-  for (const it of lookahead) {
+  for (const it of filteredLook) {
     const r = it.restrictions || {};
     for (const [k, v] of Object.entries(r)) {
       totalRestrictionFlags++;
@@ -146,6 +159,7 @@ function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
 
   return {
     scope,
+    weekNumber: scope === "week" ? weekNumber : undefined,
     pacPct,
     plannedCount: planned.length,
     compliantCount: compliant.length,
@@ -153,7 +167,7 @@ function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
     responsibleStats,
     worstActivities,
     lookahead: {
-      total: lookahead.length,
+      total: filteredLook.length,
       pendingFlags,
       totalRestrictionFlags,
       topRestrictions,
@@ -185,13 +199,14 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { projectId, scope, view } = await req.json();
+    const { projectId, scope, view, weekNumber } = await req.json();
     if (!projectId || !["week", "month", "year"].includes(scope)) {
       return new Response(JSON.stringify({ error: "Parámetros inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const weekNum = typeof weekNumber === "number" && weekNumber > 0 ? weekNumber : undefined;
 
     const [pacRes, lookRes, projRes] = await Promise.all([
       supabase
@@ -220,10 +235,15 @@ Deno.serve(async (req) => {
       (pacRes.data || []) as PacRow[],
       (lookRes.data || []) as LookaheadRow[],
       scope as Scope,
+      weekNum,
     );
 
     const scopeLabel =
-      scope === "week" ? "última semana" : scope === "month" ? "mes en curso" : "año en curso";
+      scope === "week"
+        ? `semana ${weekNum ?? "actual"}`
+        : scope === "month"
+        ? "mes en curso"
+        : "año en curso";
 
     const systemPrompt = `Eres un experto en Lean Construction y Last Planner System (LPS). Analiza datos reales de PAC (Porcentaje de Asignaciones Completadas) y de la planificación lookahead de un proyecto de construcción. Responde SIEMPRE en español, en formato Markdown conciso, con encabezados ## y listas. Tu análisis debe ser práctico, accionable y basado en evidencia de los datos provistos. No inventes datos que no estén en el contexto. IMPORTANTE: un PAC de 0% con plannedCount > 0 significa que SÍ hay actividades planificadas pero ninguna se cumplió; NO digas que "no hay datos" en ese caso.`;
 
