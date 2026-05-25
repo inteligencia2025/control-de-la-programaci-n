@@ -18,6 +18,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, smartCeil, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
+import { LeanAssistant } from './LeanAssistant';
 
 const PIE_COLORS = ['#c0392b', '#2980b9', '#e69500', '#8e44ad', '#16a085', '#7f8c8d', '#d35400', '#27ae60', '#1e3a5f', '#e74c3c'];
 
@@ -595,6 +596,7 @@ export function ProductionControl() {
         </TabsContent>
 
         <TabsContent value="indicadores" className="flex-1 overflow-auto m-0 p-3 space-y-3">
+          <LeanAssistant view="pac" />
           <div className="grid grid-cols-3 gap-3">
             <Card>
               <CardHeader className="pb-1 pt-2 px-3">

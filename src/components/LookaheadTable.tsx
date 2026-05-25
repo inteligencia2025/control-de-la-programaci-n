@@ -20,6 +20,7 @@ import * as XLSX from 'xlsx';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
+import { LeanAssistant } from './LeanAssistant';
 
 const MAX_WEEKS = 260;
 
@@ -639,6 +640,7 @@ function LookaheadDashboard({ items, weekFilter, allItems, totalWeeks }: Dashboa
   return (
     <ScrollArea className="flex-1">
       <div className="p-4 space-y-4">
+        <LeanAssistant view="lookahead" />
         {/* Header cards */}
         <div className="grid grid-cols-4 gap-3">
           <div className="border rounded-lg p-3 bg-card text-center">
