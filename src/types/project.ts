@@ -158,6 +158,21 @@ export const DEFAULT_FAILURE_CAUSES: string[] = [
   'Reprocesos',
 ];
 
+export type ProgressStatus = 'E' | 'P' | 'R' | 'NA';
+
+export interface ProgressCell {
+  activityKey: string; // activity id (LOB) or 'extra:<id>'
+  unitNumber: number;
+  status: ProgressStatus;
+}
+
+export interface ProgressExtraActivity {
+  id: string;
+  name: string;
+  category: string;
+  sortOrder: number;
+}
+
 export interface ProjectData {
   name: string;
   projectType: ProjectType;
@@ -170,7 +185,9 @@ export interface ProjectData {
   customFailureCauses: string[];
   projectStartDate?: string;
   defaultUnits?: number;
-  unitLabels?: Record<string, string>; // key: unit number as string, value: custom label
+  unitLabels?: Record<string, string>;
+  progressCells?: ProgressCell[];
+  progressExtras?: ProgressExtraActivity[];
 }
 
 export const DEFAULT_COLORS = [

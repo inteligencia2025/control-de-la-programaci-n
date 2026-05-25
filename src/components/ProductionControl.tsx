@@ -19,6 +19,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, smartCeil, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 import { LeanAssistant } from './LeanAssistant';
+import { ProgressTracking } from './ProgressTracking';
 
 const PIE_COLORS = ['#c0392b', '#2980b9', '#e69500', '#8e44ad', '#16a085', '#7f8c8d', '#d35400', '#27ae60', '#1e3a5f', '#e74c3c'];
 
@@ -437,6 +438,7 @@ export function ProductionControl() {
           <TabsList className="bg-transparent h-9 gap-1">
             <TabsTrigger value="programacion" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs px-4 h-7 rounded-md font-semibold">Programación</TabsTrigger>
             <TabsTrigger value="indicadores" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs px-4 h-7 rounded-md font-semibold">Indicadores</TabsTrigger>
+            <TabsTrigger value="avance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs px-4 h-7 rounded-md font-semibold">Avance de obra</TabsTrigger>
           </TabsList>
         </div>
 
@@ -739,6 +741,10 @@ export function ProductionControl() {
           </Card>
 
           <LeanAssistant view="pac" weekNumber={displayWeek} />
+        </TabsContent>
+
+        <TabsContent value="avance" className="flex-1 overflow-auto m-0 p-3">
+          <ProgressTracking />
         </TabsContent>
 
       </Tabs>
