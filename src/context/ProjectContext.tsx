@@ -234,11 +234,15 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       { data: acts },
       { data: look },
       { data: pacs },
+      { data: progCells },
+      { data: progExtras },
     ] = await Promise.all([
       supabase.from('projects').select('*').eq('id', projectId).single(),
       supabase.from('activities').select('*').eq('project_id', projectId).order('sort_order'),
       supabase.from('lookahead_items').select('*').eq('project_id', projectId),
       supabase.from('pac_records').select('*').eq('project_id', projectId),
+      (supabase as any).from('progress_cells').select('*').eq('project_id', projectId),
+      (supabase as any).from('progress_extra_activities').select('*').eq('project_id', projectId).order('sort_order'),
     ]);
 
     if (!proj) return;
