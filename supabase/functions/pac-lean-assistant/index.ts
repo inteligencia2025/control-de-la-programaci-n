@@ -28,27 +28,48 @@ interface LookaheadRow {
   commitment_cause: string | null;
 }
 
-function isCompliant(r: PacRow) {
-  return r.planned_pct > 0 && r.completed_pct >= r.planned_pct;
-}
 
-function inScope(dateStr: string, scope: Scope, now: Date): boolean {
+function inScope(dateStr: string, scope: Scope, ref: Date): boolean {
   if (!dateStr) return false;
   const [y, m, d] = dateStr.split("-").map(Number);
   if (!y || !m || !d) return false;
   const dt = new Date(y, m - 1, d);
-  if (scope === "year") return dt.getFullYear() === now.getFullYear();
+  if (scope === "year") return dt.getFullYear() === ref.getFullYear();
   if (scope === "month")
-    return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
-  const diff = (now.getTime() - dt.getTime()) / (1000 * 60 * 60 * 24);
-  return diff >= 0 && diff <= 7;
+    return dt.getFullYear() === ref.getFullYear() && dt.getMonth() === ref.getMonth();
+  // week: last 7 days relative to reference date (inclusive)
+  const diff = (ref.getTime() - dt.getTime()) / (1000 * 60 * 60 * 24);
+  return diff >= -0.5 && diff <= 7.5;
+}
+
+function isPlanned(r: PacRow): boolean {
+  // Consider planned if planned_pct > 0 OR the legacy planned flag was set
+  return (r.planned_pct ?? 0) > 0 || (r as any).planned === true;
+}
+
+function isCompliantRow(r: PacRow): boolean {
+  const planned = (r.planned_pct ?? 0);
+  const done = (r.completed_pct ?? 0);
+  if (planned > 0) return done >= planned;
+  // Fallback to boolean completed when no pct recorded
+  return (r as any).completed === true;
 }
 
 function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
-  const now = new Date();
-  const filtered = pac.filter((r) => inScope(r.date, scope, now));
-  const planned = filtered.filter((r) => r.planned_pct > 0);
-  const compliant = planned.filter(isCompliant);
+  // Use the most recent record date as the reference, falling back to now.
+  // This avoids empty results when the user logs data for a past/future week.
+  const latestTs = pac.reduce((acc, r) => {
+    if (!r.date) return acc;
+    const [y, m, d] = r.date.split("-").map(Number);
+    if (!y || !m || !d) return acc;
+    const t = new Date(y, m - 1, d).getTime();
+    return t > acc ? t : acc;
+  }, 0);
+  const ref = latestTs > 0 ? new Date(latestTs) : new Date();
+  const filtered = pac.filter((r) => inScope(r.date, scope, ref));
+  const planned = filtered.filter(isPlanned);
+  const compliant = planned.filter(isCompliantRow);
+
   const pacPct = planned.length
     ? Math.round((compliant.length / planned.length) * 100)
     : 0;
@@ -58,18 +79,20 @@ function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
   const byActivity: Record<string, { planned: number; compliant: number }> = {};
 
   for (const r of filtered) {
-    if (r.planned_pct > 0 && !isCompliant(r) && r.failure_cause) {
+    const rowPlanned = isPlanned(r);
+    const rowOk = isCompliantRow(r);
+    if (rowPlanned && !rowOk && r.failure_cause) {
       causes[r.failure_cause] = (causes[r.failure_cause] || 0) + 1;
     }
     const resp = r.responsible || "Sin asignar";
     if (!byResponsible[resp]) byResponsible[resp] = { planned: 0, compliant: 0 };
-    if (r.planned_pct > 0) byResponsible[resp].planned++;
-    if (isCompliant(r)) byResponsible[resp].compliant++;
+    if (rowPlanned) byResponsible[resp].planned++;
+    if (rowPlanned && rowOk) byResponsible[resp].compliant++;
 
     const act = r.activity_name || "Sin nombre";
     if (!byActivity[act]) byActivity[act] = { planned: 0, compliant: 0 };
-    if (r.planned_pct > 0) byActivity[act].planned++;
-    if (isCompliant(r)) byActivity[act].compliant++;
+    if (rowPlanned) byActivity[act].planned++;
+    if (rowPlanned && rowOk) byActivity[act].compliant++;
   }
 
   const topCauses = Object.entries(causes)
@@ -202,7 +225,7 @@ Deno.serve(async (req) => {
     const scopeLabel =
       scope === "week" ? "última semana" : scope === "month" ? "mes en curso" : "año en curso";
 
-    const systemPrompt = `Eres un experto en Lean Construction y Last Planner System (LPS). Analiza datos reales de PAC (Porcentaje de Asignaciones Completadas) y de la planificación lookahead de un proyecto de construcción. Responde SIEMPRE en español, en formato Markdown conciso, con encabezados ## y listas. Tu análisis debe ser práctico, accionable y basado en evidencia de los datos provistos. No inventes datos que no estén en el contexto.`;
+    const systemPrompt = `Eres un experto en Lean Construction y Last Planner System (LPS). Analiza datos reales de PAC (Porcentaje de Asignaciones Completadas) y de la planificación lookahead de un proyecto de construcción. Responde SIEMPRE en español, en formato Markdown conciso, con encabezados ## y listas. Tu análisis debe ser práctico, accionable y basado en evidencia de los datos provistos. No inventes datos que no estén en el contexto. IMPORTANTE: un PAC de 0% con plannedCount > 0 significa que SÍ hay actividades planificadas pero ninguna se cumplió; NO digas que "no hay datos" en ese caso.`;
 
     const focus =
       view === "lookahead"
@@ -211,6 +234,9 @@ Deno.serve(async (req) => {
 
     const userPrompt = `Proyecto: ${projRes.data?.name || "Sin nombre"}
 Período de análisis: ${scopeLabel}
+Actividades planificadas en el período: ${stats.plannedCount}
+Actividades cumplidas en el período: ${stats.compliantCount}
+PAC calculado: ${stats.pacPct}%
 ${focus}
 
 Datos agregados (JSON):
@@ -218,7 +244,7 @@ ${JSON.stringify(stats, null, 2)}
 
 Entrega un análisis con estas secciones:
 ## Resumen ejecutivo
-PAC del período, tendencia y diagnóstico en 2-3 líneas.
+PAC del período (${stats.pacPct}% sobre ${stats.plannedCount} actividades planificadas), tendencia y diagnóstico en 2-3 líneas. Si plannedCount es 0 entonces sí indica que no hay datos cargados; en caso contrario describe el desempeño.
 
 ## Principales causas de no cumplimiento
 Lista priorizada con su impacto y por qué ocurren.
