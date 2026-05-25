@@ -19,6 +19,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { getEffectiveStartDateSimple, smartCeil, calcActivityWorkdays, advanceWorkdays } from '@/utils/schedulingUtils';
 import { LeanAssistant } from './LeanAssistant';
+import { ProgressTracking } from './ProgressTracking';
 
 const PIE_COLORS = ['#c0392b', '#2980b9', '#e69500', '#8e44ad', '#16a085', '#7f8c8d', '#d35400', '#27ae60', '#1e3a5f', '#e74c3c'];
 
