@@ -12,6 +12,7 @@ type Scope = 'week' | 'month' | 'year';
 
 interface Props {
   view: 'pac' | 'lookahead';
+  weekNumber?: number;
 }
 
 const SCOPE_LABELS: Record<Scope, string> = {
