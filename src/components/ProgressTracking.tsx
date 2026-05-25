@@ -136,6 +136,25 @@ export function ProgressTracking() {
     XLSX.writeFile(wb, `avance_${project.name.replace(/\s+/g, '_')}.xlsx`);
   };
 
+  // Empty state
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Toolbar
+          showAddExtra={showAddExtra}
+          setShowAddExtra={setShowAddExtra}
+          newExtraName={newExtraName}
+          setNewExtraName={setNewExtraName}
+          onAddExtra={handleAddExtra}
+        />
+        <Card className="p-8 text-center text-muted-foreground">
+          <p className="font-semibold mb-1">No hay actividades para registrar avance</p>
+          <p className="text-sm">Agregue actividades en el LOB del proyecto, o añada una actividad extra arriba.</p>
+        </Card>
+      </div>
+    );
+  }
+
   // ---------- CASAS view ----------
   if (isCasas) {
     return (
@@ -178,13 +197,19 @@ export function ProgressTracking() {
                   const stats = computeActivityStats(cells, r.key, r.totalUnits);
                   const sched = r.activity ? computeScheduledPct(r.activity, project.activities) : 0;
                   const dev = stats.realPct - sched;
+                  const uStart = r.activity?.unitStart ?? 1;
+                  const uEnd = r.activity?.unitEnd ?? totalUnits;
                   return (
                     <tr key={r.key} className="hover:bg-secondary/30">
                       <td className="sticky left-0 bg-background z-10 px-2 py-0.5 border-r border-border font-medium truncate max-w-[200px]" title={r.name}>
                         {r.name}
                       </td>
                       {units.map(u => {
+                        const inRange = r.isExtra || (u >= uStart && u <= uEnd);
                         const s = getStatus(r.key, u);
+                        if (!inRange) {
+                          return <td key={u} className="border border-border/40 p-0 text-center bg-muted/30" />;
+                        }
                         return (
                           <td key={u} className="border border-border/40 p-0 text-center">
                             <button
@@ -217,9 +242,11 @@ export function ProgressTracking() {
             </tbody>
           </table>
         </Card>
+        <ProgressChart rows={rows} cells={cells} />
       </div>
     );
   }
+
 
   // ---------- EDIFICIOS view (one matrix per activity) ----------
   const { floors, unitsPerFloor } = project.buildingConfig;
