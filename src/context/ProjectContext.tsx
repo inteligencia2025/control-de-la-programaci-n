@@ -666,6 +666,118 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, [toast]);
 
+  // ---- Progress (avance de obra) ----
+  const setProgressCell = useCallback(async (activityKey: string, unitNumber: number, status: ProgressStatus | null) => {
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    // Optimistic local update
+    skipHistory.current = true;
+    setProjectInternal(p => {
+      const cells = (p.progressCells || []).filter(c => !(c.activityKey === activityKey && c.unitNumber === unitNumber));
+      const next = status ? [...cells, { activityKey, unitNumber, status }] : cells;
+      const updated = { ...p, progressCells: next };
+      latestProjectRef.current = updated;
+      return updated;
+    });
+    skipHistory.current = false;
+    try {
+      if (status === null) {
+        await (supabase as any).from('progress_cells').delete()
+          .eq('project_id', pid).eq('activity_key', activityKey).eq('unit_number', unitNumber);
+      } else {
+        await (supabase as any).from('progress_cells').upsert(
+          { project_id: pid, activity_key: activityKey, unit_number: unitNumber, status },
+          { onConflict: 'project_id,activity_key,unit_number' }
+        );
+      }
+    } catch (err) {
+      console.error('[setProgressCell]', err);
+      toast({ title: 'Error', description: 'No se pudo guardar el avance', variant: 'destructive' });
+    }
+  }, [toast]);
+
+  const addProgressExtra = useCallback(async (name: string, category: string = 'extra') => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    const existing = latestProjectRef.current.progressExtras || [];
+    const sortOrder = existing.length;
+    const tmpId = crypto.randomUUID();
+    const optimistic: ProgressExtraActivity = { id: tmpId, name: trimmed, category, sortOrder };
+    skipHistory.current = true;
+    setProjectInternal(p => {
+      const updated = { ...p, progressExtras: [...(p.progressExtras || []), optimistic] };
+      latestProjectRef.current = updated;
+      return updated;
+    });
+    skipHistory.current = false;
+    try {
+      const { data, error } = await (supabase as any).from('progress_extra_activities').insert({
+        project_id: pid, name: trimmed, category, sort_order: sortOrder,
+      }).select('id').single();
+      if (error) throw error;
+      if (data?.id && data.id !== tmpId) {
+        skipHistory.current = true;
+        setProjectInternal(p => {
+          const updated = { ...p, progressExtras: (p.progressExtras || []).map(e => e.id === tmpId ? { ...e, id: data.id } : e) };
+          latestProjectRef.current = updated;
+          return updated;
+        });
+        skipHistory.current = false;
+      }
+    } catch (err) {
+      console.error('[addProgressExtra]', err);
+      toast({ title: 'Error', description: 'No se pudo agregar la actividad', variant: 'destructive' });
+    }
+  }, [toast]);
+
+  const updateProgressExtra = useCallback(async (id: string, patch: Partial<ProgressExtraActivity>) => {
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    skipHistory.current = true;
+    setProjectInternal(p => {
+      const updated = { ...p, progressExtras: (p.progressExtras || []).map(e => e.id === id ? { ...e, ...patch } : e) };
+      latestProjectRef.current = updated;
+      return updated;
+    });
+    skipHistory.current = false;
+    try {
+      const dbPatch: any = {};
+      if (patch.name !== undefined) dbPatch.name = patch.name;
+      if (patch.category !== undefined) dbPatch.category = patch.category;
+      if (patch.sortOrder !== undefined) dbPatch.sort_order = patch.sortOrder;
+      await (supabase as any).from('progress_extra_activities').update(dbPatch).eq('id', id);
+    } catch (err) {
+      console.error('[updateProgressExtra]', err);
+    }
+  }, []);
+
+  const removeProgressExtra = useCallback(async (id: string) => {
+    const pid = activeIdRef.current;
+    if (!pid) return;
+    const key = `extra:${id}`;
+    skipHistory.current = true;
+    setProjectInternal(p => {
+      const updated = {
+        ...p,
+        progressExtras: (p.progressExtras || []).filter(e => e.id !== id),
+        progressCells: (p.progressCells || []).filter(c => c.activityKey !== key),
+      };
+      latestProjectRef.current = updated;
+      return updated;
+    });
+    skipHistory.current = false;
+    try {
+      await (supabase as any).from('progress_cells').delete().eq('project_id', pid).eq('activity_key', key);
+      await (supabase as any).from('progress_extra_activities').delete().eq('id', id);
+    } catch (err) {
+      console.error('[removeProgressExtra]', err);
+    }
+  }, []);
+
+
+
 
   // Auto-save on project changes — only when loaded data corresponds to active project AND user has actually edited
   useEffect(() => {
