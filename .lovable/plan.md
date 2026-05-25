@@ -1,50 +1,76 @@
-## Asistente IA Lean Construction
 
-Añadir un asistente de IA que analice las causas de no cumplimiento (PAC) en períodos semanal, mensual y anual para cada proyecto, integrado en dos lugares:
+## Objetivo
 
-1. **Control del PAC** — dentro de la sección de Indicadores.
-2. **Lookahead** — dentro del Resumen.
+Agregar dentro de **Control PAC** una nueva sub-pestaña **"Avance de obra"** que replica el formato del Excel: una matriz de actividades × unidades donde cada celda guarda un estado (E, P, R, N/A), calcula % de avance real por actividad y total, y se compara contra el % programado del LOB.
 
-### Funcionalidad del asistente
+## Alcance funcional
 
-- Analiza los registros `pac_records` del proyecto activo (incluyendo `failure_cause`, `failure_description`, `planned_pct`, `completed_pct`, `responsible`, `date`, `week_number`) y los `lookahead_items` (restricciones marcadas, compromisos cumplidos/incumplidos, causas).
-- Genera un análisis principal con:
-  - **% PAC** del período (semana actual, mes actual, año en curso).
-  - **Top causas de no cumplimiento** ordenadas por frecuencia e impacto.
-  - **Patrones detectados** (responsables recurrentes, actividades problemáticas, restricciones más comunes en lookahead).
-  - **Recomendaciones Lean Construction** accionables (Last Planner System, eliminación de restricciones, mejora de compromisos).
-- Selector de período: Semanal / Mensual / Anual.
-- Botón "Actualizar análisis" para regenerar bajo demanda (evitar costo en cada render).
-- Render del resultado en Markdown con secciones claras.
+### 1. Vistas según tipo de proyecto
 
-### Implementación técnica
+- **Casas**: una sola matriz.
+  - Filas: actividades (LOB + extras).
+  - Columnas: unidades 1..N (de `defaultUnits` / `buildingConfig`).
+  - Encabezados de grupo por categoría (Estructura, Acabados, Fachada, Urbanismo…).
 
-**Backend (Edge Function nueva: `pac-lean-assistant`)**
-- Recibe `{ projectId, scope: 'week' | 'month' | 'year', view: 'pac' | 'lookahead' }`.
-- Valida JWT del usuario y que tenga acceso al proyecto (RLS lo cubre al consultar con el token del usuario).
-- Consulta `pac_records` y `lookahead_items` filtrados por proyecto y rango de fechas.
-- Pre-agrega estadísticas en el servidor (conteo de causas, % PAC por semana, etc.) para reducir tokens.
-- Llama a Lovable AI Gateway (`google/gemini-3-flash-preview`) con un system prompt experto en Lean Construction + Last Planner System, y los datos agregados como contexto.
-- Maneja errores 429 (rate limit) y 402 (créditos) devolviéndolos al cliente.
-- Devuelve `{ analysis: string, stats: {...} }`.
+- **Edificios**: una matriz por actividad, agrupadas en pestañas o acordeones.
+  - Filas: pisos (de mayor a menor, como en el Excel).
+  - Columnas: apartamentos por piso (1..unitsPerFloor).
+  - Si `hasCubierta`, fila adicional para cubierta/muros cubierta/ascensores.
+  - Pie de cada matriz: total de unidades y % avance ejecutadas.
 
-**Frontend**
-- Nuevo componente `src/components/LeanAssistant.tsx` reutilizable, con props `{ scope, view }` y selector de período interno.
-- Usa `supabase.functions.invoke('pac-lean-assistant', ...)`.
-- Renderiza Markdown con `react-markdown` (añadir dependencia).
-- Estados: loading skeleton, error con toast, contenido con scroll.
-- Integración:
-  - `ProductionControl.tsx` → tarjeta nueva en la sección de Indicadores titulada "Asistente Lean IA".
-  - `LookaheadTable.tsx` → tarjeta nueva en el Resumen con el mismo asistente (variante `view='lookahead'`).
+### 2. Estados por celda
 
-### Detalles técnicos
+Ciclo con click: vacío → **E** (verde) → **P** (azul) → **R** (rojo) → **N/A** (gris) → vacío.
+Solo los 4 estados del Excel, sin %, sin fechas.
 
-- Modelo: `google/gemini-3-flash-preview` (rápido y económico, ideal para análisis textual breve).
-- Sin persistencia: el análisis se genera bajo demanda y no se guarda en BD (evita tabla nueva).
-- Cache local opcional en memoria del componente para no recalcular al cambiar de pestaña sin pedirlo.
-- Idioma del análisis: español (siguiendo el resto del proyecto).
+### 3. Actividades (LOB + extras)
 
-### Preguntas antes de implementar
+- Se precargan automáticamente las actividades activas del LOB del proyecto.
+- Botón **"Agregar actividad extra"** para items no repetitivos (Urbanismo, Acceso principal, Nichos, etc.) — solo viven en el módulo de avance, no afectan LOB.
+- Reordenar y eliminar extras; ocultar/mostrar actividades del LOB.
 
-1. ¿El asistente debe generarse automáticamente al abrir la pestaña, o solo al pulsar un botón "Generar análisis"? (recomiendo botón para controlar costos).
-2. ¿Quieres que también guarde un histórico de análisis (tabla nueva) o es suficiente con generarlo en vivo?
+### 4. Cálculos
+
+- **% Avance Real por actividad** = `count(E) / count(celdas aplicables, excluyendo N/A)`.
+- **% Programado a la fecha** por actividad: derivado del LOB usando `startDate`, `rate`, `unitStart`, `unitEnd` y la fecha actual (qué unidades deberían estar completas hoy).
+- **Desviación** = Real − Programado (verde si ≥ 0, rojo si < 0).
+- **% Avance total del proyecto** = promedio ponderado (por unidades aplicables) de todas las actividades.
+- Tarjetas resumen arriba: % Real, % Programado, Desviación, # actividades atrasadas.
+
+### 5. Persistencia
+
+Nueva tabla `progress_cells` en Lovable Cloud:
+- `project_id`, `activity_key` (id LOB o extra), `unit_number` (entero), `status` ('E'|'P'|'R'|'NA'), `updated_at`.
+- Tabla `progress_extra_activities` para extras: `project_id`, `name`, `category`, `sort_order`.
+- RLS igual al resto: dueño del proyecto o asignado.
+- Guardado debounced al cambiar celdas (mismo patrón que LOB/PAC).
+
+### 6. UX
+
+- Sticky header con nombres de unidades, sticky first column con actividades.
+- Leyenda fija de estados.
+- Botones: exportar a Excel (mismo formato), limpiar fila, marcar fila completa.
+- Tooltip en celda con fecha del último cambio y unidad/actividad.
+
+## Cambios técnicos
+
+### Archivos nuevos
+- `src/components/ProgressTracking.tsx` — contenedor con switch casas/edificios.
+- `src/components/ProgressMatrixHouses.tsx` — matriz única.
+- `src/components/ProgressMatrixBuildings.tsx` — matriz por actividad.
+- `src/components/ProgressSummary.tsx` — tarjetas Real vs Programado.
+- `src/utils/progressUtils.ts` — cálculo de % programado desde LOB y % real desde celdas.
+
+### Archivos modificados
+- `src/components/ProductionControl.tsx` — agregar sub-tab "Avance" dentro del Tabs existente.
+- `src/types/project.ts` — tipos `ProgressCell`, `ProgressExtraActivity`, `ProgressStatus`.
+- `src/context/ProjectContext.tsx` — cargar/guardar progress_cells y extras.
+- `src/integrations/supabase/types.ts` — se regenera tras la migración.
+
+### Migración Supabase
+- Crear `progress_cells` y `progress_extra_activities` con RLS basada en `projects.user_id` / `is_assigned_to_project`.
+- Índices `(project_id, activity_key)` para lectura rápida.
+
+## Lo que NO entra en este plan
+
+- % parciales por celda, fechas por celda, sincronización bidireccional con PAC, fotos por unidad, historial de cambios. Si los quieres después se agregan en una segunda iteración.
