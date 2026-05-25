@@ -199,13 +199,14 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } },
     );
 
-    const { projectId, scope, view } = await req.json();
+    const { projectId, scope, view, weekNumber } = await req.json();
     if (!projectId || !["week", "month", "year"].includes(scope)) {
       return new Response(JSON.stringify({ error: "Parámetros inválidos" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+    const weekNum = typeof weekNumber === "number" && weekNumber > 0 ? weekNumber : undefined;
 
     const [pacRes, lookRes, projRes] = await Promise.all([
       supabase
@@ -234,10 +235,15 @@ Deno.serve(async (req) => {
       (pacRes.data || []) as PacRow[],
       (lookRes.data || []) as LookaheadRow[],
       scope as Scope,
+      weekNum,
     );
 
     const scopeLabel =
-      scope === "week" ? "última semana" : scope === "month" ? "mes en curso" : "año en curso";
+      scope === "week"
+        ? `semana ${weekNum ?? "actual"}`
+        : scope === "month"
+        ? "mes en curso"
+        : "año en curso";
 
     const systemPrompt = `Eres un experto en Lean Construction y Last Planner System (LPS). Analiza datos reales de PAC (Porcentaje de Asignaciones Completadas) y de la planificación lookahead de un proyecto de construcción. Responde SIEMPRE en español, en formato Markdown conciso, con encabezados ## y listas. Tu análisis debe ser práctico, accionable y basado en evidencia de los datos provistos. No inventes datos que no estén en el contexto. IMPORTANTE: un PAC de 0% con plannedCount > 0 significa que SÍ hay actividades planificadas pero ninguna se cumplió; NO digas que "no hay datos" en ese caso.`;
 
