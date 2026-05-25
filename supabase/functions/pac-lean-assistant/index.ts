@@ -32,23 +32,47 @@ function isCompliant(r: PacRow) {
   return r.planned_pct > 0 && r.completed_pct >= r.planned_pct;
 }
 
-function inScope(dateStr: string, scope: Scope, now: Date): boolean {
+function inScope(dateStr: string, scope: Scope, ref: Date): boolean {
   if (!dateStr) return false;
   const [y, m, d] = dateStr.split("-").map(Number);
   if (!y || !m || !d) return false;
   const dt = new Date(y, m - 1, d);
-  if (scope === "year") return dt.getFullYear() === now.getFullYear();
+  if (scope === "year") return dt.getFullYear() === ref.getFullYear();
   if (scope === "month")
-    return dt.getFullYear() === now.getFullYear() && dt.getMonth() === now.getMonth();
-  const diff = (now.getTime() - dt.getTime()) / (1000 * 60 * 60 * 24);
-  return diff >= 0 && diff <= 7;
+    return dt.getFullYear() === ref.getFullYear() && dt.getMonth() === ref.getMonth();
+  // week: last 7 days relative to reference date (inclusive)
+  const diff = (ref.getTime() - dt.getTime()) / (1000 * 60 * 60 * 24);
+  return diff >= -0.5 && diff <= 7.5;
+}
+
+function isPlanned(r: PacRow): boolean {
+  // Consider planned if planned_pct > 0 OR the legacy planned flag was set
+  return (r.planned_pct ?? 0) > 0 || (r as any).planned === true;
+}
+
+function isCompliantRow(r: PacRow): boolean {
+  const planned = (r.planned_pct ?? 0);
+  const done = (r.completed_pct ?? 0);
+  if (planned > 0) return done >= planned;
+  // Fallback to boolean completed when no pct recorded
+  return (r as any).completed === true;
 }
 
 function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
-  const now = new Date();
-  const filtered = pac.filter((r) => inScope(r.date, scope, now));
-  const planned = filtered.filter((r) => r.planned_pct > 0);
-  const compliant = planned.filter(isCompliant);
+  // Use the most recent record date as the reference, falling back to now.
+  // This avoids empty results when the user logs data for a past/future week.
+  const latestTs = pac.reduce((acc, r) => {
+    if (!r.date) return acc;
+    const [y, m, d] = r.date.split("-").map(Number);
+    if (!y || !m || !d) return acc;
+    const t = new Date(y, m - 1, d).getTime();
+    return t > acc ? t : acc;
+  }, 0);
+  const ref = latestTs > 0 ? new Date(latestTs) : new Date();
+  const filtered = pac.filter((r) => inScope(r.date, scope, ref));
+  const planned = filtered.filter(isPlanned);
+  const compliant = planned.filter(isCompliantRow);
+
   const pacPct = planned.length
     ? Math.round((compliant.length / planned.length) * 100)
     : 0;
