@@ -166,8 +166,8 @@ export function ProgressTracking() {
             </thead>
             <tbody>
               {groups.map(([cat, catRows]) => (
-                <>
-                  <tr key={`g-${cat}`} className="bg-muted/50">
+                <tbody key={`g-${cat}`} className="contents">
+                  <tr className="bg-muted/50">
                     <td colSpan={units.length + 5} className="px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-muted-foreground">
                       {cat}
                     </td>
