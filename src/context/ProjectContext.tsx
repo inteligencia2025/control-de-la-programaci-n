@@ -20,6 +20,8 @@ const defaultProject: ProjectData = {
   customFailureCauses: [],
   projectStartDate: new Date().toISOString().split('T')[0],
   defaultUnits: 10,
+  progressCells: [],
+  progressExtras: [],
 };
 
 const getActiveProjectStorageKey = (userId: string) => `lob-active-project:${userId}`;
