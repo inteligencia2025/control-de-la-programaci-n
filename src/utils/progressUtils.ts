@@ -1,17 +1,33 @@
 import { Activity, BuildingConfig, ProjectType, ProgressCell, ProgressStatus, getCubiertaUnits, getUnitLabel } from '@/types/project';
 import { getEffectiveStartDateSimple, getEffectiveRate, workdayIndexBetween } from '@/utils/schedulingUtils';
 
-/** Total number of units in a project (houses count or floors*unitsPerFloor [+3 if cubierta]) */
-export function getProjectTotalUnits(projectType: ProjectType, buildingConfig: BuildingConfig, defaultUnits?: number): number {
-  if (projectType === 'casas') return Math.max(1, defaultUnits || 10);
+/** Total number of units in a project.
+ *  - Edificios: floors * unitsPerFloor (+3 if cubierta).
+ *  - Casas: max(defaultUnits, max activity.unitEnd). Falls back to 1.
+ */
+export function getProjectTotalUnits(
+  projectType: ProjectType,
+  buildingConfig: BuildingConfig,
+  defaultUnits?: number,
+  activities: Activity[] = [],
+): number {
+  if (projectType === 'casas') {
+    const fromActs = activities.reduce((m, a) => Math.max(m, a.unitEnd || 0), 0);
+    return Math.max(1, defaultUnits || 0, fromActs);
+  }
   const base = buildingConfig.floors * buildingConfig.unitsPerFloor;
   const cu = getCubiertaUnits(buildingConfig);
   return cu ? base + 3 : base;
 }
 
 /** Returns array of unit numbers 1..N for the project */
-export function listProjectUnits(projectType: ProjectType, buildingConfig: BuildingConfig, defaultUnits?: number): number[] {
-  const total = getProjectTotalUnits(projectType, buildingConfig, defaultUnits);
+export function listProjectUnits(
+  projectType: ProjectType,
+  buildingConfig: BuildingConfig,
+  defaultUnits?: number,
+  activities: Activity[] = [],
+): number[] {
+  const total = getProjectTotalUnits(projectType, buildingConfig, defaultUnits, activities);
   return Array.from({ length: total }, (_, i) => i + 1);
 }
 

@@ -32,24 +32,26 @@ export function ProgressTracking() {
 
   const isCasas = project.projectType === 'casas';
   const units = useMemo(
-    () => listProjectUnits(project.projectType, project.buildingConfig, project.defaultUnits),
-    [project.projectType, project.buildingConfig, project.defaultUnits],
+    () => listProjectUnits(project.projectType, project.buildingConfig, project.defaultUnits, project.activities),
+    [project.projectType, project.buildingConfig, project.defaultUnits, project.activities],
   );
   const totalUnits = units.length;
   const cells = project.progressCells || [];
   const extras = project.progressExtras || [];
 
   const rows: Row[] = useMemo(() => {
-    const lobRows: Row[] = project.activities
-      .filter(a => a.enabled)
-      .map(a => ({
-        key: a.id,
-        name: a.name,
-        category: a.category,
-        isExtra: false,
-        totalUnits: Math.max(1, a.unitEnd - a.unitStart + 1),
-        activity: a,
-      }));
+    // For casas: each activity row spans the units defined in the activity (unitStart..unitEnd).
+    // For edificios: each activity applies to ALL apartments in the building.
+    const lobRows: Row[] = project.activities.map(a => ({
+      key: a.id,
+      name: a.name,
+      category: a.category,
+      isExtra: false,
+      totalUnits: isCasas
+        ? Math.max(1, (a.unitEnd || totalUnits) - (a.unitStart || 1) + 1)
+        : totalUnits,
+      activity: a,
+    }));
     const extraRows: Row[] = extras
       .slice()
       .sort((a, b) => a.sortOrder - b.sortOrder)
@@ -61,7 +63,8 @@ export function ProgressTracking() {
         totalUnits,
       }));
     return [...lobRows, ...extraRows];
-  }, [project.activities, extras, totalUnits]);
+  }, [project.activities, extras, totalUnits, isCasas]);
+
 
   // Group rows by category in original order
   const groups = useMemo(() => {
@@ -133,6 +136,25 @@ export function ProgressTracking() {
     XLSX.writeFile(wb, `avance_${project.name.replace(/\s+/g, '_')}.xlsx`);
   };
 
+  // Empty state
+  if (rows.length === 0) {
+    return (
+      <div className="flex flex-col gap-3">
+        <Toolbar
+          showAddExtra={showAddExtra}
+          setShowAddExtra={setShowAddExtra}
+          newExtraName={newExtraName}
+          setNewExtraName={setNewExtraName}
+          onAddExtra={handleAddExtra}
+        />
+        <Card className="p-8 text-center text-muted-foreground">
+          <p className="font-semibold mb-1">No hay actividades para registrar avance</p>
+          <p className="text-sm">Agregue actividades en el LOB del proyecto, o añada una actividad extra arriba.</p>
+        </Card>
+      </div>
+    );
+  }
+
   // ---------- CASAS view ----------
   if (isCasas) {
     return (
@@ -175,13 +197,19 @@ export function ProgressTracking() {
                   const stats = computeActivityStats(cells, r.key, r.totalUnits);
                   const sched = r.activity ? computeScheduledPct(r.activity, project.activities) : 0;
                   const dev = stats.realPct - sched;
+                  const uStart = r.activity?.unitStart ?? 1;
+                  const uEnd = r.activity?.unitEnd ?? totalUnits;
                   return (
                     <tr key={r.key} className="hover:bg-secondary/30">
                       <td className="sticky left-0 bg-background z-10 px-2 py-0.5 border-r border-border font-medium truncate max-w-[200px]" title={r.name}>
                         {r.name}
                       </td>
                       {units.map(u => {
+                        const inRange = r.isExtra || (u >= uStart && u <= uEnd);
                         const s = getStatus(r.key, u);
+                        if (!inRange) {
+                          return <td key={u} className="border border-border/40 p-0 text-center bg-muted/30" />;
+                        }
                         return (
                           <td key={u} className="border border-border/40 p-0 text-center">
                             <button
@@ -214,9 +242,11 @@ export function ProgressTracking() {
             </tbody>
           </table>
         </Card>
+        <ProgressChart rows={rows} cells={cells} />
       </div>
     );
   }
+
 
   // ---------- EDIFICIOS view (one matrix per activity) ----------
   const { floors, unitsPerFloor } = project.buildingConfig;
@@ -309,7 +339,40 @@ export function ProgressTracking() {
           );
         })}
       </div>
+      <ProgressChart rows={rows} cells={cells} />
     </div>
+  );
+}
+
+function ProgressChart({ rows, cells }: { rows: Row[]; cells: { activityKey: string; unitNumber: number; status: ProgressStatus }[] }) {
+  const data = useMemo(() => {
+    return rows.map(r => {
+      const s = computeActivityStats(cells, r.key, r.totalUnits);
+      return { name: r.name, pct: s.realPct };
+    });
+  }, [rows, cells]);
+  const max = 100;
+  if (data.length === 0) return null;
+  return (
+    <Card className="p-3">
+      <h4 className="text-sm font-bold mb-2">% Avance Real por actividad</h4>
+      <div className="space-y-1 max-h-[300px] overflow-auto pr-2">
+        {data.map(d => (
+          <div key={d.name} className="flex items-center gap-2 text-xs">
+            <div className="w-44 truncate" title={d.name}>{d.name}</div>
+            <div className="flex-1 bg-muted h-4 rounded overflow-hidden relative">
+              <div
+                className="h-full bg-primary transition-all"
+                style={{ width: `${(d.pct / max) * 100}%` }}
+              />
+              <span className="absolute inset-0 flex items-center justify-end pr-1 text-[10px] font-bold">
+                {d.pct}%
+              </span>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Card>
   );
 }
 
