@@ -59,7 +59,10 @@ interface ProjectContextType {
   saveNow: (data: ProjectData) => Promise<void>;
   addContractor: (name: string) => Promise<void>;
   addCustomCause: (name: string) => Promise<void>;
-
+  setProgressCell: (activityKey: string, unitNumber: number, status: ProgressStatus | null) => Promise<void>;
+  addProgressExtra: (name: string, category?: string) => Promise<void>;
+  updateProgressExtra: (id: string, patch: Partial<ProgressExtraActivity>) => Promise<void>;
+  removeProgressExtra: (id: string) => Promise<void>;
 }
 
 const ProjectContext = createContext<ProjectContextType | null>(null);
