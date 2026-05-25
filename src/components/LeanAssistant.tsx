@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Sparkles, RefreshCw, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,26 +20,101 @@ const SCOPE_LABELS: Record<Scope, string> = {
   year: 'Anual',
 };
 
+const SUPABASE_URL = 'https://qxgoujqndhurhoasbfla.supabase.co';
+
 export function LeanAssistant({ view }: Props) {
   const { activeProjectId } = useProject();
   const [scope, setScope] = useState<Scope>('week');
   const [analysis, setAnalysis] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const generate = async () => {
     if (!activeProjectId) {
       toast({ title: 'Selecciona un proyecto', variant: 'destructive' });
       return;
     }
+    // cancel any in-flight request
+    abortRef.current?.abort();
+    const ac = new AbortController();
+    abortRef.current = ac;
+
     setLoading(true);
+    setAnalysis('');
+
     try {
-      const { data, error } = await supabase.functions.invoke('pac-lean-assistant', {
-        body: { projectId: activeProjectId, scope, view },
-      });
-      if (error) throw error;
-      if ((data as any)?.error) throw new Error((data as any).error);
-      setAnalysis((data as any)?.analysis || '');
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) throw new Error('Sesión no válida');
+
+      const resp = await fetch(
+        `${SUPABASE_URL}/functions/v1/pac-lean-assistant`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ projectId: activeProjectId, scope, view }),
+          signal: ac.signal,
+        },
+      );
+
+      if (!resp.ok || !resp.body) {
+        let msg = `Error ${resp.status}`;
+        try {
+          const j = await resp.json();
+          if (j?.error) msg = j.error;
+        } catch {}
+        throw new Error(msg);
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+      let acc = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+
+        // Parse SSE events separated by blank lines
+        let sep: number;
+        while ((sep = buffer.indexOf('\n\n')) !== -1) {
+          const chunk = buffer.slice(0, sep);
+          buffer = buffer.slice(sep + 2);
+          const lines = chunk.split('\n');
+          let event = 'message';
+          let data = '';
+          for (const line of lines) {
+            if (line.startsWith('event:')) event = line.slice(6).trim();
+            else if (line.startsWith('data:')) data += line.slice(5).trim();
+          }
+          if (!data) continue;
+          if (event === 'delta') {
+            try {
+              const j = JSON.parse(data);
+              if (j?.t) {
+                acc += j.t;
+                setAnalysis(acc);
+              }
+            } catch {}
+          } else if (event === 'error') {
+            try {
+              const j = JSON.parse(data);
+              throw new Error(j?.error || 'Error en el stream');
+            } catch (e) {
+              throw e;
+            }
+          } else if (event === 'done') {
+            // finished
+          }
+        }
+      }
     } catch (e: any) {
+      if (e?.name === 'AbortError') return;
       const msg = e?.message || 'Error al generar el análisis';
       toast({ title: 'Asistente IA', description: msg, variant: 'destructive' });
     } finally {
