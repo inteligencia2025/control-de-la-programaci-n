@@ -1,5 +1,5 @@
 import { Activity, BuildingConfig, ProjectType, ProgressCell, ProgressStatus, getCubiertaUnits, getUnitLabel } from '@/types/project';
-import { getEffectiveStartDateSimple, getEffectiveRate, workdayIndexBetween, safeParse } from '@/utils/schedulingUtils';
+import { getEffectiveStartDateSimple, getEffectiveRate, workdayIndexBetween } from '@/utils/schedulingUtils';
 
 /** Total number of units in a project (houses count or floors*unitsPerFloor [+3 if cubierta]) */
 export function getProjectTotalUnits(projectType: ProjectType, buildingConfig: BuildingConfig, defaultUnits?: number): number {
