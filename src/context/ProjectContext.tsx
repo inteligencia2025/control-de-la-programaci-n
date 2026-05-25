@@ -305,6 +305,17 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
       projectStartDate: proj.project_start_date || undefined,
       defaultUnits: proj.default_units || 10,
       unitLabels: (proj.unit_labels as Record<string, string>) || {},
+      progressCells: (progCells || []).map((c: any) => ({
+        activityKey: c.activity_key,
+        unitNumber: c.unit_number,
+        status: c.status as ProgressStatus,
+      })),
+      progressExtras: (progExtras || []).map((e: any) => ({
+        id: e.id,
+        name: e.name,
+        category: e.category || 'extra',
+        sortOrder: e.sort_order || 0,
+      })),
     };
 
     // Auto-inject newly added preloaded fachada activities (AVALUOS, ESCRITURACIÓN)
