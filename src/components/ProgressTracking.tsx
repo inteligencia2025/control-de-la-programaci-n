@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { useProject } from '@/context/ProjectContext';
-import { Activity, ProgressStatus, ProgressExtraActivity } from '@/types/project';
+import { Activity, ProgressStatus } from '@/types/project';
 import {
   listProjectUnits,
   unitLabel,
