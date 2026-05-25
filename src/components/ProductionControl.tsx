@@ -737,7 +737,10 @@ export function ProductionControl() {
               ) : <p className="text-sm text-muted-foreground text-center pt-16">Sin causas de incumplimiento registradas</p>}
             </CardContent>
           </Card>
+
+          <LeanAssistant view="pac" weekNumber={displayWeek} />
         </TabsContent>
+
       </Tabs>
     </div>
   );
