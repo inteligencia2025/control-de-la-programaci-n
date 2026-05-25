@@ -254,6 +254,66 @@ export type Database = {
         }
         Relationships: []
       }
+      progress_cells: {
+        Row: {
+          activity_key: string
+          created_at: string
+          id: string
+          project_id: string
+          status: string
+          unit_number: number
+          updated_at: string
+        }
+        Insert: {
+          activity_key: string
+          created_at?: string
+          id?: string
+          project_id: string
+          status: string
+          unit_number: number
+          updated_at?: string
+        }
+        Update: {
+          activity_key?: string
+          created_at?: string
+          id?: string
+          project_id?: string
+          status?: string
+          unit_number?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      progress_extra_activities: {
+        Row: {
+          category: string
+          created_at: string
+          id: string
+          name: string
+          project_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          id?: string
+          name: string
+          project_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          id?: string
+          name?: string
+          project_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       project_assignments: {
         Row: {
           created_at: string
