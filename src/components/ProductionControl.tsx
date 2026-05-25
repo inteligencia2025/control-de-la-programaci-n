@@ -438,6 +438,7 @@ export function ProductionControl() {
           <TabsList className="bg-transparent h-9 gap-1">
             <TabsTrigger value="programacion" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs px-4 h-7 rounded-md font-semibold">Programación</TabsTrigger>
             <TabsTrigger value="indicadores" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs px-4 h-7 rounded-md font-semibold">Indicadores</TabsTrigger>
+            <TabsTrigger value="avance" className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs px-4 h-7 rounded-md font-semibold">Avance de obra</TabsTrigger>
           </TabsList>
         </div>
 
