@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
-import { ProjectData, Activity, LookaheadItem, PACRecord } from '@/types/project';
+import { ProjectData, Activity, LookaheadItem, PACRecord, ProgressCell, ProgressExtraActivity, ProgressStatus } from '@/types/project';
 import { useAuth } from '@/hooks/useAuth';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
