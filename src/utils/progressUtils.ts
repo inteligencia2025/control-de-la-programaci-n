@@ -15,9 +15,10 @@ export function getProjectTotalUnits(
     const fromActs = activities.reduce((m, a) => Math.max(m, a.unitEnd || 0), 0);
     return Math.max(1, defaultUnits || 0, fromActs);
   }
-  const base = buildingConfig.floors * buildingConfig.unitsPerFloor;
-  const cu = getCubiertaUnits(buildingConfig);
-  return cu ? base + 3 : base;
+  // Note: cubierta rows (cubierta/muros/ascensores) are special add-on slots
+  // that only apply to cubierta-category activities and are rendered separately
+  // in the building matrix. They are NOT counted in the project's total units.
+  return buildingConfig.floors * buildingConfig.unitsPerFloor;
 }
 
 /** Returns array of unit numbers 1..N for the project */
