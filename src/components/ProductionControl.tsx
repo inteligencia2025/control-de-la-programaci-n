@@ -743,6 +743,10 @@ export function ProductionControl() {
           <LeanAssistant view="pac" weekNumber={displayWeek} />
         </TabsContent>
 
+        <TabsContent value="avance" className="flex-1 overflow-auto m-0 p-3">
+          <ProgressTracking />
+        </TabsContent>
+
       </Tabs>
     </div>
   );
