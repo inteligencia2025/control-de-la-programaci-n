@@ -55,20 +55,33 @@ function isCompliantRow(r: PacRow): boolean {
   return (r as any).completed === true;
 }
 
-function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
-  // Use the most recent record date as the reference, falling back to now.
-  // This avoids empty results when the user logs data for a past/future week.
-  const latestTs = pac.reduce((acc, r) => {
-    if (!r.date) return acc;
-    const [y, m, d] = r.date.split("-").map(Number);
-    if (!y || !m || !d) return acc;
-    const t = new Date(y, m - 1, d).getTime();
-    return t > acc ? t : acc;
-  }, 0);
-  const ref = latestTs > 0 ? new Date(latestTs) : new Date();
-  const filtered = pac.filter((r) => inScope(r.date, scope, ref));
+function aggregate(
+  pac: PacRow[],
+  lookahead: LookaheadRow[],
+  scope: Scope,
+  weekNumber?: number,
+) {
+  let filtered: PacRow[];
+  let filteredLook = lookahead;
+  if (scope === "week" && typeof weekNumber === "number") {
+    // Filter directly by the week the user is viewing
+    filtered = pac.filter((r) => r.week_number === weekNumber);
+    filteredLook = lookahead.filter((l) => l.week === weekNumber);
+  } else {
+    // Use the most recent record date as the reference, falling back to now.
+    const latestTs = pac.reduce((acc, r) => {
+      if (!r.date) return acc;
+      const [y, m, d] = r.date.split("-").map(Number);
+      if (!y || !m || !d) return acc;
+      const t = new Date(y, m - 1, d).getTime();
+      return t > acc ? t : acc;
+    }, 0);
+    const ref = latestTs > 0 ? new Date(latestTs) : new Date();
+    filtered = pac.filter((r) => inScope(r.date, scope, ref));
+  }
   const planned = filtered.filter(isPlanned);
   const compliant = planned.filter(isCompliantRow);
+
 
   const pacPct = planned.length
     ? Math.round((compliant.length / planned.length) * 100)
