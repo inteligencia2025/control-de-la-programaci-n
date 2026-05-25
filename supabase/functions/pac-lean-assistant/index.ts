@@ -79,18 +79,20 @@ function aggregate(pac: PacRow[], lookahead: LookaheadRow[], scope: Scope) {
   const byActivity: Record<string, { planned: number; compliant: number }> = {};
 
   for (const r of filtered) {
-    if (r.planned_pct > 0 && !isCompliant(r) && r.failure_cause) {
+    const rowPlanned = isPlanned(r);
+    const rowOk = isCompliantRow(r);
+    if (rowPlanned && !rowOk && r.failure_cause) {
       causes[r.failure_cause] = (causes[r.failure_cause] || 0) + 1;
     }
     const resp = r.responsible || "Sin asignar";
     if (!byResponsible[resp]) byResponsible[resp] = { planned: 0, compliant: 0 };
-    if (r.planned_pct > 0) byResponsible[resp].planned++;
-    if (isCompliant(r)) byResponsible[resp].compliant++;
+    if (rowPlanned) byResponsible[resp].planned++;
+    if (rowPlanned && rowOk) byResponsible[resp].compliant++;
 
     const act = r.activity_name || "Sin nombre";
     if (!byActivity[act]) byActivity[act] = { planned: 0, compliant: 0 };
-    if (r.planned_pct > 0) byActivity[act].planned++;
-    if (isCompliant(r)) byActivity[act].compliant++;
+    if (rowPlanned) byActivity[act].planned++;
+    if (rowPlanned && rowOk) byActivity[act].compliant++;
   }
 
   const topCauses = Object.entries(causes)
