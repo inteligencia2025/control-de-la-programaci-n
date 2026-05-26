@@ -283,12 +283,11 @@ export function ProgressTracking() {
             <Card key={r.key} className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-bold text-sm truncate" title={r.name}>{r.name}</h4>
-                {r.isExtra && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
-                    onClick={() => removeProgressExtra(r.key.replace('extra:', ''))}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                )}
+                <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
+                  title={r.isExtra ? 'Eliminar actividad extra' : 'Eliminar actividad del proyecto'}
+                  onClick={() => handleRemoveRow(r)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
               </div>
               <div className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide">{r.category}</div>
               <table className="w-full text-xs border-collapse mb-2">
