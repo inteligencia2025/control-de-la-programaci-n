@@ -26,7 +26,19 @@ interface Row {
 }
 
 export function ProgressTracking() {
-  const { project, setProgressCell, addProgressExtra, removeProgressExtra } = useProject();
+  const { project, setProgressCell, addProgressExtra, removeProgressExtra, removeActivity } = useProject();
+
+  const handleRemoveRow = (r: Row) => {
+    if (r.isExtra) {
+      if (window.confirm(`¿Eliminar la actividad extra "${r.name}"? Se perderá su avance registrado.`)) {
+        removeProgressExtra(r.key.replace('extra:', ''));
+      }
+    } else {
+      if (window.confirm(`¿Eliminar la actividad "${r.name}" del proyecto? Esto la quitará también del LOB y se perderá su avance.`)) {
+        removeActivity(r.key);
+      }
+    }
+  };
   const [newExtraName, setNewExtraName] = useState('');
   const [showAddExtra, setShowAddExtra] = useState(false);
 
@@ -228,12 +240,11 @@ export function ProgressTracking() {
                         {dev > 0 ? '+' : ''}{dev}%
                       </td>
                       <td className="text-center">
-                        {r.isExtra && (
-                          <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
-                            onClick={() => removeProgressExtra(r.key.replace('extra:', ''))}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
+                        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
+                          title={r.isExtra ? 'Eliminar actividad extra' : 'Eliminar actividad del proyecto'}
+                          onClick={() => handleRemoveRow(r)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </td>
                     </tr>
                   );
@@ -272,12 +283,11 @@ export function ProgressTracking() {
             <Card key={r.key} className="p-3">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-bold text-sm truncate" title={r.name}>{r.name}</h4>
-                {r.isExtra && (
-                  <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
-                    onClick={() => removeProgressExtra(r.key.replace('extra:', ''))}>
-                    <Trash2 className="h-3 w-3" />
-                  </Button>
-                )}
+                <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
+                  title={r.isExtra ? 'Eliminar actividad extra' : 'Eliminar actividad del proyecto'}
+                  onClick={() => handleRemoveRow(r)}>
+                  <Trash2 className="h-3 w-3" />
+                </Button>
               </div>
               <div className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide">{r.category}</div>
               <table className="w-full text-xs border-collapse mb-2">
