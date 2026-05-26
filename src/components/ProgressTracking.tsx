@@ -240,12 +240,11 @@ export function ProgressTracking() {
                         {dev > 0 ? '+' : ''}{dev}%
                       </td>
                       <td className="text-center">
-                        {r.isExtra && (
-                          <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
-                            onClick={() => removeProgressExtra(r.key.replace('extra:', ''))}>
-                            <Trash2 className="h-3 w-3" />
-                          </Button>
-                        )}
+                        <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
+                          title={r.isExtra ? 'Eliminar actividad extra' : 'Eliminar actividad del proyecto'}
+                          onClick={() => handleRemoveRow(r)}>
+                          <Trash2 className="h-3 w-3" />
+                        </Button>
                       </td>
                     </tr>
                   );
