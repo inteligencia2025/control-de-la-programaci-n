@@ -26,7 +26,19 @@ interface Row {
 }
 
 export function ProgressTracking() {
-  const { project, setProgressCell, addProgressExtra, removeProgressExtra } = useProject();
+  const { project, setProgressCell, addProgressExtra, removeProgressExtra, removeActivity } = useProject();
+
+  const handleRemoveRow = (r: Row) => {
+    if (r.isExtra) {
+      if (window.confirm(`¿Eliminar la actividad extra "${r.name}"? Se perderá su avance registrado.`)) {
+        removeProgressExtra(r.key.replace('extra:', ''));
+      }
+    } else {
+      if (window.confirm(`¿Eliminar la actividad "${r.name}" del proyecto? Esto la quitará también del LOB y se perderá su avance.`)) {
+        removeActivity(r.key);
+      }
+    }
+  };
   const [newExtraName, setNewExtraName] = useState('');
   const [showAddExtra, setShowAddExtra] = useState(false);
 
