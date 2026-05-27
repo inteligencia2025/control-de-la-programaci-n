@@ -504,6 +504,7 @@ export function ProductionControl() {
             <Table>
               <TableHeader>
                 <TableRow>
+                  <TableHead className="w-6"></TableHead>
                   <TableHead className="min-w-[260px] w-[34%] text-xs font-semibold">Actividad</TableHead>
                   <TableHead className="min-w-[160px] w-40 text-xs font-semibold">Responsable</TableHead>
                   <TableHead className="text-center w-32 text-xs font-semibold">Programado %</TableHead>
@@ -511,6 +512,7 @@ export function ProductionControl() {
                   <TableHead className="min-w-[220px] w-[28%] text-xs font-semibold">Causa / Descripción</TableHead>
                   <TableHead className="w-8"></TableHead>
                 </TableRow>
+
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
