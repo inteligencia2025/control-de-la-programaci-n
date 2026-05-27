@@ -500,6 +500,14 @@ export function ProductionControl() {
               className="h-8 w-36 text-xs"
               title="Fecha de inicio de la semana"
             />
+            <span className="text-xs text-muted-foreground">—</span>
+            <Input
+              type="date"
+              value={format(weekEndDate, 'yyyy-MM-dd')}
+              onChange={e => handleWeekEndDateChange(e.target.value)}
+              className="h-8 w-36 text-xs"
+              title="Fecha de fin de la semana"
+            />
             <div className="ml-auto flex gap-2">
               <Badge className="bg-destructive text-destructive-foreground text-sm px-3 py-1">M.M &lt;80%</Badge>
               <Badge className="bg-warning text-warning-foreground text-sm px-3 py-1">M.SA 80-90%</Badge>
