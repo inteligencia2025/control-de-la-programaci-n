@@ -516,41 +516,60 @@ export function ProductionControl() {
               </TableHeader>
               <TableBody>
                 {filtered.length === 0 ? (
-                  <TableRow><TableCell colSpan={6} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
+                  <TableRow><TableCell colSpan={7} className="text-center py-6 text-muted-foreground text-sm">Sin registros. Agrega actividades o carga desde LOB.</TableCell></TableRow>
                 ) : (() => {
-                  // Group by responsable preserving insertion order.
-                  // Emit a header whenever the consecutive group key changes,
-                  // so rows never jump around while the user is filling them in.
-                  const out: JSX.Element[] = [];
-                  let currentKey: string | null = null;
-                  let groupIndex = 0;
+                  // Group by responsable (sorted alpha, "Sin responsable" last).
+                  // Drag-and-drop on row reorders pacRecords and may move
+                  // an item across responsables.
+                  const groups = new Map<string, typeof filtered>();
                   filtered.forEach(r => {
                     const key = r.responsible || '— Sin responsable —';
-                    if (key !== currentKey) {
-                      currentKey = key;
-                      groupIndex++;
-                      const rowsOfKey = filtered.filter(x => (x.responsible || '— Sin responsable —') === key);
-                      const planned = rowsOfKey.filter(x => x.plannedPct > 0).length;
-                      const done = rowsOfKey.filter(x => isPACCompliant(x)).length;
-                      const pct = planned > 0 ? Math.round((done / planned) * 100) : 0;
-                      out.push(
-                        <TableRow key={`group-${groupIndex}-${key}`} className="bg-muted/60 hover:bg-muted/60">
-                          <TableCell colSpan={6} className="py-1.5">
-                            <div className="flex items-center justify-between">
-                              <span className="text-xs font-semibold uppercase tracking-wide">{key}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {rowsOfKey.length} actividad{rowsOfKey.length !== 1 ? 'es' : ''} · PAC {pct}% ({done}/{planned})
-                              </span>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    }
-                    const compliant = isPACCompliant(r);
-                    const hasShortfall = r.plannedPct > 0 && r.completedPct < r.plannedPct;
-                    const clampPct = (v: number) => Math.max(0, Math.min(100, isFinite(v) ? v : 0));
-                    out.push(
-                  <TableRow key={r.id}>
+                    if (!groups.has(key)) groups.set(key, [] as typeof filtered);
+                    groups.get(key)!.push(r);
+                  });
+                  const sortedKeys = Array.from(groups.keys()).sort((a, b) => {
+                    if (a.startsWith('—')) return 1;
+                    if (b.startsWith('—')) return -1;
+                    return a.localeCompare(b);
+                  });
+                  return sortedKeys.flatMap(key => {
+                    const rows = groups.get(key)!;
+                    const planned = rows.filter(r => r.plannedPct > 0).length;
+                    const done = rows.filter(r => isPACCompliant(r)).length;
+                    const pct = planned > 0 ? Math.round((done / planned) * 100) : 0;
+                    return [
+                      <TableRow
+                        key={`group-${key}`}
+                        className="bg-muted/60 hover:bg-muted/60"
+                        onDragOver={e => { if (draggedPacId) e.preventDefault(); }}
+                        onDrop={e => { e.preventDefault(); if (draggedPacId) { dropOntoGroup(draggedPacId, key); setDraggedPacId(null); } }}
+                      >
+                        <TableCell colSpan={7} className="py-1.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold uppercase tracking-wide">{key}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {rows.length} actividad{rows.length !== 1 ? 'es' : ''} · PAC {pct}% ({done}/{planned})
+                            </span>
+                          </div>
+                        </TableCell>
+                      </TableRow>,
+                      ...rows.map(r => {
+                        const compliant = isPACCompliant(r);
+                        const hasShortfall = r.plannedPct > 0 && r.completedPct < r.plannedPct;
+                        const clampPct = (v: number) => Math.max(0, Math.min(100, isFinite(v) ? v : 0));
+                        return (
+                  <TableRow
+                    key={r.id}
+                    draggable
+                    onDragStart={e => { setDraggedPacId(r.id); e.dataTransfer.effectAllowed = 'move'; }}
+                    onDragEnd={() => setDraggedPacId(null)}
+                    onDragOver={e => { if (draggedPacId && draggedPacId !== r.id) e.preventDefault(); }}
+                    onDrop={e => { e.preventDefault(); if (draggedPacId) { reorderPACRecord(draggedPacId, r.id, key); setDraggedPacId(null); } }}
+                    className={draggedPacId === r.id ? 'opacity-50' : ''}
+                  >
+                    <TableCell className="align-top cursor-grab active:cursor-grabbing text-muted-foreground px-1">
+                      <GripVertical className="h-3.5 w-3.5" />
+                    </TableCell>
                     <TableCell className="min-w-[260px] w-[34%] align-top">
                       <Input value={r.activityName} onChange={e => updatePACRecord({ ...r, activityName: e.target.value })} className="h-7 text-xs w-full" placeholder="Actividad" title={r.activityName} />
                     </TableCell>
@@ -626,10 +645,12 @@ export function ProductionControl() {
                       </Button>
                     </TableCell>
                   </TableRow>
-                    );
+                        );
+                      })
+                    ];
                   });
-                  return out;
                 })()}
+
 
 
               </TableBody>
