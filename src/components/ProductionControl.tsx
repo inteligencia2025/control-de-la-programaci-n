@@ -363,8 +363,22 @@ export function ProductionControl() {
       doc.text(`Filtro: ${responsibleFilter}`, 14, 40);
     }
 
-    // Activities table
-    const tableData = filtered.map(r => [
+    // Activities table — agrupar por responsable (mismo orden que la tabla en pantalla)
+    const NO_RESP = '— Sin responsable —';
+    const groupsMap = new Map<string, typeof filtered>();
+    filtered.forEach(r => {
+      const key = r.responsible?.trim() || NO_RESP;
+      if (!groupsMap.has(key)) groupsMap.set(key, []);
+      groupsMap.get(key)!.push(r);
+    });
+    const sortedKeys = Array.from(groupsMap.keys()).sort((a, b) => {
+      if (a === NO_RESP) return 1;
+      if (b === NO_RESP) return -1;
+      return a.localeCompare(b);
+    });
+    const sortedRecords = sortedKeys.flatMap(k => groupsMap.get(k)!);
+
+    const tableData = sortedRecords.map(r => [
       r.activityName || '-',
       r.responsible || '-',
       `${r.plannedPct ?? 0}%`,
@@ -372,6 +386,7 @@ export function ProductionControl() {
       r.failureCause || '-',
       r.failureDescription || '-',
     ]);
+
 
     autoTable(doc, {
       startY: responsibleFilter !== 'all' ? 45 : 38,
