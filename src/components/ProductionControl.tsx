@@ -91,6 +91,7 @@ export function ProductionControl() {
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   const [historyWeek, setHistoryWeek] = useState<string>('current');
   const [weekDateOverrides, setWeekDateOverrides] = useState<Record<number, string>>({});
+  const [weekEndDateOverrides, setWeekEndDateOverrides] = useState<Record<number, string>>({});
   const [draggedPacId, setDraggedPacId] = useState<string | null>(null);
 
   const reorderPACRecord = (draggedId: string, targetId: string, targetResponsible: string) => {
