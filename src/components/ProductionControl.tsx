@@ -562,10 +562,9 @@ export function ProductionControl() {
                     </TableCell>
                   </TableRow>
                   );
-                })
-                    ];
-                  });
-                })()}
+                  })
+                )}
+
               </TableBody>
             </Table>
           </Card>
