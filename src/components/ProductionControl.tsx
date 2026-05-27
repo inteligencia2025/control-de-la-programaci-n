@@ -153,7 +153,8 @@ export function ProductionControl() {
   const storedWeekDates = getPACWeekDates(displayWeek, project.activities, project.pacRecords);
   const overrideWeekStart = weekDateOverrides[displayWeek] ? parseLocalDate(weekDateOverrides[displayWeek]) : null;
   const weekStartDate = overrideWeekStart && !Number.isNaN(overrideWeekStart.getTime()) ? overrideWeekStart : storedWeekDates.weekStart;
-  const weekEndDate = addDays(weekStartDate, 4);
+  const overrideWeekEnd = weekEndDateOverrides[displayWeek] ? parseLocalDate(weekEndDateOverrides[displayWeek]) : null;
+  const weekEndDate = overrideWeekEnd && !Number.isNaN(overrideWeekEnd.getTime()) ? overrideWeekEnd : addDays(weekStartDate, 4);
 
   // Get all weeks that have records
   const recordedWeeks = useMemo(() => {
@@ -170,6 +171,11 @@ export function ProductionControl() {
       ...p,
       pacRecords: p.pacRecords.map(r => r.weekNumber === displayWeek ? { ...r, date } : r),
     }));
+  };
+
+  const handleWeekEndDateChange = (date: string) => {
+    if (!date) return;
+    setWeekEndDateOverrides(prev => ({ ...prev, [displayWeek]: date }));
   };
 
   const handleAdd = () => {
