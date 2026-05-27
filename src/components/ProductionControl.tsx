@@ -91,6 +91,43 @@ export function ProductionControl() {
   const [expandedChart, setExpandedChart] = useState<string | null>(null);
   const [historyWeek, setHistoryWeek] = useState<string>('current');
   const [weekDateOverrides, setWeekDateOverrides] = useState<Record<number, string>>({});
+  const [draggedPacId, setDraggedPacId] = useState<string | null>(null);
+
+  const reorderPACRecord = (draggedId: string, targetId: string, targetResponsible: string) => {
+    if (draggedId === targetId) return;
+    setProject(p => {
+      const list = [...p.pacRecords];
+      const fromIdx = list.findIndex(r => r.id === draggedId);
+      const toIdx = list.findIndex(r => r.id === targetId);
+      if (fromIdx < 0 || toIdx < 0) return p;
+      const [moved] = list.splice(fromIdx, 1);
+      const newToIdx = list.findIndex(r => r.id === targetId);
+      list.splice(newToIdx, 0, { ...moved, responsible: targetResponsible });
+      return { ...p, pacRecords: list };
+    });
+  };
+
+  const dropOntoGroup = (draggedId: string, groupResponsible: string) => {
+    setProject(p => {
+      const list = [...p.pacRecords];
+      const fromIdx = list.findIndex(r => r.id === draggedId);
+      if (fromIdx < 0) return p;
+      const [moved] = list.splice(fromIdx, 1);
+      // Insert after the last record of that group (within same week), or at end
+      const week = moved.weekNumber;
+      let insertAt = list.length;
+      for (let i = list.length - 1; i >= 0; i--) {
+        const r = list[i];
+        if (r.weekNumber === week && (r.responsible || '') === (groupResponsible === '— Sin responsable —' ? '' : groupResponsible)) {
+          insertAt = i + 1;
+          break;
+        }
+      }
+      list.splice(insertAt, 0, { ...moved, responsible: groupResponsible === '— Sin responsable —' ? '' : groupResponsible });
+      return { ...p, pacRecords: list };
+    });
+  };
+
 
   // Calculate total project weeks
   const totalProjectWeeks = useMemo(() => {
