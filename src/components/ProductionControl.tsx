@@ -451,9 +451,23 @@ export function ProductionControl() {
       <div className="flex items-center gap-2 px-4 py-2 border-b border-border flex-wrap">
         <h3 className="text-base font-bold">Control de Producción — PAC</h3>
         <div className="flex gap-0.5 overflow-x-auto max-w-[300px]">
-          {Array.from({ length: totalProjectWeeks }, (_, i) => i + 1).map(w => (
+          {Array.from({ length: Math.max(totalProjectWeeks, (recordedWeeks[recordedWeeks.length - 1] ?? 0)) + extraWeeks }, (_, i) => i + 1).map(w => (
             <Button key={w} variant={weekView === w ? 'default' : 'outline'} size="sm" className="h-7 text-xs shrink-0" onClick={() => { setWeekView(w); setHistoryWeek('current'); }}>S{w}</Button>
           ))}
+          <Button
+            variant="outline"
+            size="sm"
+            className="h-7 text-xs shrink-0 gap-1"
+            title="Crear una nueva semana para evaluar"
+            onClick={() => {
+              const base = Math.max(totalProjectWeeks, (recordedWeeks[recordedWeeks.length - 1] ?? 0)) + extraWeeks;
+              setExtraWeeks(extraWeeks + 1);
+              setWeekView(base + 1);
+              setHistoryWeek('current');
+            }}
+          >
+            <Plus className="h-3 w-3" />Nueva semana
+          </Button>
         </div>
         {/* History dropdown */}
         {recordedWeeks.length > 0 && (
