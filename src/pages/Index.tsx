@@ -1,5 +1,5 @@
 import { useState, Component, ErrorInfo, ReactNode } from 'react';
-import { BarChart3, CalendarRange, ClipboardCheck, GanttChart as GanttIcon } from 'lucide-react';
+import { BarChart3, CalendarRange, ClipboardCheck, GanttChart as GanttIcon, LayoutDashboard } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ProjectProvider, useProject } from '@/context/ProjectContext';
 import { ProjectToolbar } from '@/components/ProjectToolbar';
@@ -8,7 +8,9 @@ import { LOBChart } from '@/components/LOBChart';
 import { LookaheadTable } from '@/components/LookaheadTable';
 import { ProductionControl } from '@/components/ProductionControl';
 import { GanttChart } from '@/components/GanttChart';
+import { AdminDashboard } from '@/components/AdminDashboard';
 import { useAuth } from '@/hooks/useAuth';
+import { useUserRole } from '@/hooks/useUserRole';
 import { Navigate } from 'react-router-dom';
 
 class ChartErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
@@ -33,7 +35,7 @@ function LOBChartWrapper() {
   );
 }
 
-const tabs = [
+const baseTabs = [
   { id: 'lob', label: 'Líneas de Balance', icon: BarChart3 },
   { id: 'lookahead', label: 'Lookahead', icon: CalendarRange },
   { id: 'pac', label: 'Control PAC', icon: ClipboardCheck },
@@ -42,8 +44,9 @@ const tabs = [
 
 const Index = () => {
   const { user, loading } = useAuth();
+  const { isAdmin, loading: roleLoading } = useUserRole();
 
-  if (loading) {
+  if (loading || roleLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-background">
         <div className="text-muted-foreground">Cargando...</div>
@@ -54,6 +57,10 @@ const Index = () => {
   if (!user) {
     return <Navigate to="/auth" replace />;
   }
+
+  const tabs = isAdmin
+    ? [...baseTabs, { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }]
+    : baseTabs;
 
   return (
     <ProjectProvider>
@@ -93,6 +100,12 @@ const Index = () => {
             <TabsContent value="gantt" className="absolute inset-0 flex flex-col overflow-hidden mt-0 data-[state=inactive]:hidden">
               <GanttChart />
             </TabsContent>
+
+            {isAdmin && (
+              <TabsContent value="dashboard" className="absolute inset-0 flex flex-col overflow-auto mt-0 data-[state=inactive]:hidden">
+                <AdminDashboard />
+              </TabsContent>
+            )}
           </div>
         </Tabs>
       </div>
@@ -101,3 +114,4 @@ const Index = () => {
 };
 
 export default Index;
+
