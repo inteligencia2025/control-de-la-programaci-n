@@ -6,8 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, TrendingUp, CheckCircle2, AlertTriangle, CalendarDays } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-  LineChart, Line,
+  LineChart, Line, Cell, ReferenceLine,
 } from 'recharts';
+
+function getPACRating(pac: number): { label: string; color: string; className: string } {
+  if (pac >= 90) return { label: 'M.SO', color: 'hsl(var(--success))', className: 'bg-success text-success-foreground' };
+  if (pac >= 80) return { label: 'M.SA', color: 'hsl(var(--warning))', className: 'bg-warning text-warning-foreground' };
+  return { label: 'M.M', color: 'hsl(var(--destructive))', className: 'bg-destructive text-destructive-foreground' };
+}
 import { format, parseISO, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { advanceWorkdays, ensureWorkday } from '@/utils/schedulingUtils';
@@ -249,8 +255,11 @@ export function AdminDashboard() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{kpis.avgPac}%</div>
-            <p className="text-xs text-muted-foreground mt-1">{kpis.compliant}/{kpis.planned} actividades cumplidas</p>
+            <div className="text-3xl font-bold" style={{ color: getPACRating(kpis.avgPac).color }}>{kpis.avgPac}%</div>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge className={getPACRating(kpis.avgPac).className + ' text-[10px] px-1.5 py-0'}>{getPACRating(kpis.avgPac).label}</Badge>
+              <p className="text-xs text-muted-foreground">{kpis.compliant}/{kpis.planned} cumplidas</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
@@ -290,7 +299,12 @@ export function AdminDashboard() {
         <CardHeader>
           <CardTitle className="text-base">Indicador PAC por proyecto</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2 items-center justify-end flex-wrap">
+            <Badge className="bg-destructive text-destructive-foreground text-xs">M.M &lt; 80%</Badge>
+            <Badge className="bg-warning text-warning-foreground text-xs">M.SA 80-90%</Badge>
+            <Badge className="bg-success text-success-foreground text-xs">M.SO ≥ 90%</Badge>
+          </div>
           {pacByProject.length === 0 ? (
             <div className="text-sm text-muted-foreground py-8 text-center">Sin registros PAC para el filtro seleccionado.</div>
           ) : (
@@ -300,7 +314,11 @@ export function AdminDashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={60} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                 <Tooltip formatter={(v: any) => `${v}%`} />
-                <Bar dataKey="pac" fill="hsl(var(--primary))" name="PAC" radius={[4, 4, 0, 0]} />
+                <ReferenceLine y={90} stroke="hsl(var(--success))" strokeDasharray="5 5" />
+                <ReferenceLine y={80} stroke="hsl(var(--warning))" strokeDasharray="5 5" />
+                <Bar dataKey="pac" name="PAC" radius={[4, 4, 0, 0]}>
+                  {pacByProject.map((entry, i) => <Cell key={i} fill={getPACRating(entry.pac).color} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
@@ -322,7 +340,12 @@ export function AdminDashboard() {
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                 <Tooltip formatter={(v: any) => `${v}%`} />
-                <Line type="monotone" dataKey="pac" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} name="PAC" />
+                <ReferenceLine y={90} stroke="hsl(var(--success))" strokeDasharray="5 5" />
+                <ReferenceLine y={80} stroke="hsl(var(--warning))" strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="pac" stroke="hsl(var(--primary))" strokeWidth={2} dot={(props: any) => {
+                  const { cx, cy, payload } = props;
+                  return <circle cx={cx} cy={cy} r={4} fill={getPACRating(payload.pac).color} stroke="hsl(var(--background))" strokeWidth={1} />;
+                }} name="PAC" />
               </LineChart>
             </ResponsiveContainer>
           )}
