@@ -255,8 +255,11 @@ export function AdminDashboard() {
             <TrendingUp className="h-4 w-4 text-primary" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{kpis.avgPac}%</div>
-            <p className="text-xs text-muted-foreground mt-1">{kpis.compliant}/{kpis.planned} actividades cumplidas</p>
+            <div className="text-3xl font-bold" style={{ color: getPACRating(kpis.avgPac).color }}>{kpis.avgPac}%</div>
+            <div className="flex items-center gap-2 mt-1">
+              <Badge className={getPACRating(kpis.avgPac).className + ' text-[10px] px-1.5 py-0'}>{getPACRating(kpis.avgPac).label}</Badge>
+              <p className="text-xs text-muted-foreground">{kpis.compliant}/{kpis.planned} cumplidas</p>
+            </div>
           </CardContent>
         </Card>
         <Card>
