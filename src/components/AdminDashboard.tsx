@@ -6,8 +6,14 @@ import { Badge } from '@/components/ui/badge';
 import { Loader2, TrendingUp, CheckCircle2, AlertTriangle, CalendarDays } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid, Legend,
-  LineChart, Line,
+  LineChart, Line, Cell, ReferenceLine,
 } from 'recharts';
+
+function getPACRating(pac: number): { label: string; color: string; className: string } {
+  if (pac >= 90) return { label: 'M.SO', color: 'hsl(var(--success))', className: 'bg-success text-success-foreground' };
+  if (pac >= 80) return { label: 'M.SA', color: 'hsl(var(--warning))', className: 'bg-warning text-warning-foreground' };
+  return { label: 'M.M', color: 'hsl(var(--destructive))', className: 'bg-destructive text-destructive-foreground' };
+}
 import { format, parseISO, startOfMonth } from 'date-fns';
 import { es } from 'date-fns/locale';
 import { advanceWorkdays, ensureWorkday } from '@/utils/schedulingUtils';
