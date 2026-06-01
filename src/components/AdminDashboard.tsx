@@ -299,7 +299,12 @@ export function AdminDashboard() {
         <CardHeader>
           <CardTitle className="text-base">Indicador PAC por proyecto</CardTitle>
         </CardHeader>
-        <CardContent>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2 items-center justify-end flex-wrap">
+            <Badge className="bg-destructive text-destructive-foreground text-xs">M.M &lt; 80%</Badge>
+            <Badge className="bg-warning text-warning-foreground text-xs">M.SA 80-90%</Badge>
+            <Badge className="bg-success text-success-foreground text-xs">M.SO ≥ 90%</Badge>
+          </div>
           {pacByProject.length === 0 ? (
             <div className="text-sm text-muted-foreground py-8 text-center">Sin registros PAC para el filtro seleccionado.</div>
           ) : (
@@ -309,7 +314,11 @@ export function AdminDashboard() {
                 <XAxis dataKey="name" tick={{ fontSize: 11 }} interval={0} angle={-15} textAnchor="end" height={60} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                 <Tooltip formatter={(v: any) => `${v}%`} />
-                <Bar dataKey="pac" fill="hsl(var(--primary))" name="PAC" radius={[4, 4, 0, 0]} />
+                <ReferenceLine y={90} stroke="hsl(var(--success))" strokeDasharray="5 5" />
+                <ReferenceLine y={80} stroke="hsl(var(--warning))" strokeDasharray="5 5" />
+                <Bar dataKey="pac" name="PAC" radius={[4, 4, 0, 0]}>
+                  {pacByProject.map((entry, i) => <Cell key={i} fill={getPACRating(entry.pac).color} />)}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           )}
