@@ -282,10 +282,18 @@ export function LOBPanel() {
   };
 
   const toggleActivityEnabled = (id: string) => {
-    setProject(p => ({
-      ...p,
-      activities: p.activities.map(a => a.id === id ? { ...a, enabled: !a.enabled } : a),
-    }));
+    setProject(p => {
+      const target = p.activities.find(a => a.id === id);
+      const willDisable = target ? target.enabled : false;
+      return {
+        ...p,
+        activities: p.activities.map(a => {
+          if (a.id === id) return { ...a, enabled: !a.enabled };
+          if (willDisable && a.predecessorId === id) return { ...a, predecessorId: undefined };
+          return a;
+        }),
+      };
+    });
   };
 
   const handleDelete = (id: string) => {
