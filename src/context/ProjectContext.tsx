@@ -910,7 +910,12 @@ export const ProjectProvider: React.FC<{ children: React.ReactNode }> = ({ child
     cascadeSuccessors(a.id);
     return { ...p, activities };
   }), [setProject]);
-  const removeActivity = useCallback((id: string) => setProject(p => ({ ...p, activities: p.activities.filter(x => x.id !== id) })), [setProject]);
+  const removeActivity = useCallback((id: string) => setProject(p => ({
+    ...p,
+    activities: p.activities
+      .filter(x => x.id !== id)
+      .map(a => a.predecessorId === id ? { ...a, predecessorId: undefined } : a),
+  })), [setProject]);
   const addLookahead = useCallback((item: LookaheadItem) => setProject(p => ({ ...p, lookahead: [...p.lookahead, item] })), [setProject]);
   const updateLookahead = useCallback((item: LookaheadItem) => setProject(p => ({ ...p, lookahead: p.lookahead.map(x => x.id === item.id ? item : x) })), [setProject]);
   const removeLookahead = useCallback((id: string) => setProject(p => ({ ...p, lookahead: p.lookahead.filter(x => x.id !== id) })), [setProject]);
