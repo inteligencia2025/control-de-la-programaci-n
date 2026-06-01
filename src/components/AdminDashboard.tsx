@@ -340,7 +340,12 @@ export function AdminDashboard() {
                 <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                 <YAxis domain={[0, 100]} tick={{ fontSize: 11 }} unit="%" />
                 <Tooltip formatter={(v: any) => `${v}%`} />
-                <Line type="monotone" dataKey="pac" stroke="hsl(var(--primary))" strokeWidth={2} dot={{ r: 3 }} name="PAC" />
+                <ReferenceLine y={90} stroke="hsl(var(--success))" strokeDasharray="5 5" />
+                <ReferenceLine y={80} stroke="hsl(var(--warning))" strokeDasharray="5 5" />
+                <Line type="monotone" dataKey="pac" stroke="hsl(var(--primary))" strokeWidth={2} dot={(props: any) => {
+                  const { cx, cy, payload } = props;
+                  return <circle cx={cx} cy={cy} r={4} fill={getPACRating(payload.pac).color} stroke="hsl(var(--background))" strokeWidth={1} />;
+                }} name="PAC" />
               </LineChart>
             </ResponsiveContainer>
           )}
