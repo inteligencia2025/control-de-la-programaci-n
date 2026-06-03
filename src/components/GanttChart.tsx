@@ -47,10 +47,15 @@ export function GanttChart() {
 
     type Group = { key: string; label: string; barColor: string; bgFill: string; filter: (a: typeof acts[number]) => boolean };
     const groupDefs: Group[] = [
-      { key: 'preliminares', label: 'Preliminares', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)', filter: a => a.activity.category === 'preliminares' },
-      { key: 'estructura', label: 'Estructura', barColor: '#1e3a5f', bgFill: 'hsl(var(--primary) / 0.15)', filter: a => {
-        if (a.activity.category !== 'estructura') return false;
+      { key: 'preliminares', label: 'Preliminares', barColor: '#7f8c8d', bgFill: 'hsl(var(--muted) / 0.55)', filter: a => {
+        if (a.activity.category !== 'preliminares') return false;
         const n = (a.activity.name || '').toUpperCase();
+        return !n.includes('CIMENTAC');
+      }},
+      { key: 'estructura', label: 'Estructura', barColor: '#1e3a5f', bgFill: 'hsl(var(--primary) / 0.15)', filter: a => {
+        const n = (a.activity.name || '').toUpperCase();
+        if (a.activity.category === 'preliminares' && n.includes('CIMENTAC')) return true;
+        if (a.activity.category !== 'estructura') return false;
         return n.includes('VACIADO MURO') || n.includes('VACIADO LOSA');
       }},
       { key: 'cubierta', label: 'Cubierta', barColor: '#2d8a56', bgFill: 'hsl(var(--accent) / 0.35)', filter: a => a.activity.category === 'cubierta' && a.activity.cubiertaRow !== 'ascensores' },
