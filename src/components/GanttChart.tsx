@@ -291,7 +291,7 @@ export function GanttChart() {
                   <rect x={0} y={yG} width={WIDTH} height={ROW_H} fill={g.bgFill} />
                   <line x1={0} x2={WIDTH} y1={yG + ROW_H} y2={yG + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
                   <g onClick={() => toggle(g.key)} className="cursor-pointer">
-                    <text x={12} y={yG + ROW_H / 2 + 4} className="fill-foreground text-[12px] font-semibold">
+                    <text x={12} y={yG + ROW_H / 2 + 4} clipPath="url(#gantt-label-clip)" className="fill-foreground text-[12px] font-semibold">
                       {isOpen ? '▾' : '▸'} {g.label} ({g.items.length})
                     </text>
                   </g>
