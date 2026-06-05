@@ -55,6 +55,9 @@ export function GanttChart() {
       { key: 'estructura', label: 'Estructura', barColor: '#1e3a5f', bgFill: 'hsl(var(--primary) / 0.15)', filter: a => {
         const n = (a.activity.name || '').toUpperCase();
         if (a.activity.category === 'preliminares' && n.includes('CIMENTAC')) return true;
+        if (n.includes('EXCAVACIONES PARA TUBERIA HIDROSANITARIA')) return true;
+        if (n.includes('INSTALACION DE TUBERIA HIDROSANITARIA')) return true;
+        if (n.includes('INSTALACION DE TUBERIA HIDROSANITARIA Y ELECTRICA')) return true;
         if (a.activity.category !== 'estructura') return false;
         return n.includes('VACIADO MURO') || n.includes('VACIADO LOSA');
       }},
