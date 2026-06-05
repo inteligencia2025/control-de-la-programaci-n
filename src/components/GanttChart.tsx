@@ -209,7 +209,8 @@ export function GanttChart() {
   const { groups, projectStart, projectEndDate, totalCalDays, numMonths } = chartData;
   const MONTH_W = 90;
   const ROW_H = 36;
-  const LABEL_W = 200;
+  const LABEL_W = 320;
+  const LABEL_PAD = 10;
   const MONTHNUM_H = 24;
   const MONTH_H = 24;
   const HEADER_H = MONTHNUM_H + MONTH_H;
@@ -251,6 +252,11 @@ export function GanttChart() {
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-card rounded-lg border border-border inline-block">
           <svg ref={svgRef} width={WIDTH} height={HEIGHT}>
+            <defs>
+              <clipPath id="gantt-label-clip">
+                <rect x={0} y={0} width={LABEL_W - LABEL_PAD} height={HEIGHT} />
+              </clipPath>
+            </defs>
             {Array.from({ length: numMonths }, (_, i) => (
               <g key={`mn-${i}`}>
                 <rect x={LABEL_W + i * MONTH_W} y={0} width={MONTH_W} height={MONTHNUM_H} fill="hsl(var(--accent))" stroke="hsl(var(--border))" strokeWidth={0.5} />
@@ -285,7 +291,7 @@ export function GanttChart() {
                   <rect x={0} y={yG} width={WIDTH} height={ROW_H} fill={g.bgFill} />
                   <line x1={0} x2={WIDTH} y1={yG + ROW_H} y2={yG + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
                   <g onClick={() => toggle(g.key)} className="cursor-pointer">
-                    <text x={12} y={yG + ROW_H / 2 + 4} className="fill-foreground text-[12px] font-semibold">
+                    <text x={12} y={yG + ROW_H / 2 + 4} clipPath="url(#gantt-label-clip)" className="fill-foreground text-[12px] font-semibold">
                       {isOpen ? '▾' : '▸'} {g.label} ({g.items.length})
                     </text>
                   </g>
@@ -300,7 +306,7 @@ export function GanttChart() {
                     return (
                       <g key={it.activity.id}>
                         <line x1={0} x2={WIDTH} y1={y + ROW_H} y2={y + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                        <text x={24} y={y + ROW_H / 2 + 4} className="fill-foreground text-[10px]">{it.activity.name}</text>
+                        <text x={24} y={y + ROW_H / 2 + 4} clipPath="url(#gantt-label-clip)" className="fill-foreground text-[10px]">{it.activity.name}</text>
                         <rect x={cx} y={y + 8} width={cw} height={ROW_H - 16} rx={3} fill={it.activity.color} opacity={0.85} />
                         <text x={cx + cw / 2} y={y + ROW_H / 2 + 3} textAnchor="middle" className="text-[9px] font-medium" fill="white">{durationMonths.toFixed(1)} m</text>
                       </g>
