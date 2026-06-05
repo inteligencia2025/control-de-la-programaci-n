@@ -252,6 +252,11 @@ export function GanttChart() {
       <div className="flex-1 overflow-auto p-4">
         <div className="bg-card rounded-lg border border-border inline-block">
           <svg ref={svgRef} width={WIDTH} height={HEIGHT}>
+            <defs>
+              <clipPath id="gantt-label-clip">
+                <rect x={0} y={0} width={LABEL_W - LABEL_PAD} height={HEIGHT} />
+              </clipPath>
+            </defs>
             {Array.from({ length: numMonths }, (_, i) => (
               <g key={`mn-${i}`}>
                 <rect x={LABEL_W + i * MONTH_W} y={0} width={MONTH_W} height={MONTHNUM_H} fill="hsl(var(--accent))" stroke="hsl(var(--border))" strokeWidth={0.5} />
