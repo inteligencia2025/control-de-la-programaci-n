@@ -255,15 +255,22 @@ export function GanttChart() {
                 <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H - 7} textAnchor="middle" className="fill-accent-foreground text-[12px] font-semibold">Mes {i + 1}</text>
               </g>
             ))}
-            {Array.from({ length: numMonths }, (_, i) => {
-              const d = addDays(projectStart, i * MONTH_DAYS);
-              return (
-                <g key={`mh-${i}`}>
-                  <rect x={LABEL_W + i * MONTH_W} y={MONTHNUM_H} width={MONTH_W} height={MONTH_H} fill="hsl(var(--primary))" stroke="hsl(var(--border))" strokeWidth={0.5} />
-                  <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H + MONTH_H - 8} textAnchor="middle" className="fill-primary-foreground text-[11px] font-medium">{format(d, 'MMM yy', { locale: es })}</text>
-                </g>
-              );
-            })}
+            {(() => {
+              // Etiquetar cada columna con un mes calendario consecutivo,
+              // empezando por el mes de inicio del proyecto, para evitar duplicados
+              // cuando dos bloques de 28 días caen en el mismo mes.
+              const baseYear = projectStart.getFullYear();
+              const baseMonth = projectStart.getMonth();
+              return Array.from({ length: numMonths }, (_, i) => {
+                const d = new Date(baseYear, baseMonth + i, 1);
+                return (
+                  <g key={`mh-${i}`}>
+                    <rect x={LABEL_W + i * MONTH_W} y={MONTHNUM_H} width={MONTH_W} height={MONTH_H} fill="hsl(var(--primary))" stroke="hsl(var(--border))" strokeWidth={0.5} />
+                    <text x={LABEL_W + i * MONTH_W + MONTH_W / 2} y={MONTHNUM_H + MONTH_H - 8} textAnchor="middle" className="fill-primary-foreground text-[11px] font-medium">{format(d, 'MMM yy', { locale: es })}</text>
+                  </g>
+                );
+              });
+            })()}
             {Array.from({ length: numMonths + 1 }, (_, i) => (
               <line key={`vl-${i}`} x1={LABEL_W + i * MONTH_W} x2={LABEL_W + i * MONTH_W} y1={HEADER_H} y2={HEADER_H + totalRows * ROW_H} stroke="hsl(var(--border))" strokeWidth={0.5} />
             ))}
