@@ -209,7 +209,8 @@ export function GanttChart() {
   const { groups, projectStart, projectEndDate, totalCalDays, numMonths } = chartData;
   const MONTH_W = 90;
   const ROW_H = 36;
-  const LABEL_W = 200;
+  const LABEL_W = 320;
+  const LABEL_PAD = 10;
   const MONTHNUM_H = 24;
   const MONTH_H = 24;
   const HEADER_H = MONTHNUM_H + MONTH_H;
