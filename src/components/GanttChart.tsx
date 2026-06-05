@@ -306,7 +306,7 @@ export function GanttChart() {
                     return (
                       <g key={it.activity.id}>
                         <line x1={0} x2={WIDTH} y1={y + ROW_H} y2={y + ROW_H} stroke="hsl(var(--border))" strokeWidth={0.3} />
-                        <text x={24} y={y + ROW_H / 2 + 4} className="fill-foreground text-[10px]">{it.activity.name}</text>
+                        <text x={24} y={y + ROW_H / 2 + 4} clipPath="url(#gantt-label-clip)" className="fill-foreground text-[10px]">{it.activity.name}</text>
                         <rect x={cx} y={y + 8} width={cw} height={ROW_H - 16} rx={3} fill={it.activity.color} opacity={0.85} />
                         <text x={cx + cw / 2} y={y + ROW_H / 2 + 3} textAnchor="middle" className="text-[9px] font-medium" fill="white">{durationMonths.toFixed(1)} m</text>
                       </g>
