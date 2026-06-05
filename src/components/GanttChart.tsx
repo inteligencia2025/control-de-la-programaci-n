@@ -56,7 +56,7 @@ export function GanttChart() {
         const raw = (a.activity.name || '').toUpperCase();
         const n = raw.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
         if (a.activity.category === 'preliminares' && n.includes('CIMENTAC')) return true;
-        if (n.includes('HIDROSANITARIA')) return true;
+        if (n.includes('HIDROSANITARIA') && !n.includes('PROLONGACIONES')) return true;
         if (a.activity.category !== 'estructura') return false;
         return n.includes('VACIADO MURO') || n.includes('VACIADO LOSA');
       }},
