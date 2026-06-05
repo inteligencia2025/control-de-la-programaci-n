@@ -224,8 +224,22 @@ export function GanttChart() {
   const renderedGroups = groups.map(g => {
     const groupRow = rowIdx++;
     const isOpen = !collapsed[g.key];
+    const orderKey = (name: string) => {
+      const n = (name || '').toUpperCase();
+      if (n.includes('RETIE')) return 0;
+      if (n.includes('MEDIDOR')) return 1;
+      return 2;
+    };
+    const sortedItems = isOpen
+      ? [...g.items].sort((a, b) => {
+          const oa = orderKey(a.activity.name);
+          const ob = orderKey(b.activity.name);
+          if (oa !== ob) return oa - ob;
+          return a.startDate.getTime() - b.startDate.getTime();
+        })
+      : [];
     const childRows = isOpen
-      ? g.items.map(it => {
+      ? sortedItems.map(it => {
           const startMonths = differenceInCalendarDays(it.startDate, projectStart) / MONTH_DAYS;
           const durationMonths = Math.max(0.05, differenceInCalendarDays(it.endDate, it.startDate) / MONTH_DAYS);
           const r = rowIdx++;
