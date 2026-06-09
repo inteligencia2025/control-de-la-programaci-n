@@ -184,7 +184,7 @@ export function ProgressTracking() {
           <table className="w-full text-xs border-collapse">
             <thead className="bg-secondary sticky top-0 z-10">
               <tr>
-                <th className="sticky left-0 bg-secondary z-20 text-left px-2 py-1.5 border-b border-r border-border min-w-[200px]">
+                <th className="sticky left-0 bg-secondary z-20 text-left px-2 py-1.5 border-b border-r border-border min-w-[320px] w-[320px]">
                   Actividad
                 </th>
                 {units.map(u => (
