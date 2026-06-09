@@ -209,8 +209,6 @@ export function ProgressTracking() {
                   const stats = computeActivityStats(cells, r.key, r.totalUnits);
                   const sched = r.activity ? computeScheduledPct(r.activity, project.activities) : 0;
                   const dev = stats.realPct - sched;
-                  const uStart = r.activity?.unitStart ?? 1;
-                  const uEnd = r.activity?.unitEnd ?? totalUnits;
                   return (
                     <tr key={r.key} className="hover:bg-secondary/30">
                       <td className="sticky left-0 bg-background z-10 px-2 py-1 border-r border-border font-medium whitespace-normal break-words w-[320px] min-w-[320px] max-w-[320px] leading-tight" title={r.name}>
