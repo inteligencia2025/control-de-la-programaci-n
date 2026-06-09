@@ -213,15 +213,11 @@ export function ProgressTracking() {
                   const uEnd = r.activity?.unitEnd ?? totalUnits;
                   return (
                     <tr key={r.key} className="hover:bg-secondary/30">
-                      <td className="sticky left-0 bg-background z-10 px-2 py-0.5 border-r border-border font-medium truncate max-w-[200px]" title={r.name}>
+                      <td className="sticky left-0 bg-background z-10 px-2 py-1 border-r border-border font-medium whitespace-normal break-words w-[320px] min-w-[320px] max-w-[320px] leading-tight" title={r.name}>
                         {r.name}
                       </td>
                       {units.map(u => {
-                        const inRange = r.isExtra || (u >= uStart && u <= uEnd);
                         const s = getStatus(r.key, u);
-                        if (!inRange) {
-                          return <td key={u} className="border border-border/40 p-0 text-center bg-muted/30" />;
-                        }
                         return (
                           <td key={u} className="border border-border/40 p-0 text-center">
                             <button
