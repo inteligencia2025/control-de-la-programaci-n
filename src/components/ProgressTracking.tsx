@@ -184,7 +184,7 @@ export function ProgressTracking() {
           <table className="w-full text-xs border-collapse">
             <thead className="bg-secondary sticky top-0 z-10">
               <tr>
-                <th className="sticky left-0 bg-secondary z-20 text-left px-2 py-1.5 border-b border-r border-border min-w-[200px]">
+                <th className="sticky left-0 bg-secondary z-20 text-left px-2 py-1.5 border-b border-r border-border min-w-[320px] w-[320px]">
                   Actividad
                 </th>
                 {units.map(u => (
@@ -209,19 +209,13 @@ export function ProgressTracking() {
                   const stats = computeActivityStats(cells, r.key, r.totalUnits);
                   const sched = r.activity ? computeScheduledPct(r.activity, project.activities) : 0;
                   const dev = stats.realPct - sched;
-                  const uStart = r.activity?.unitStart ?? 1;
-                  const uEnd = r.activity?.unitEnd ?? totalUnits;
                   return (
                     <tr key={r.key} className="hover:bg-secondary/30">
-                      <td className="sticky left-0 bg-background z-10 px-2 py-0.5 border-r border-border font-medium truncate max-w-[200px]" title={r.name}>
+                      <td className="sticky left-0 bg-background z-10 px-2 py-1 border-r border-border font-medium whitespace-normal break-words w-[320px] min-w-[320px] max-w-[320px] leading-tight" title={r.name}>
                         {r.name}
                       </td>
                       {units.map(u => {
-                        const inRange = r.isExtra || (u >= uStart && u <= uEnd);
                         const s = getStatus(r.key, u);
-                        if (!inRange) {
-                          return <td key={u} className="border border-border/40 p-0 text-center bg-muted/30" />;
-                        }
                         return (
                           <td key={u} className="border border-border/40 p-0 text-center">
                             <button
@@ -282,7 +276,7 @@ export function ProgressTracking() {
           return (
             <Card key={r.key} className="p-3">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-bold text-sm truncate" title={r.name}>{r.name}</h4>
+                <h4 className="font-bold text-sm whitespace-normal break-words leading-tight pr-2" title={r.name}>{r.name}</h4>
                 <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
                   title={r.isExtra ? 'Eliminar actividad extra' : 'Eliminar actividad del proyecto'}
                   onClick={() => handleRemoveRow(r)}>
