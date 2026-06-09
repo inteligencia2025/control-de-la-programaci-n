@@ -274,7 +274,7 @@ export function ProgressTracking() {
           const sched = r.activity ? computeScheduledPct(r.activity, project.activities) : 0;
           const dev = stats.realPct - sched;
           return (
-            <Card key={r.key} className="p-3">
+            <Card key={r.key} className="p-3 overflow-x-auto">
               <div className="flex items-center justify-between mb-2">
                 <h4 className="font-bold text-sm whitespace-normal break-words leading-tight pr-2" title={r.name}>{r.name}</h4>
                 <Button variant="ghost" size="icon" className="h-5 w-5 text-destructive"
@@ -284,7 +284,7 @@ export function ProgressTracking() {
                 </Button>
               </div>
               <div className="text-[10px] text-muted-foreground mb-2 uppercase tracking-wide">{r.category}</div>
-              <table className="w-full text-xs border-collapse mb-2">
+              <table className="min-w-max text-xs border-collapse mb-2">
                 <thead>
                   <tr>
                     <th className="text-[10px] font-semibold text-muted-foreground text-left">Piso</th>
